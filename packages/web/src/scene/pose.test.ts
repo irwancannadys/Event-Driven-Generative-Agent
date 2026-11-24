@@ -31,6 +31,7 @@ describe('agentPose', () => {
       z: spot.z,
       facing: spot.facing,
       status: 'idle',
+      walked: 0,
     });
   });
 
@@ -95,6 +96,7 @@ describe('agentPose', () => {
         z: to.z,
         facing: to.facing,
         status: 'idle',
+        walked: 0,
       });
     }
   });

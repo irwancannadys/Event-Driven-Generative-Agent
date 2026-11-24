@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { AGENT_IDS } from '@cafe/core';
 import type { Mesh, MeshStandardMaterial, Object3D } from 'three';
-import { AVATAR_COLORS, CUSTOMER_COLORS, UNIFORM, createAvatar, type StaffRole } from './avatar';
+import {
+  AVATAR_COLORS,
+  CUSTOMER_COLORS,
+  STEP_LENGTH,
+  UNIFORM,
+  createAvatar,
+  type StaffRole,
+} from './avatar';
 
 const ROLES: StaffRole[] = [...AGENT_IDS, 'boss'];
 
@@ -45,15 +52,41 @@ describe('createAvatar', () => {
     expect(AGENT_IDS.every((role) => AVATAR_COLORS[role] === UNIFORM.shirt)).toBe(true);
   });
 
-  it('tells the staff apart by their hair and by the hat of the cook, not by their clothes', () => {
+  it('tells the staff apart by their hair, the hat of the cook and the beard, not by their clothes', () => {
     expect(part(createAvatar('cook'), 'toque')).toBeDefined();
     expect(part(createAvatar('cook'), 'hair')).toBeUndefined();
     for (const role of ['cashier', 'stock_admin', 'waiter'] as const) {
       expect(part(createAvatar(role), 'hair'), role).toBeDefined();
       expect(part(createAvatar(role), 'toque'), role).toBeUndefined();
     }
-    expect(part(createAvatar('cashier'), 'bun')).toBeDefined();
+    expect(part(createAvatar('cashier'), 'long-hair')).toBeDefined();
     expect(part(createAvatar('waiter'), 'ponytail')).toBeDefined();
+  });
+
+  it('makes the cashier and Rina women, and the cook, the stock admin and the boss men', () => {
+    const woman = (role: StaffRole) => part(createAvatar(role), 'lips') !== undefined;
+    expect([woman('cashier'), woman('waiter')]).toEqual([true, true]);
+    expect([woman('cook'), woman('stock_admin'), woman('boss')]).toEqual([false, false, false]);
+    expect(part(createAvatar('cook'), 'beard')).toBeDefined();
+    expect(part(createAvatar('cashier'), 'beard')).toBeUndefined();
+  });
+
+  it('gives men broad shoulders and women slim ones, longer hair to some women, and never a beard to a woman', () => {
+    const width = (role: StaffRole) => (part(createAvatar(role), 'torso') as Mesh).scale.x;
+    expect(width('cook')).toBeGreaterThan(width('cashier') + 0.15);
+    expect(width('stock_admin')).toBe(width('cook'));
+    for (let variant = 0; variant < 12; variant += 1) {
+      const customer = createAvatar('customer', variant);
+      const woman = part(customer, 'lips') !== undefined;
+      expect(woman, `customer ${variant}`).toBe(variant % 2 === 1);
+      if (woman) expect(part(customer, 'beard')).toBeUndefined();
+      else expect(part(customer, 'long-hair')).toBeUndefined();
+    }
+    expect(
+      [0, 1, 2, 3, 4, 5].some(
+        (variant) => part(createAvatar('customer', variant), 'long-hair') !== undefined,
+      ),
+    ).toBe(true);
   });
 
   it('puts the boss in a dark suit with a tie', () => {
@@ -77,23 +110,80 @@ describe('createAvatar', () => {
     expect(a.geometry).toBe(b.geometry);
   });
 
+  /** Walks an avatar `distance` units at `speed` units per real second, drawing every 1/60 s. */
+  function walkFor(avatar: ReturnType<typeof createAvatar>, distance: number, speed: number) {
+    const frame = 1 / 60;
+    const frames = Math.round(distance / (speed * frame));
+    const legs: number[] = [];
+    for (let index = 1; index <= frames; index += 1) {
+      avatar.play('walking', index * frame, index * speed * frame);
+      legs.push(part(avatar, 'leg-left')?.rotation.x ?? 0);
+    }
+    return legs;
+  }
+
   it('swings the arms and the legs against each other when walking', () => {
     const avatar = createAvatar('cashier');
-    const legs = [part(avatar, 'leg-left'), part(avatar, 'leg-right')];
-    const arms = [part(avatar, 'arm-left'), part(avatar, 'arm-right')];
     const seen = new Set<number>();
-    for (let index = 0; index < 40; index += 1) {
-      avatar.play('walking', index / 13);
-      const [leftLeg, rightLeg] = legs.map((leg) => leg?.rotation.x ?? 0) as [number, number];
-      const [leftArm, rightArm] = arms.map((arm) => arm?.rotation.x ?? 0) as [number, number];
-      expect(leftLeg).toBeCloseTo(-rightLeg); // one forward, the other back
+    let walked = 0;
+    for (let index = 1; index <= 60; index += 1) {
+      walked += 0.03;
+      avatar.play('walking', index / 60, walked);
+      const leftLeg = part(avatar, 'leg-left')?.rotation.x ?? 0;
+      const rightLeg = part(avatar, 'leg-right')?.rotation.x ?? 0;
+      const leftArm = part(avatar, 'arm-left')?.rotation.x ?? 0;
+      const rightArm = part(avatar, 'arm-right')?.rotation.x ?? 0;
+      expect(leftLeg).toBeCloseTo(-rightLeg);
       expect(leftArm).toBeCloseTo(-rightArm);
       expect(leftArm * leftLeg).toBeLessThanOrEqual(1e-9); // an arm swings against the leg on its side
-      expect(Math.abs(leftLeg)).toBeLessThanOrEqual(0.7 + 1e-9);
+      expect(Math.abs(leftLeg)).toBeLessThanOrEqual(0.5 + 1e-9);
       seen.add(Math.round(leftLeg * 100));
     }
     expect(seen.size).toBeGreaterThan(8);
-    expect(part(avatar, 'figure')?.position.y).toBeLessThanOrEqual(0.06 + 1e-9);
+    expect(part(avatar, 'figure')?.position.y).toBeLessThanOrEqual(0.03 + 1e-9);
+  });
+
+  it('makes one step for every step length it walks: the legs swing by the distance, not by the time', () => {
+    const slow = createAvatar('cook');
+    const fast = createAvatar('cook');
+    walkFor(slow, STEP_LENGTH * 4, 0.6); // four steps, slowly
+    walkFor(fast, STEP_LENGTH * 4, 1.5); // four steps, faster
+    // after a whole number of steps the legs are in the same place, whatever the speed
+    expect(part(slow, 'leg-left')?.rotation.x).toBeCloseTo(
+      part(fast, 'leg-left')?.rotation.x ?? 9,
+      1,
+    );
+    // and the swing goes once through the whole cycle for two steps
+    const cycle = walkFor(createAvatar('cook'), STEP_LENGTH * 2, 0.8);
+    expect(Math.max(...cycle)).toBeGreaterThan(0.45);
+    expect(Math.min(...cycle)).toBeLessThan(-0.45);
+  });
+
+  it('stands still with its legs when it does not move forward', () => {
+    const avatar = createAvatar('waiter');
+    for (let index = 1; index <= 30; index += 1) avatar.play('walking', index / 60, 2); // always at 2 units
+    const before = part(avatar, 'leg-left')?.rotation.x;
+    avatar.play('walking', 1, 2);
+    expect(part(avatar, 'leg-left')?.rotation.x).toBe(before);
+  });
+
+  it('never swings the legs faster than a person can, however fast the clock runs', () => {
+    const avatar = createAvatar('stock_admin');
+    let last = 0;
+    let biggest = 0;
+    for (let index = 1; index <= 60; index += 1) {
+      avatar.play('walking', index / 60, index * 5); // 300 units per second: a very fast clock
+      const now = part(avatar, 'leg-left')?.rotation.x ?? 0;
+      biggest = Math.max(
+        biggest,
+        Math.abs(
+          Math.asin(Math.max(-1, Math.min(1, now / 0.5))) -
+            Math.asin(Math.max(-1, Math.min(1, last / 0.5))),
+        ),
+      );
+      last = now;
+    }
+    expect(biggest).toBeLessThan(13 / 60 + 0.4); // the angle of the legs changes by about 13 rad/s at the most
   });
 
   it('holds the arms out in front and moves them while working', () => {

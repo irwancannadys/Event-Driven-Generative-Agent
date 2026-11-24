@@ -14,13 +14,21 @@ export interface Pose {
   /** `rotation.y` of the character. */
   facing: number;
   status: PoseStatus;
+  /** How far it has walked along its way, in layout units (the legs swing by it). */
+  walked: number;
 }
 
 const clamp01 = (value: number): number => Math.max(0, Math.min(1, value));
 
 export function agentPose(agent: AgentState, now: number): Pose {
   const to = standingPoint(agent.station, agent.id);
-  const standing = (status: PoseStatus): Pose => ({ x: to.x, z: to.z, facing: to.facing, status });
+  const standing = (status: PoseStatus): Pose => ({
+    x: to.x,
+    z: to.z,
+    facing: to.facing,
+    status,
+    walked: 0,
+  });
 
   if (agent.state === 'working') return standing('working');
   if (
@@ -40,9 +48,16 @@ export function agentPose(agent: AgentState, now: number): Pose {
 
   // The way goes round the tables and through the doors, and takes as long as the domain says.
   const path = findPath(from, to);
-  if (pathLength(path) === 0) return { x: to.x, z: to.z, facing: to.facing, status: 'walking' };
+  const length = pathLength(path);
+  if (length === 0) return { x: to.x, z: to.z, facing: to.facing, status: 'walking', walked: 0 };
   const here = pointAlong(path, progress);
-  return { x: here.x, z: here.z, facing: here.heading, status: 'walking' };
+  return {
+    x: here.x,
+    z: here.z,
+    facing: here.heading,
+    status: 'walking',
+    walked: progress * length,
+  };
 }
 
 /** How far the pot on the stove tilts: it wobbles while the cook is cooking and stands still otherwise. */

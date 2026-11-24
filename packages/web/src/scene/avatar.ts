@@ -56,6 +56,9 @@ const shapes = {
   head: new SphereGeometry(0.17, 18, 14),
   hair: new SphereGeometry(0.185, 18, 12, 0, Math.PI * 2, 0, Math.PI * 0.55),
   bun: new SphereGeometry(0.07, 10, 8),
+  longHair: new CapsuleGeometry(0.12, 0.3, 4, 10),
+  lips: new SphereGeometry(0.035, 8, 6),
+  beard: new BoxGeometry(0.16, 0.08, 0.06),
   toque: new CylinderGeometry(0.16, 0.17, 0.2, 16),
   toquePuff: new SphereGeometry(0.2, 14, 10),
   eye: new SphereGeometry(0.02, 8, 6),
@@ -78,11 +81,20 @@ function material(color: number, roughness = 0.8): MeshStandardMaterial {
   return found;
 }
 
+/** How far a person goes with one step, in layout units. The legs swing by the distance walked. */
+export const STEP_LENGTH = 0.5;
+/** The legs never swing faster than this (radians per second), however fast the clock runs. */
+const MAX_GAIT_RATE = 13;
+
 export interface Avatar {
   /** Put it in the scene and move it: `position` for where, `rotation.y` for which way it faces. */
   object: Group;
-  /** Shows the pose: walking swings arms and legs, working holds the arms out and moves them, idle rests. */
-  play(status: PoseStatus, seconds: number): void;
+  /**
+   * Shows the pose: walking swings arms and legs, working holds the arms out and moves them, idle rests.
+   * `seconds` is real time. `walked` is the distance the person has gone along its way, in layout units:
+   * the legs swing by that, so one step is as long as it should be at any speed of the clock.
+   */
+  play(status: PoseStatus, seconds: number, walked?: number): void;
   /** Puts a cup in its hand, or takes it away. */
   carry(on: boolean): void;
   /** Sits down (a customer at a table) or stands up again. */
@@ -90,32 +102,46 @@ export interface Avatar {
 }
 
 interface Outfit {
+  female: boolean;
   shirt: number;
   trousers: number;
   shoes: number;
   skin: number;
   hair: number;
   hat: 'none' | 'toque';
-  hairStyle: 'short' | 'bun' | 'ponytail';
+  hairStyle: 'short' | 'bun' | 'ponytail' | 'long';
+  beard: boolean;
   tie?: number;
 }
+
+const STAFF_FEMALE: Record<AgentId, boolean> = {
+  cashier: true,
+  cook: false,
+  stock_admin: false,
+  waiter: true,
+};
 
 function outfit(role: AvatarRole, variant: number): Outfit {
   const pick = <T>(list: readonly T[], offset = 0): T =>
     list[(Math.abs(variant) + offset) % list.length] as T;
   if (role === 'customer') {
+    const female = Math.abs(variant) % 2 === 1;
+    const styles = ['long', 'bun', 'ponytail'] as const;
     return {
+      female,
       shirt: pick(CUSTOMER_COLORS),
       trousers: pick(CUSTOMER_TROUSERS, 1),
       shoes: 0x3a2e28,
       skin: pick(SKIN_TONES, 2),
       hair: pick(HAIR_COLORS, 3),
       hat: 'none',
-      hairStyle: variant % 3 === 0 ? 'bun' : variant % 3 === 1 ? 'short' : 'ponytail',
+      hairStyle: female ? pick(styles, 1) : 'short',
+      beard: !female && Math.abs(variant) % 4 === 0,
     };
   }
   if (role === 'boss') {
     return {
+      female: false,
       shirt: SUIT.jacket,
       trousers: SUIT.trousers,
       shoes: 0x111111,
@@ -123,17 +149,20 @@ function outfit(role: AvatarRole, variant: number): Outfit {
       hair: 0x111111,
       hat: 'none',
       hairStyle: 'short',
+      beard: false,
       tie: SUIT.tie,
     };
   }
   return {
+    female: STAFF_FEMALE[role],
     shirt: UNIFORM.shirt,
     trousers: UNIFORM.trousers,
     shoes: UNIFORM.shoes,
     skin: STAFF_SKIN[role],
     hair: STAFF_HAIR[role],
     hat: role === 'cook' ? 'toque' : 'none',
-    hairStyle: role === 'cashier' ? 'bun' : role === 'waiter' ? 'ponytail' : 'short',
+    hairStyle: role === 'cashier' ? 'long' : role === 'waiter' ? 'ponytail' : 'short',
+    beard: role === 'cook',
   };
 }
 
@@ -155,7 +184,8 @@ export function createAvatar(role: AvatarRole, variant = 0): Avatar {
 
   // torso, head, face and hair
   const torso = put('torso', new Mesh(shapes.torso, material(look.shirt)), 0, 1.18, 0);
-  torso.scale.set(1.05, 1, 0.72);
+  // men are broader at the shoulders, women slimmer
+  torso.scale.set(look.female ? 0.9 : 1.12, 1, look.female ? 0.68 : 0.76);
   const head = put('head', new Mesh(shapes.head, material(look.skin, 0.6)), 0, 1.64, 0);
   figure.add(
     torso,
@@ -164,6 +194,13 @@ export function createAvatar(role: AvatarRole, variant = 0): Avatar {
     put('eye', new Mesh(shapes.eye, material(0x111111, 0.4)), 0.06, 1.67, 0.15),
     put('nose', new Mesh(shapes.nose, material(look.skin, 0.6)), 0, 1.63, 0.17),
   );
+  if (look.female) {
+    const lips = put('lips', new Mesh(shapes.lips, material(0xc4455a, 0.5)), 0, 1.585, 0.155);
+    lips.scale.set(1.5, 0.6, 0.6);
+    figure.add(lips);
+  } else if (look.beard) {
+    figure.add(put('beard', new Mesh(shapes.beard, material(look.hair, 0.9)), 0, 1.545, 0.12));
+  }
   if (look.hat === 'toque') {
     figure.add(
       put('toque', new Mesh(shapes.toque, material(0xffffff, 0.9)), 0, 1.86, 0),
@@ -171,6 +208,10 @@ export function createAvatar(role: AvatarRole, variant = 0): Avatar {
     );
   } else {
     figure.add(put('hair', new Mesh(shapes.hair, material(look.hair, 0.9)), 0, 1.68, -0.01));
+    if (look.hairStyle === 'long')
+      figure.add(
+        put('long-hair', new Mesh(shapes.longHair, material(look.hair, 0.9)), 0, 1.5, -0.13),
+      );
     if (look.hairStyle === 'bun')
       figure.add(put('bun', new Mesh(shapes.bun, material(look.hair, 0.9)), 0, 1.86, -0.06));
     if (look.hairStyle === 'ponytail')
@@ -189,7 +230,7 @@ export function createAvatar(role: AvatarRole, variant = 0): Avatar {
     return pivot;
   };
   const arm = (name: string, side: number) =>
-    limb(name, side * 0.27, 1.42, () => [
+    limb(name, side * (look.female ? 0.245 : 0.3), 1.42, () => [
       put('arm-shape', new Mesh(shapes.arm, material(look.shirt)), 0, -0.26, 0),
       put('hand', new Mesh(shapes.hand, material(look.skin, 0.6)), 0, -0.52, 0),
     ]);
@@ -205,27 +246,39 @@ export function createAvatar(role: AvatarRole, variant = 0): Avatar {
   right.arm.add(cup);
 
   let seated = false;
+  let phase = 0;
+  let lastWalked = 0;
+  let lastSeconds = 0;
   const rest = (): void => {
     for (const pivot of [left.arm, right.arm, left.leg, right.leg]) pivot.rotation.set(0, 0, 0);
     left.arm.rotation.z = 0.08;
     right.arm.rotation.z = -0.08;
     figure.position.y = seated ? -0.4 : 0;
-    figure.rotation.z = 0;
+    figure.rotation.set(0, 0, 0);
     if (seated) left.leg.rotation.x = right.leg.rotation.x = -1.45;
   };
   rest();
 
   return {
     object,
-    play(status, seconds) {
+    play(status, seconds, walked = 0) {
       rest();
+      const seconds_since = Math.min(0.1, Math.max(0, seconds - lastSeconds));
       if (status === 'walking') {
-        const swing = Math.sin(seconds * 9);
-        left.leg.rotation.x = swing * 0.7;
-        right.leg.rotation.x = -swing * 0.7;
-        left.arm.rotation.x = -swing * 0.55;
-        right.arm.rotation.x = swing * 0.55;
-        figure.position.y = Math.abs(Math.cos(seconds * 9)) * 0.06;
+        // The legs swing by the distance walked, one step to every STEP_LENGTH, but never faster than a
+        // person can move them: at a high speed of the clock the feet slide a little instead of blurring.
+        const stepped = Math.min(
+          (Math.abs(walked - lastWalked) / STEP_LENGTH) * Math.PI,
+          MAX_GAIT_RATE * seconds_since,
+        );
+        phase += stepped;
+        const swing = Math.sin(phase);
+        left.leg.rotation.x = swing * 0.5;
+        right.leg.rotation.x = -swing * 0.5;
+        left.arm.rotation.x = -swing * 0.4;
+        right.arm.rotation.x = swing * 0.4;
+        figure.position.y = Math.abs(Math.cos(phase)) * 0.03;
+        figure.rotation.x = 0.05; // leans a little into the walk
       } else if (status === 'working') {
         // the arms held out in front, moving: typing, stirring, writing
         left.arm.rotation.x = -1 + Math.sin(seconds * 7) * 0.12;
@@ -234,6 +287,8 @@ export function createAvatar(role: AvatarRole, variant = 0): Avatar {
       } else {
         figure.position.y += Math.sin(seconds * 1.6) * 0.006; // breathing
       }
+      lastWalked = walked;
+      lastSeconds = seconds;
     },
     carry(on) {
       cup.visible = on;
