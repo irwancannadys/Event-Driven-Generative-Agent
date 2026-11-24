@@ -1,4 +1,5 @@
 // Domain murni (event, agent, aturan, sim clock). Diisi bertahap mulai Tahap 0.
+export * from './agents';
 export * from './clock';
 export * from './events';
 export * from './ids';
