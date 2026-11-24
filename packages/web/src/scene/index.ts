@@ -146,7 +146,7 @@ export function createScene(
           `${AGENT_NAME_ID[id]} · ${agentActivity(agent)}`,
           `agent agent-${id}`,
         );
-        const at = projectToScreen(camera, { x: pose.x, y: 1.9, z: pose.z }, width, height);
+        const at = projectToScreen(camera, { x: pose.x, y: 2.3, z: pose.z }, width, height);
         labels.place(`agent:${id}`, at.x, at.y, at.visible);
       }
       shelf.update(Object.values(state.stock));
@@ -170,11 +170,12 @@ export function createScene(
         view.object.position.set(pose.x, 0, pose.z);
         view.object.rotation.y = pose.facing;
         view.play(pose.moving ? 'walking' : 'idle', seconds);
+        view.sit(pose.seated);
         view.carry(pose.carrying);
         const key = `customer:${customer.orderId}`;
         if (pose.bubble) {
           labels.set(key, t(`customer.${pose.bubble}`), `bubble bubble-${pose.bubble}`);
-          const at = projectToScreen(camera, { x: pose.x, y: 1.75, z: pose.z }, width, height);
+          const at = projectToScreen(camera, { x: pose.x, y: 2.2, z: pose.z }, width, height);
           labels.place(key, at.x, at.y, at.visible);
         } else {
           labels.hide(key);
@@ -194,7 +195,7 @@ export function createScene(
     }
     const bossAt = projectToScreen(
       camera,
-      { x: BOSS_SPOT.x, y: 1.9, z: BOSS_SPOT.z },
+      { x: BOSS_SPOT.x, y: 2.3, z: BOSS_SPOT.z },
       width,
       height,
     );
