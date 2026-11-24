@@ -4,6 +4,7 @@ import type { ApiResult, TimeRequest } from '../net/api';
 import type { ConnectionStatus } from '../net/connection';
 import type { WorldState } from '../state/world';
 import type { ViewChoice } from '../view-mode';
+import { browserStore, loadFolded, saveFolded, type KeyValueStore } from './collapse';
 import { changeDetector, el } from './dom';
 import {
   JUMPS,
@@ -17,8 +18,8 @@ import {
   type ReportRowView,
 } from './view-models';
 
-// The panels of the page: status and time controls, characters, orders, event log, stock and the boss
-// desk. What each shows comes from `view-models.ts`; this file only puts it on the screen and passes
+// The panels of the page: status, characters, orders, the boss desk, and in the sidebar the time
+// controls, the event log and the stock (each can be folded away). What each shows comes from `view-models.ts`; this file only puts it on the screen and passes
 // the boss's clicks on. It makes no decisions.
 
 export interface PanelActions {
@@ -46,12 +47,17 @@ function section(title: TextKey, className: string): { root: HTMLElement; body: 
   return { root: el('section', `panel ${className}`, el('h2', '', t(title)), body), body };
 }
 
+const OPEN_MARK = '\u25be';
+const FOLDED_MARK = '\u25b8';
+
 export function createPanels(
   root: HTMLElement,
   actions: PanelActions,
-  options: { view?: ViewChoice } = {},
+  options: { view?: ViewChoice; store?: KeyValueStore } = {},
 ): Panels {
   const view: ViewChoice = options.view ?? { mode: 'scene', reason: 'default' };
+  const store = 'store' in options ? options.store : browserStore();
+  const folded = loadFolded(store);
   const changed = changeDetector();
   const pending = new Set<number>();
   let latest: PanelInput | undefined;
@@ -73,7 +79,7 @@ export function createPanels(
     link.href = view.mode === 'scene' ? '?view=panel' : '?view=3d';
     viewControl.append(link);
   }
-  const strip = el('header', 'status-strip', dot, connection, clock, pace, controls, viewControl);
+  const strip = el('header', 'status-strip', dot, connection, clock, pace);
 
   const showNotice = (message: string): void => {
     notice.textContent = message;
@@ -86,11 +92,36 @@ export function createPanels(
   };
 
   // --- the panels ---
+  // A section of the sidebar has a title that folds it away and opens it again; what was folded is kept.
+  const foldable = (id: string, title: TextKey, className: string) => {
+    const body = el('div', 'panel-body');
+    const mark = el('span', 'fold-mark');
+    const toggle = el('button', 'panel-toggle', t(title), mark);
+    toggle.type = 'button';
+    const root = el('section', `panel ${className}`, el('h2', '', toggle), body);
+    const show = (): void => {
+      const open = !folded.has(id);
+      mark.textContent = open ? OPEN_MARK : FOLDED_MARK;
+      toggle.setAttribute('aria-expanded', String(open));
+      body.style.display = open ? '' : 'none';
+      root.className = open ? `panel ${className}` : `panel ${className} folded`;
+    };
+    toggle.addEventListener('click', () => {
+      if (!folded.delete(id)) folded.add(id);
+      saveFolded(store, folded);
+      show();
+    });
+    show();
+    return { root, body };
+  };
+
   const agents = section('panel.agents', 'agents');
   const orders = section('panel.orders', 'orders');
-  const stock = section('panel.stock', 'stock');
   const boss = section('panel.boss', 'boss');
-  const log = section('panel.log', 'log');
+  const controlsPanel = foldable('time', 'panel.time', 'time');
+  const log = foldable('log', 'panel.log', 'log');
+  const stock = foldable('stock', 'panel.stock', 'stock');
+  controlsPanel.body.append(controls, viewControl);
   const sceneSlot = el('section', 'scene-slot');
   const banner = el('div', 'scene-banner', t('status.closed'));
   banner.style.display = 'none';
@@ -100,7 +131,7 @@ export function createPanels(
   // it, and a column on the right with the log (it scrolls) and the stock below it.
   const topbar = el('header', 'topbar', el('h1', '', t('app.title')), strip);
   const main = el('div', 'main', sceneSlot, el('div', 'info', agents.root, orders.root, boss.root));
-  const side = el('aside', 'side', log.root, stock.root);
+  const side = el('aside', 'side', controlsPanel.root, log.root, stock.root);
   root.replaceChildren(topbar, notice, el('main', 'watch', main, side));
 
   const drawControls = (paused: boolean, speed: number, enabled: boolean): void => {

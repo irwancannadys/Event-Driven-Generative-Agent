@@ -29,7 +29,7 @@ export const ID = {
   'panel.log': 'Kejadian',
   'panel.stock': 'Stok',
   'panel.boss': 'Meja Bos',
-  'panel.time': 'Waktu',
+  'panel.time': 'Kontrol waktu',
 
   'agent.until': 'sampai',
   'orders.placed': 'menunggu',

@@ -403,3 +403,44 @@ button.reject {
   background: rgba(44, 44, 42, 0.75);
   color: #fff;
 }
+
+/* A section of the sidebar folds away when its title is clicked. */
+.panel-toggle {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+.panel-toggle:hover:not(:disabled) {
+  color: var(--accent);
+}
+.fold-mark {
+  font-size: 15px;
+  line-height: 1;
+}
+.panel.folded h2 {
+  margin-bottom: 0;
+}
+.side .controls {
+  flex-direction: column;
+  align-items: flex-start;
+  margin-left: 0;
+  gap: 8px;
+}
+.side .group {
+  flex-wrap: wrap;
+  gap: 4px 6px;
+}
+.side .view-control {
+  display: block;
+  margin-top: 10px;
+}

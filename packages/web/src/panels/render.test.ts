@@ -3,12 +3,13 @@ import { agent, apply, event, snapshot, stockRow } from '../state/test-fixtures'
 import { applySnapshot } from '../state/world';
 import { asElement, FakeNode, installFakeDom } from './fake-dom';
 import type { ViewChoice } from '../view-mode';
+import type { KeyValueStore } from './collapse';
 import { createPanels, type PanelActions } from './render';
 
 beforeEach(() => installFakeDom());
 afterEach(() => vi.unstubAllGlobals());
 
-function setup(overrides: Partial<PanelActions> = {}, view?: ViewChoice) {
+function setup(overrides: Partial<PanelActions> = {}, view?: ViewChoice, store?: KeyValueStore) {
   const root = new FakeNode('div');
   const calls = { decide: [] as unknown[][], time: [] as unknown[] };
   const actions: PanelActions = {
@@ -22,7 +23,7 @@ function setup(overrides: Partial<PanelActions> = {}, view?: ViewChoice) {
     },
     ...overrides,
   };
-  const panels = createPanels(asElement(root), actions, { view });
+  const panels = createPanels(asElement(root), actions, { view, store });
   return { root, panels, calls };
 }
 
@@ -58,7 +59,9 @@ describe('the panels', () => {
     panels.update({ state: undefined, status: 'connecting', nowMs: 0 });
     expect(root.textContent).toContain('Menunggu data dunia dari server');
     expect(root.textContent).toContain('Menyambung ke server');
-    expect(root.findAll((node) => node.tag === 'button')).toHaveLength(0);
+    // only the titles that fold a section are left, no time control
+    const buttons = root.findAll((node) => node.tag === 'button');
+    expect(buttons.every((node) => node.className === 'panel-toggle')).toBe(true);
   });
 
   it('show the connection, the time, the characters, the orders, the stock, the log and the boss desk', () => {
@@ -208,5 +211,83 @@ describe('the choice between the picture and the panels', () => {
     ]) {
       expect(root.textContent).toContain(text);
     }
+  });
+});
+
+describe('the sidebar', () => {
+  const side = (root: FakeNode) =>
+    root.findAll((node) => node.tag === 'aside' && node.className === 'side')[0] as FakeNode;
+  const body = (root: FakeNode, title: string) => {
+    const section = side(root).findAll(
+      (node) => node.tag === 'section' && node.textContent.startsWith(title),
+    )[0] as FakeNode;
+    return section.findAll((node) => node.className === 'panel-body')[0] as FakeNode;
+  };
+  const memoryStore = (initial: string | null = null) => {
+    const store = {
+      value: initial,
+      getItem: () => store.value,
+      setItem: (_key: string, value: string) => void (store.value = value),
+    };
+    return store;
+  };
+
+  it('holds the time controls, the log and the stock, and the top of the page only the status', () => {
+    const { root, panels } = setup();
+    panels.update({ state: world(), status: 'open', nowMs: 1000 });
+    const sidebar = side(root).textContent;
+    for (const text of [
+      'Kontrol waktu',
+      'Jeda',
+      '600x',
+      '+1 jam',
+      'Kejadian',
+      'Stok',
+      'Panel saja',
+    ])
+      expect(sidebar).toContain(text);
+    const topbar = root.findAll((node) => node.tag === 'header' && node.className === 'topbar')[0];
+    expect(topbar?.textContent).toContain('Hari 0, 08:20');
+    expect(topbar?.textContent).not.toContain('Jeda');
+    expect(topbar?.textContent).not.toContain('Panel saja');
+  });
+
+  it('folds a section away and opens it again, with the title as the button', () => {
+    const { root, panels } = setup();
+    panels.update({ state: world(), status: 'open', nowMs: 1000 });
+    const toggle = side(root).findAll((node) => node.className === 'panel-toggle');
+    expect(toggle.map((node) => node.attributes['aria-expanded'])).toEqual([
+      'true',
+      'true',
+      'true',
+    ]);
+    root.button('Kontrol waktu\u25be').click();
+    expect(body(root, 'Kontrol waktu').style.display).toBe('none');
+    expect(body(root, 'Kejadian').style.display).toBe('');
+    expect(root.button('Kontrol waktu\u25b8').attributes['aria-expanded']).toBe('false');
+    root.button('Kontrol waktu\u25b8').click();
+    expect(body(root, 'Kontrol waktu').style.display).toBe('');
+  });
+
+  it('keeps the time controls working inside a section that was folded and opened again', () => {
+    const { root, panels, calls } = setup();
+    panels.update({ state: world(), status: 'open', nowMs: 1000 });
+    root.button('Kontrol waktu\u25be').click();
+    root.button('Kontrol waktu\u25b8').click();
+    root.button('600x').click();
+    expect(calls.time).toEqual([{ speed: 600 }]);
+  });
+
+  it('remembers what was folded, for the next visit', () => {
+    const store = memoryStore();
+    const first = setup({}, undefined, store);
+    first.panels.update({ state: world(), status: 'open', nowMs: 1000 });
+    first.root.button('Kejadian\u25be').click();
+    expect(JSON.parse(store.value ?? '[]')).toEqual(['log']);
+
+    const second = setup({}, undefined, store);
+    second.panels.update({ state: world(), status: 'open', nowMs: 1000 });
+    expect(body(second.root, 'Kejadian').style.display).toBe('none');
+    expect(body(second.root, 'Stok').style.display).toBe('');
   });
 });

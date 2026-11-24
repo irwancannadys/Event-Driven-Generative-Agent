@@ -11,6 +11,8 @@ export class FakeNode {
   type = '';
   disabled = false;
   style: Record<string, string> = {};
+  /** Attributes set with `setAttribute` (the panels mark whether a section is open this way). */
+  readonly attributes: Record<string, string> = {};
   clientWidth = 800;
   clientHeight = 400;
   /** Class names added with `classList` (the scene marks a drag this way). */
@@ -23,6 +25,10 @@ export class FakeNode {
   private readonly listeners = new Map<string, ((event: never) => void)[]>();
 
   constructor(readonly tag: string) {}
+
+  setAttribute(name: string, value: string): void {
+    this.attributes[name] = value;
+  }
 
   append(...nodes: Child[]): void {
     for (const node of nodes) if (typeof node !== 'string') node.parent = this;
