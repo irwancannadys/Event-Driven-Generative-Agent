@@ -40,6 +40,11 @@ export function handleDueItem(ctx: Context, item: DueItem, scenario: Scenario): 
     case 'complaint_check':
       checkComplaints(ctx, scenario);
       return;
+
+    case 'task_end':
+    case 'restock_arrival':
+      // Dynamic items are handled by the agent engine (stage 3, step 6).
+      throw new Error(`no handler for dynamic item "${item.kind}" yet`);
   }
 }
 

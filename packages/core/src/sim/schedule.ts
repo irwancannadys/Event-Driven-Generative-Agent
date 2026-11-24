@@ -1,5 +1,5 @@
 import { REGULARS } from '../seed-data';
-import type { TableId } from '../ids';
+import type { AgentId, TableId } from '../ids';
 import type { OrderItem } from '../schema-parts';
 import {
   CLOSE_TIME_SEC,
@@ -22,7 +22,8 @@ import {
 // (decision 020). Nothing is remembered between calls, so asking for the same window again, or for the
 // same time span cut into pieces, always gives the same answer.
 
-export type DueItem =
+/** Items whose time follows from the seed and the clock alone. */
+export type StaticDueItem =
   | { kind: 'day_opened'; time: SimTime; day: number }
   | { kind: 'day_closed'; time: SimTime; day: number }
   | {
@@ -35,23 +36,39 @@ export type DueItem =
   | { kind: 'order_arrival'; time: SimTime; items: OrderItem[] }
   | { kind: 'complaint_check'; time: SimTime };
 
+/**
+ * Items whose time is only known while the world runs, so the server reads them from the projections
+ * (decision 023): the end of an agent's task and the arrival of a supplier delivery.
+ */
+export type DynamicDueItem =
+  | { kind: 'task_end'; time: SimTime; agent_id: AgentId; task_id: number }
+  | { kind: 'restock_arrival'; time: SimTime; restock_id: number };
+
+export type DueItem = StaticDueItem | DynamicDueItem;
+
 /** What goes first when two items are due in the same second. */
 const PRIORITY: Record<DueItem['kind'], number> = {
   day_opened: 0,
   regular_expected: 1,
-  order_arrival: 2,
-  complaint_check: 3,
-  day_closed: 4,
+  restock_arrival: 2,
+  task_end: 3,
+  order_arrival: 4,
+  complaint_check: 5,
+  day_closed: 6,
 };
 
+export function priorityOf(item: DueItem): number {
+  return PRIORITY[item.kind];
+}
+
 /** All items due in the window (after, upTo], ordered by time and then by priority. */
-export function dueItems(after: SimTime, upTo: SimTime, scenario: Scenario): DueItem[] {
+export function dueItems(after: SimTime, upTo: SimTime, scenario: Scenario): StaticDueItem[] {
   if (upTo <= after) return [];
-  const items: DueItem[] = [];
+  const items: StaticDueItem[] = [];
   for (let day = Math.max(0, dayOf(after)); day <= dayOf(upTo); day += 1) {
     collectDay(day * SECONDS_PER_DAY, day, after, upTo, scenario, items);
   }
-  return items.sort((a, b) => a.time - b.time || PRIORITY[a.kind] - PRIORITY[b.kind]);
+  return items.sort((a, b) => a.time - b.time || priorityOf(a) - priorityOf(b));
 }
 
 function inWindow(time: SimTime, after: SimTime, upTo: SimTime): boolean {
@@ -64,7 +81,7 @@ function collectDay(
   after: SimTime,
   upTo: SimTime,
   scenario: Scenario,
-  out: DueItem[],
+  out: StaticDueItem[],
 ): void {
   const opens = base + OPEN_TIME_SEC;
   const closes = base + CLOSE_TIME_SEC;
@@ -105,7 +122,7 @@ function collectArrivals(
   after: SimTime,
   upTo: SimTime,
   scenario: Scenario,
-  out: DueItem[],
+  out: StaticDueItem[],
 ): void {
   const hour = Math.floor((slot % SECONDS_PER_DAY) / SECONDS_PER_HOUR);
   const expected = (arrivalsPerHour(hour) * scenario.crowdPct) / 100 / SLOT_SEC;
@@ -141,4 +158,35 @@ function chooseItems(seed: number, tag: string): OrderItem[] {
     items.push({ menu_item_id, qty: pickWeighted(seed, `qty${line}@${tag}`, QUANTITIES) });
   }
   return items;
+}
+
+/**
+ * The static items as a source for `VirtualClock`: for a window `(after, upTo]` it returns the group
+ * of items due at the earliest time. The items of a whole `advance` are worked out once and cached,
+ * so the many calls of one `advance` do not each recompute the same window. A different `upTo`, or an
+ * `after` before the cached start, starts a fresh calculation.
+ */
+export function makeStaticSource(
+  scenario: Scenario,
+): (after: SimTime, upTo: SimTime) => StaticDueItem[] {
+  let cache: { from: SimTime; upTo: SimTime; items: StaticDueItem[] } | undefined;
+  return (after, upTo) => {
+    if (upTo <= after) return [];
+    if (!cache || cache.upTo !== upTo || after < cache.from) {
+      cache = { from: after, upTo, items: dueItems(after, upTo, scenario) };
+    }
+    const { items } = cache;
+    let low = 0;
+    let high = items.length;
+    while (low < high) {
+      const middle = (low + high) >> 1;
+      if ((items[middle] as StaticDueItem).time > after) high = middle;
+      else low = middle + 1;
+    }
+    if (low >= items.length) return [];
+    const time = (items[low] as StaticDueItem).time;
+    let end = low;
+    while (end < items.length && (items[end] as StaticDueItem).time === time) end += 1;
+    return items.slice(low, end);
+  };
 }

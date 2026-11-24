@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SEED_MENU_IDS, makeScenario } from './scenario';
-import { dueItems, type DueItem } from './schedule';
+import { dueItems, makeStaticSource, priorityOf, type DueItem } from './schedule';
 import { CLOSE_TIME_SEC, OPEN_TIME_SEC, SECONDS_PER_DAY, formatClock, simTime } from '../time';
 
 const scenario = makeScenario(42);
@@ -172,5 +172,66 @@ describe('dueItems and the scenario', () => {
       perMinute.set(minute, (perMinute.get(minute) ?? 0) + 1);
     }
     expect(Math.max(...perMinute.values())).toBeGreaterThan(1);
+  });
+});
+
+describe('makeStaticSource', () => {
+  it('returns the group of items due at the earliest time', () => {
+    const source = makeStaticSource(scenario);
+    const first = source(0, SECONDS_PER_DAY);
+    expect(first.length).toBeGreaterThan(0);
+    expect(new Set(first.map((item) => item.time)).size).toBe(1);
+    expect(first[0]?.time).toBe(oneDay()[0]?.time);
+  });
+
+  it('returns the items of a window one group at a time, in the same order as dueItems', () => {
+    const source = makeStaticSource(scenario);
+    const collected: DueItem[] = [];
+    let after = 0;
+    for (;;) {
+      const group = source(after, SECONDS_PER_DAY);
+      if (group.length === 0) break;
+      collected.push(...group);
+      after = (group[0] as DueItem).time;
+    }
+    expect(collected).toEqual(oneDay());
+  });
+
+  it('groups items of the same second by priority: the closing check comes before day_closed', () => {
+    const source = makeStaticSource(scenario);
+    const group = source(CLOSE_TIME_SEC - 1, CLOSE_TIME_SEC);
+    expect(group.map((item) => item.kind)).toEqual(['complaint_check', 'day_closed']);
+  });
+
+  it('is empty when nothing is due, or the window is empty', () => {
+    const source = makeStaticSource(scenario);
+    expect(source(100, 100)).toEqual([]);
+    expect(source(200, 100)).toEqual([]);
+    expect(source(simTime(0, 21), simTime(0, 21) + 30)).toEqual([]);
+  });
+
+  it('still gives the right answer after the window changes (the cache is not stale)', () => {
+    const source = makeStaticSource(scenario);
+    source(0, 40000);
+    const later = source(40000, SECONDS_PER_DAY);
+    expect(later[0]?.time).toBe(dueItems(40000, SECONDS_PER_DAY, scenario)[0]?.time);
+    const earlier = source(0, 30000);
+    expect(earlier[0]?.time).toBe(dueItems(0, 30000, scenario)[0]?.time);
+  });
+});
+
+describe('priorityOf', () => {
+  it('puts a delivery before a task end, and both before new orders and the checks', () => {
+    const order: DueItem[] = [
+      { kind: 'day_opened', time: 0, day: 0 },
+      { kind: 'restock_arrival', time: 0, restock_id: 1 },
+      { kind: 'task_end', time: 0, agent_id: 'cook', task_id: 1 },
+      { kind: 'order_arrival', time: 0, items: [] },
+      { kind: 'complaint_check', time: 0 },
+      { kind: 'day_closed', time: 0, day: 0 },
+    ];
+    const priorities = order.map((item) => priorityOf(item));
+    expect(priorities).toEqual([...priorities].sort((a, b) => a - b));
+    expect(new Set(priorities).size).toBe(priorities.length);
   });
 });

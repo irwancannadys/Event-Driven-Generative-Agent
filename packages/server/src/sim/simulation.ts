@@ -1,7 +1,7 @@
 import {
   OPEN_TIME_SEC,
   VirtualClock,
-  dueItems,
+  makeStaticSource,
   type DueItem,
   type Scenario,
   type SimTime,
@@ -61,9 +61,10 @@ export function bootSimulation(options: BootOptions): Simulation {
   // The clock needs the context (its handlers write events) and the context needs the clock,
   // so the context is filled in right after the clock exists.
   const holder: { ctx?: Context } = {};
+  const staticSource = makeStaticSource(scenario);
   const clock = new VirtualClock<DueItem>(
     start,
-    (after, upTo) => dueItems(after, upTo, scenario),
+    (after, upTo) => staticSource(after, upTo),
     (item) => handleDueItem(requireContext(holder.ctx), item, scenario),
   );
   const context: Context = { db, clock, publish: bus?.publish };

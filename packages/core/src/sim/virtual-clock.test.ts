@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { makeScenario } from './scenario';
-import { dueItems, type DueItem } from './schedule';
+import { makeStaticSource, type DueItem } from './schedule';
 import { VirtualClock } from './virtual-clock';
 import { SECONDS_PER_DAY, simTime } from '../time';
 
@@ -9,21 +9,26 @@ interface Tick {
   label: string;
 }
 
-/** A tiny timetable for tests: the items that are due, with a label. */
+/**
+ * A timetable for tests, as a `due` function: it returns the group of items due at the earliest
+ * time in (after, upTo], like the real sources do. Items given at the same time keep their order.
+ */
 function timetable(...entries: [number, string][]): (after: number, upTo: number) => Tick[] {
-  return (after, upTo) =>
-    entries
+  return (after, upTo) => {
+    const inWindow = entries
       .filter(([time]) => time > after && time <= upTo)
-      .map(([time, label]) => ({ time, label }));
+      .sort((a, b) => a[0] - b[0]);
+    if (inWindow.length === 0) return [];
+    const earliest = (inWindow[0] as [number, string])[0];
+    return inWindow.filter(([time]) => time === earliest).map(([time, label]) => ({ time, label }));
+  };
 }
+
+const noop = () => undefined;
 
 describe('VirtualClock', () => {
   it('starts at the given time and moves to the target even when nothing is due', () => {
-    const clock = new VirtualClock(
-      1000,
-      () => [],
-      () => undefined,
-    );
+    const clock = new VirtualClock(1000, () => [], noop);
     expect(clock.now()).toBe(1000);
     clock.advance(500);
     expect(clock.now()).toBe(1500);
@@ -33,10 +38,9 @@ describe('VirtualClock', () => {
 
   it('handles due items in order, with now() set to the time of each item', () => {
     const seen: { label: string; now: number }[] = [];
-    // `due` must return items sorted by time, like the real schedule does.
     const clock: VirtualClock<Tick> = new VirtualClock(
       0,
-      timetable([10, 'a'], [20, 'b'], [30, 'c']),
+      timetable([30, 'c'], [10, 'a'], [20, 'b']),
       (item) => seen.push({ label: item.label, now: clock.now() }),
     );
     clock.advance(100);
@@ -65,11 +69,7 @@ describe('VirtualClock', () => {
     const handled: string[] = [];
     const clock = new VirtualClock<Tick>(
       0,
-      () => [
-        { time: 5, label: 'first' },
-        { time: 5, label: 'second' },
-        { time: 5, label: 'third' },
-      ],
+      timetable([5, 'first'], [5, 'second'], [5, 'third']),
       (item) => handled.push(item.label),
     );
     clock.advance(10);
@@ -77,22 +77,11 @@ describe('VirtualClock', () => {
   });
 
   it('rejects amounts that are negative or not whole seconds', () => {
-    const clock = new VirtualClock(
-      0,
-      () => [],
-      () => undefined,
-    );
+    const clock = new VirtualClock(0, () => [], noop);
     expect(() => clock.advance(-1)).toThrow(/non-negative integer/);
     expect(() => clock.advance(1.5)).toThrow(/non-negative integer/);
     expect(() => clock.advance(Number.NaN)).toThrow(/non-negative integer/);
-    expect(
-      () =>
-        new VirtualClock(
-          -1,
-          () => [],
-          () => undefined,
-        ),
-    ).toThrow(/non-negative integer/);
+    expect(() => new VirtualClock(-1, () => [], noop)).toThrow(/non-negative integer/);
   });
 
   it('goes back to the last handled item when a handler fails, and retries the failed item', () => {
@@ -114,14 +103,100 @@ describe('VirtualClock', () => {
   });
 });
 
-describe('VirtualClock with the real schedule', () => {
+describe('VirtualClock with items that appear while handling (decision 023)', () => {
+  /** A pool of items that handlers can add to, like tasks that end at a time known only once they start. */
+  function dynamicPool(initial: [number, string][]) {
+    const entries: [number, string][] = [...initial];
+    const due = (after: number, upTo: number): Tick[] => timetable(...entries)(after, upTo);
+    const remove = (item: Tick) => {
+      const index = entries.findIndex(
+        ([time, label]) => time === item.time && label === item.label,
+      );
+      entries.splice(index, 1);
+    };
+    return { entries, due, remove };
+  }
+
+  it('processes an item that a handler adds inside the same advance', () => {
+    const pool = dynamicPool([[10, 'start']]);
+    const handled: string[] = [];
+    const clock = new VirtualClock<Tick>(0, pool.due, (item) => {
+      pool.remove(item);
+      handled.push(`${item.label}@${item.time}`);
+      if (item.label === 'start') pool.entries.push([item.time + 25, 'end']);
+    });
+    clock.advance(100);
+    expect(handled).toEqual(['start@10', 'end@35']);
+  });
+
+  it('leaves an item that falls after the target for a later advance', () => {
+    const pool = dynamicPool([[10, 'start']]);
+    const handled: string[] = [];
+    const clock = new VirtualClock<Tick>(0, pool.due, (item) => {
+      pool.remove(item);
+      handled.push(item.label);
+      if (item.label === 'start') pool.entries.push([item.time + 90, 'end']);
+    });
+    clock.advance(50);
+    expect(handled).toEqual(['start']);
+    clock.advance(60);
+    expect(handled).toEqual(['start', 'end']);
+  });
+
+  it('chains several steps: each item adds the next one', () => {
+    const pool = dynamicPool([[5, 'step1']]);
+    const times: number[] = [];
+    const clock = new VirtualClock<Tick>(0, pool.due, (item) => {
+      pool.remove(item);
+      times.push(item.time);
+      if (times.length < 4) pool.entries.push([item.time + 10, `step${times.length + 1}`]);
+    });
+    clock.advance(1000);
+    expect(times).toEqual([5, 15, 25, 35]);
+  });
+
+  it('accepts an item that is due right now (an overdue item), as long as it gets resolved', () => {
+    const pool = dynamicPool([[100, 'overdue']]);
+    const handled: string[] = [];
+    // The provider reports an overdue item at the current time, as the server does after a crash.
+    const due = (after: number, upTo: number): Tick[] => {
+      const overdue = pool.entries.filter(([time]) => time <= after);
+      if (overdue.length > 0) return overdue.map(([, label]) => ({ time: after, label }));
+      return pool.due(after, upTo);
+    };
+    const clock = new VirtualClock<Tick>(200, due, (item) => {
+      pool.entries.splice(0, pool.entries.length);
+      handled.push(`${item.label}@${item.time}`);
+    });
+    clock.advance(10);
+    expect(handled).toEqual(['overdue@200']);
+    expect(clock.now()).toBe(210);
+  });
+
+  it('gives up with an error when an item is never resolved', () => {
+    const clock = new VirtualClock<Tick>(0, (after) => [{ time: after, label: 'stuck' }], noop, {
+      maxGroups: 50,
+    });
+    expect(() => clock.advance(10)).toThrow(/gave up after 50 groups/);
+  });
+
+  it('refuses an item outside the window it was asked for', () => {
+    const early = new VirtualClock<Tick>(100, () => [{ time: 50, label: 'past' }], noop);
+    expect(() => early.advance(10)).toThrow(/outside the window/);
+    const late = new VirtualClock<Tick>(0, () => [{ time: 500, label: 'future' }], noop);
+    expect(() => late.advance(10)).toThrow(/outside the window/);
+  });
+});
+
+describe('VirtualClock with the real static schedule', () => {
   const scenario = makeScenario(42);
 
   function run(steps: number[]): string[] {
     const log: string[] = [];
+    const source = makeStaticSource(scenario);
     const clock: VirtualClock<DueItem> = new VirtualClock<DueItem>(
       0,
-      (after, upTo) => dueItems(after, upTo, scenario),
+      (after, upTo) => source(after, upTo),
       (item) => {
         expect(clock.now()).toBe(item.time);
         log.push(`${item.time}:${item.kind}`);
