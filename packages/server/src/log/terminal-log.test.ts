@@ -90,4 +90,78 @@ describe('formatEvent', () => {
     };
     expect(formatEvent(stored(state))).toBeNull();
   });
+
+  it('shows a virtual time as a clock, and cuts a long text', () => {
+    expect(
+      formatEvent(
+        stored(ev.restockOrdered(1, 1, [{ ingredient_id: 'susu', qty: 5000 }], 'late', 30600)),
+      ),
+    ).toBe(
+      line(
+        '08:00',
+        'Trigger',
+        'restock_ordered',
+        'restock_id=1 report_id=1 items=susu×5000 supplier=late eta_sim_time=08:30',
+      ),
+    );
+    const long =
+      'Mohon maaf atas keterlambatan pesanan ini, terima kasih atas kesabaran Anda semua.';
+    expect(formatEvent(stored(ev.complaintReplied(1, 'none', 28800)))).toContain(
+      'reply_text=Mohon',
+    );
+    const reply = formatEvent(
+      stored({
+        ...ev.complaintReplied(1),
+        payload: { complaint_id: 1, compensation: 'none', reply_text: long },
+      } as Event),
+    );
+    expect(reply).toContain('reply_text=Mohon maaf atas keterlambatan pesanan ini, terima…');
+    expect(reply).not.toContain('semua');
+  });
+
+  it('lifts the report out of a proposal and out of a triage', () => {
+    expect(formatEvent(stored(ev.restockProposed(4)))).toBe(
+      line(
+        '08:00',
+        'Aturan',
+        'restock_proposed',
+        'report_id=4 title=Usul belanja: Susu items=susu×5050 urgency=normal rationale=Susu tinggal 950 ml (batas 1000). Usul: isi sampa…',
+      ),
+    );
+    const withReport = formatEvent(
+      stored(ev.complaintTriaged(2, { report: { report_id: 7, title: 'Komplain', body: 'x' } })),
+    );
+    expect(withReport).toContain('needs_boss_decision=true report_id=7');
+    expect(withReport).not.toContain('{3 entries}');
+    expect(formatEvent(stored(ev.complaintTriaged(2)))).not.toContain('report_id');
+  });
+
+  it('spells out what the character decided', () => {
+    const decided: Event = {
+      type: 'agent_decided',
+      sim_time: 28800,
+      actor: 'cashier',
+      origin: 'rule',
+      payload: {
+        agent_id: 'cashier',
+        purpose: 'complaint_triage',
+        think_event_id: 5,
+        decision: {
+          category: 'slow_service',
+          severity: 2,
+          draft_reply: 'Mohon maaf.',
+          suggested_compensation: 'discount_10',
+          needs_boss_decision: true,
+        },
+      },
+    };
+    expect(formatEvent(stored(decided))).toBe(
+      line(
+        '08:00',
+        'Aturan',
+        'agent_decided',
+        'agent_id=cashier purpose=complaint_triage think_event_id=5 decision=[category=slow_service severity=2 draft_reply=Mohon maaf. suggested_compensation=discount_10 needs_boss_decision=true]',
+      ),
+    );
+  });
 });

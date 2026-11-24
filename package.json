@@ -19,7 +19,9 @@
     "seed": "npm run seed -w @cafe/server",
     "demo:stage1": "npm run demo:stage1 -w @cafe/server",
     "dev": "npm run dev -w @cafe/server",
-    "demo:stage2": "npm run demo:stage2 -w @cafe/server"
+    "demo:stage2": "npm run demo:stage2 -w @cafe/server",
+    "watch": "npm run watch -w @cafe/server --",
+    "demo:stage3": "npm run demo:stage3 -w @cafe/server"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

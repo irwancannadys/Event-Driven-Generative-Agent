@@ -15,7 +15,9 @@
     "seed": "tsx src/db/seed-cli.ts",
     "demo:stage1": "tsx src/demo/stage1-cli.ts",
     "dev": "tsx src/dev-cli.ts",
-    "demo:stage2": "tsx src/demo/stage2-cli.ts"
+    "demo:stage2": "tsx src/demo/stage2-cli.ts",
+    "watch": "tsx src/watch/watch-cli.ts",
+    "demo:stage3": "tsx src/demo/stage3-cli.ts"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^9.6.0"
