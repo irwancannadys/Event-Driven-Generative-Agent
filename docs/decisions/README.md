@@ -29,3 +29,6 @@ Satu file per keputusan, beberapa baris tiap file. Brief menang jika ada bentura
 | [023](023-dynamic-due-items.md) | Timer dinamis di VirtualClock |
 | [024](024-rule-based-restock-and-complaints.md) | Usulan belanja dan triase komplain berbasis aturan |
 | [025](025-boss-api-watch-and-auto-boss.md) | Kontrol bos lewat API, papan pantau, dan bos otomatis untuk tes |
+| [026](026-websocket-snapshot-events-clock.md) | WebSocket: snapshot, events, dan clock |
+| [027](027-scene-is-a-function-of-state-and-time.md) | Adegan adalah fungsi dari (state, waktu virtual) |
+| [028](028-web-stack-proxy-and-no-framework.md) | Stack web: Vite, Three.js, proxy, DOM tanpa framework |
