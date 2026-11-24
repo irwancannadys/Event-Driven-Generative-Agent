@@ -1,24 +1,16 @@
 :root {
-  --bg: #f7f3ea;
-  --fg: #2c2c2a;
-  --muted: #6f6c63;
+  color-scheme: light;
+  --bg: #f5efe3;
+  --bg-glow: #fffaf0;
+  --fg: #2b2a27;
+  --muted: #6c685c;
   --card: #ffffff;
-  --line: #ded7c6;
-  --ok: #1d9e75;
-  --warn: #ba7517;
-  --bad: #c9352f;
-  --accent: #3b6fd4;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #1f1e1b;
-    --fg: #ece8dc;
-    --muted: #a09b8c;
-    --card: #2a2925;
-    --line: #3c3a34;
-    --accent: #6b9bf2;
-  }
+  --line: #e7dfce;
+  --ok: #2a9d6a;
+  --warn: #c27a12;
+  --bad: #cf4437;
+  --accent: #2a7f52;
+  --brand: #5c3d27;
 }
 
 * {
@@ -28,7 +20,10 @@
 html,
 body {
   margin: 0;
-  background: var(--bg);
+  background:
+    radial-gradient(ellipse at 20% -10%, var(--bg-glow), transparent 55%),
+    radial-gradient(ellipse at 100% 100%, #e9f1e4, transparent 50%), var(--bg);
+  background-attachment: fixed;
   color: var(--fg);
   font:
     14px/1.45 system-ui,
@@ -47,6 +42,7 @@ h1 {
   margin: 0;
   font-size: 18px;
   white-space: nowrap;
+  color: var(--brand);
 }
 
 .topbar {
@@ -264,9 +260,9 @@ button.reject {
   border: 1px solid var(--line);
   border-radius: 12px;
   background:
-    radial-gradient(ellipse at 15% 0%, rgba(86, 150, 160, 0.28), transparent 55%),
-    radial-gradient(ellipse at 85% 100%, rgba(214, 128, 62, 0.22), transparent 50%),
-    radial-gradient(ellipse at 50% 30%, #6a5240 0%, #2f231a 50%, #120d0a 100%);
+    radial-gradient(ellipse at 12% 0%, rgba(150, 205, 190, 0.45), transparent 55%),
+    radial-gradient(ellipse at 90% 100%, rgba(244, 190, 140, 0.4), transparent 55%),
+    radial-gradient(ellipse at 50% 35%, #fffaf0 0%, #f6e8cf 55%, #ecd6b4 100%);
   color: #2c2c2a;
   cursor: grab;
   touch-action: none;

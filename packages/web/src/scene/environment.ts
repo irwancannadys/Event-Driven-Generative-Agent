@@ -56,13 +56,13 @@ export function buildStage(): Group {
   stage.name = 'stage';
   const top = new Mesh(
     new CylinderGeometry(24, 24.6, 0.5, 72),
-    new MeshStandardMaterial({ color: 0x3a2a1d, roughness: 0.75 }),
+    new MeshStandardMaterial({ color: 0xe3d2b2, roughness: 0.8 }),
   );
   top.position.y = -1;
   top.receiveShadow = true;
   const rim = new Mesh(
     new CylinderGeometry(24.6, 24.9, 0.25, 72),
-    new MeshStandardMaterial({ color: 0x6b4d33, roughness: 0.6 }),
+    new MeshStandardMaterial({ color: 0xc6a77c, roughness: 0.65 }),
   );
   rim.position.y = -1.37;
   rim.receiveShadow = true;
