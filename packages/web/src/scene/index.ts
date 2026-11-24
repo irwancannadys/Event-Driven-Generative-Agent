@@ -6,13 +6,15 @@ import { virtualNow, type WorldState } from '../state/world';
 import {
   AZIMUTH_START,
   BASE_FOV,
+  ELEVATION_START,
   CAMERA_TARGET,
   cameraPosition,
   dragAzimuth,
+  dragElevation,
   fovForAspect,
 } from './camera';
 import { createAvatar, type Avatar } from './avatar';
-import { lightTheScene } from './environment';
+import { buildStage, lightTheScene } from './environment';
 import { LabelLayer } from './labels';
 import { agentPose, potTilt } from './pose';
 import { visibleCustomers, dishesOnCounter } from './customer';
@@ -40,6 +42,7 @@ export function createScene(
 
   const scene = new Scene();
   lightTheScene(renderer, scene);
+  scene.add(buildStage());
 
   const room = buildRoom();
   scene.add(room.group);
@@ -64,8 +67,9 @@ export function createScene(
 
   const camera = new PerspectiveCamera(BASE_FOV, 1, 0.1, 100);
   let azimuth = AZIMUTH_START;
+  let elevation = ELEVATION_START;
   const aim = (): void => {
-    const position = cameraPosition(azimuth);
+    const position = cameraPosition(azimuth, elevation);
     camera.position.set(position.x, position.y, position.z);
     camera.lookAt(CAMERA_TARGET.x, CAMERA_TARGET.y, CAMERA_TARGET.z);
   };
@@ -89,15 +93,16 @@ export function createScene(
   observer.observe(container);
 
   // Dragging swings the camera a little to either side.
-  let dragFrom: number | undefined;
+  let dragFrom: { x: number; y: number } | undefined;
   const onDown = (event: PointerEvent): void => {
-    dragFrom = event.clientX;
+    dragFrom = { x: event.clientX, y: event.clientY };
     container.classList.add('dragging');
   };
   const onMove = (event: PointerEvent): void => {
     if (dragFrom === undefined) return;
-    azimuth = dragAzimuth(azimuth, event.clientX - dragFrom);
-    dragFrom = event.clientX;
+    azimuth = dragAzimuth(azimuth, event.clientX - dragFrom.x);
+    elevation = dragElevation(elevation, event.clientY - dragFrom.y);
+    dragFrom = { x: event.clientX, y: event.clientY };
     aim();
   };
   const onUp = (): void => {
@@ -140,7 +145,7 @@ export function createScene(
         avatar.object.visible = true;
         avatar.object.position.set(pose.x, 0, pose.z);
         avatar.object.rotation.y = pose.facing;
-        avatar.play(pose.status, seconds);
+        avatar.play(pose.status, seconds, pose.walked);
         labels.set(
           `agent:${id}`,
           `${AGENT_NAME_ID[id]} · ${agentActivity(agent)}`,
@@ -169,7 +174,7 @@ export function createScene(
         }
         view.object.position.set(pose.x, 0, pose.z);
         view.object.rotation.y = pose.facing;
-        view.play(pose.moving ? 'walking' : 'idle', seconds);
+        view.play(pose.moving ? 'walking' : 'idle', seconds, pose.walked);
         view.sit(pose.seated);
         view.carry(pose.carrying);
         const key = `customer:${customer.orderId}`;

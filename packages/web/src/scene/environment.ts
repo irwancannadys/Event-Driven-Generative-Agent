@@ -1,8 +1,11 @@
 import {
   ACESFilmicToneMapping,
-  Color,
+  CylinderGeometry,
   DirectionalLight,
+  Group,
   HemisphereLight,
+  Mesh,
+  MeshStandardMaterial,
   PCFShadowMap,
   PMREMGenerator,
   type Scene,
@@ -18,7 +21,8 @@ export function lightTheScene(renderer: WebGLRenderer, scene: Scene): void {
   renderer.toneMappingExposure = 1.15;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = PCFShadowMap; // PCFSoftShadowMap is gone from this three; its warning says PCFShadowMap takes its place
-  scene.background = new Color(0x15110e);
+  // The picture is clear around the cafe: the page puts a warm gradient behind it (see style.css)
+  renderer.setClearColor(0x000000, 0);
 
   scene.add(new HemisphereLight(0xfff0dc, 0x6f5640, 1.5));
   const sun = new DirectionalLight(0xffe2bf, 2.4);
@@ -44,4 +48,24 @@ export function lightTheScene(renderer: WebGLRenderer, scene: Scene): void {
   } catch {
     // no reflections (the renderer is a stand-in in the tests): the picture is a little flatter, that is all
   }
+}
+
+/** A round wooden stage under the cafe, so that it stands on something, like a model on a table. */
+export function buildStage(): Group {
+  const stage = new Group();
+  stage.name = 'stage';
+  const top = new Mesh(
+    new CylinderGeometry(24, 24.6, 0.5, 72),
+    new MeshStandardMaterial({ color: 0x3a2a1d, roughness: 0.75 }),
+  );
+  top.position.y = -1;
+  top.receiveShadow = true;
+  const rim = new Mesh(
+    new CylinderGeometry(24.6, 24.9, 0.25, 72),
+    new MeshStandardMaterial({ color: 0x6b4d33, roughness: 0.6 }),
+  );
+  rim.position.y = -1.37;
+  rim.receiveShadow = true;
+  stage.add(top, rim);
+  return stage;
 }

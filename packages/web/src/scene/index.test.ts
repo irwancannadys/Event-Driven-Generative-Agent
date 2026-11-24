@@ -3,7 +3,15 @@ import { PerspectiveCamera } from 'three';
 import { agent, snapshot } from '../state/test-fixtures';
 import { applySnapshot, type WorldState } from '../state/world';
 import { FakeNode, installFakeDom } from '../panels/fake-dom';
-import { AZIMUTH_LIMIT, CAMERA_TARGET, cameraPosition, fovForAspect } from './camera';
+import {
+  AZIMUTH_LIMIT,
+  CAMERA_TARGET,
+  ELEVATION_MAX,
+  ELEVATION_MIN,
+  ELEVATION_START,
+  cameraPosition,
+  fovForAspect,
+} from './camera';
 import { createScene } from './index';
 import { projectToScreen } from './projection';
 import {
@@ -27,6 +35,7 @@ vi.mock('three', async (importOriginal) => {
     shadowMap = { enabled: false, type: 0 };
     toneMapping = 0;
     toneMappingExposure = 1;
+    setClearColor(): void {}
     setPixelRatio(): void {}
     setSize(): void {}
     render(): void {
@@ -109,14 +118,14 @@ const labelTexts = (root: FakeNode) =>
 const customersWorld = (): WorldState =>
   applySnapshot(
     snapshot({
-      recent_orders: Array.from({ length: 20 }, (_, index) => ({
+      recent_orders: Array.from({ length: 26 }, (_, index) => ({
         id: index + 1,
         status: 'cooking' as const,
         source: 'walk_in' as const,
         created_at_sim: 29_950 + index,
         done_at_sim: null,
       })),
-      open_complaints: [{ complaint_id: 1, order_id: 20 }],
+      open_complaints: [{ complaint_id: 1, order_id: 26 }],
     }),
     performance.now(),
   );
@@ -158,8 +167,8 @@ describe('createScene', () => {
     createScene(slot as unknown as HTMLElement, () => customersWorld());
     frame();
     const texts = labelTexts(slot);
-    expect(texts).toContain('!'); // the customer of order 20 complained
-    expect(texts).toContain('+6 antre'); // 20 customers, 14 drawn
+    expect(texts).toContain('!'); // the customer of order 26 complained, and is drawn though it is the newest
+    expect(texts).toContain('+6 antre'); // 26 customers, 20 drawn
     // only the customer with something to show has a bubble
     expect(slot.findAll((node) => node.className.includes('bubble'))).toHaveLength(1);
   });
@@ -250,14 +259,25 @@ describe('framing', () => {
   it.each([1.5, 1.78, 2, 2.6, 3])(
     'keeps everybody and everything inside the picture at aspect %s',
     (aspect) => {
-      for (const azimuth of [-AZIMUTH_LIMIT, 0, 0.15, AZIMUTH_LIMIT]) {
+      for (const [azimuth, elevation] of [
+        [-AZIMUTH_LIMIT, ELEVATION_START],
+        [0, ELEVATION_START],
+        [0.15, ELEVATION_START],
+        [AZIMUTH_LIMIT, ELEVATION_START],
+        [-AZIMUTH_LIMIT, ELEVATION_MIN],
+        [AZIMUTH_LIMIT, ELEVATION_MIN],
+        [0.15, ELEVATION_MIN],
+        [-AZIMUTH_LIMIT, ELEVATION_MAX],
+        [AZIMUTH_LIMIT, ELEVATION_MAX],
+        [0.15, ELEVATION_MAX],
+      ] as const) {
         const camera = new PerspectiveCamera(fovForAspect(aspect), aspect, 0.1, 100);
-        const at = cameraPosition(azimuth);
+        const at = cameraPosition(azimuth, elevation);
         camera.position.set(at.x, at.y, at.z);
         camera.lookAt(CAMERA_TARGET.x, CAMERA_TARGET.y, CAMERA_TARGET.z);
         for (const point of points) {
           const screen = projectToScreen(camera, point, 1000, 1000 / aspect);
-          const where = `${JSON.stringify(point)} azimuth ${azimuth}: ${Math.round(screen.x)},${Math.round(screen.y)}`;
+          const where = `${JSON.stringify(point)} azimuth ${azimuth}, elevation ${Math.round((elevation * 180) / Math.PI)}: ${Math.round(screen.x)},${Math.round(screen.y)}`;
           expect(screen.visible, where).toBe(true);
           expect(screen.x, where).toBeGreaterThan(0);
           expect(screen.x, where).toBeLessThan(1000);

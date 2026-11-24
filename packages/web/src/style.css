@@ -263,7 +263,10 @@ button.reject {
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: #15110e;
+  background:
+    radial-gradient(ellipse at 15% 0%, rgba(86, 150, 160, 0.28), transparent 55%),
+    radial-gradient(ellipse at 85% 100%, rgba(214, 128, 62, 0.22), transparent 50%),
+    radial-gradient(ellipse at 50% 30%, #6a5240 0%, #2f231a 50%, #120d0a 100%);
   color: #2c2c2a;
   cursor: grab;
   touch-action: none;
