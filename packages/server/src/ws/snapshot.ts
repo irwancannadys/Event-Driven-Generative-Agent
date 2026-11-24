@@ -1,5 +1,6 @@
 import {
   AGENT_HOME_STATION,
+  RECENT_DONE_WINDOW_SEC,
   type AgentId,
   type AgentView,
   type Snapshot,
@@ -20,8 +21,7 @@ import type { Context } from '../usecases/context';
 
 /** How many of the newest events a page gets with its snapshot, enough to fill the log. */
 export const SNAPSHOT_EVENT_COUNT = 200;
-/** A customer whose order was done this many virtual seconds ago may still be walking out. */
-export const RECENT_DONE_WINDOW_SEC = 1200;
+export { RECENT_DONE_WINDOW_SEC };
 /** The most orders a snapshot carries. */
 export const SNAPSHOT_ORDER_COUNT = 200;
 

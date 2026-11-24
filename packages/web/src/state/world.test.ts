@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ServerMessage, StoredEvent } from '@cafe/core';
+import { RECENT_DONE_WINDOW_SEC } from '@cafe/core';
 import {
   LOG_LIMIT,
   applyClock,
@@ -376,5 +377,108 @@ describe('freezeClock', () => {
     const frozen = freezeClock(start(), 4000);
     const next = applyMessage(frozen, { kind: 'snapshot', snapshot: snapshot() }, 5000);
     expect(next?.clock.time.paused).toBe(false);
+  });
+});
+
+describe('customers', () => {
+  const placed = (order_id: number, sim_time = 30_100) =>
+    event('order_created', { order_id, source: 'walk_in', items: [] }, sim_time);
+
+  it('comes from the orders of the snapshot, with the complaints that are still open', () => {
+    const state = applySnapshot(
+      snapshot({
+        recent_orders: [
+          {
+            id: 4,
+            status: 'cooking',
+            source: 'walk_in',
+            created_at_sim: 29_000,
+            done_at_sim: null,
+          },
+          { id: 5, status: 'done', source: 'walk_in', created_at_sim: 29_100, done_at_sim: 29_900 },
+        ],
+        open_complaints: [{ complaint_id: 2, order_id: 4 }],
+      }),
+      0,
+    );
+    expect(state.customers).toEqual({
+      4: {
+        orderId: 4,
+        source: 'walk_in',
+        status: 'cooking',
+        createdAt: 29_000,
+        doneAt: null,
+        complaint: 'open',
+      },
+      5: {
+        orderId: 5,
+        source: 'walk_in',
+        status: 'done',
+        createdAt: 29_100,
+        doneAt: 29_900,
+        complaint: 'none',
+      },
+    });
+    expect(state.openComplaints).toEqual({ 2: 4 });
+  });
+
+  it('gets a customer when an order comes in, and follows the order until it is done', () => {
+    let state = apply(start(), placed(7, 30_100));
+    expect(state.customers[7]).toEqual({
+      orderId: 7,
+      source: 'walk_in',
+      status: 'placed',
+      createdAt: 30_100,
+      doneAt: null,
+      complaint: 'none',
+    });
+    state = apply(state, event('cooking_started', { order_id: 7, duration_sim_sec: 100 }, 30_200));
+    expect(state.customers[7]?.status).toBe('cooking');
+    state = apply(state, event('cooking_done', { order_id: 7 }, 30_300));
+    expect(state.customers[7]).toMatchObject({ status: 'done', doneAt: 30_300 });
+  });
+
+  it('waits when the order is held for want of ingredients, and goes on when it is resumed', () => {
+    let state = apply(start(), placed(8));
+    state = apply(state, event('order_held', { order_id: 8, missing: [] }));
+    expect(state.customers[8]?.status).toBe('held');
+    state = apply(state, event('order_resumed', { order_id: 8 }));
+    expect(state.customers[8]?.status).toBe('placed');
+  });
+
+  it('is upset from a complaint until the cashier answers it', () => {
+    let state = apply(start(), placed(9));
+    state = apply(
+      state,
+      event('complaint_received', { complaint_id: 3, order_id: 9, cause: 'slow_service' }),
+    );
+    expect(state.customers[9]?.complaint).toBe('open');
+    expect(state.openComplaints).toEqual({ 3: 9 });
+    state = apply(
+      state,
+      event('complaint_replied', { complaint_id: 3, compensation: 'none', reply_text: 'x' }),
+    );
+    expect(state.customers[9]?.complaint).toBe('none');
+    expect(state.openComplaints).toEqual({});
+  });
+
+  it('ignores what is about an order or a complaint it does not know', () => {
+    const base = start();
+    expect(apply(base, event('cooking_done', { order_id: 99 })).customers).toEqual({});
+    expect(
+      apply(
+        base,
+        event('complaint_replied', { complaint_id: 99, compensation: 'none', reply_text: 'x' }),
+      ).openComplaints,
+    ).toEqual({});
+  });
+
+  it('forgets a customer that has been gone for long, and never one that is still waiting', () => {
+    let state = apply(start(), placed(1, 30_000), placed(2, 30_000));
+    state = apply(state, event('cooking_started', { order_id: 1, duration_sim_sec: 1 }, 30_001));
+    state = apply(state, event('cooking_done', { order_id: 1 }, 30_100));
+    expect(Object.keys(state.customers)).toEqual(['1', '2']);
+    state = apply(state, event('day_opened', { day: 0 }, 30_100 + 2 * RECENT_DONE_WINDOW_SEC + 1));
+    expect(Object.keys(state.customers)).toEqual(['2']); // order 2 is still waiting, however old
   });
 });

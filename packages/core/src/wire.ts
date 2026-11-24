@@ -69,6 +69,9 @@ export interface ReportView {
   decided_at_sim: SimTime | null;
 }
 
+/** A customer whose order was done this many virtual seconds ago may still be walking out. */
+export const RECENT_DONE_WINDOW_SEC = 1200;
+
 /** An order as far as the picture needs it: a customer is drawn for each one (decision 029). */
 export interface OrderView {
   id: number;

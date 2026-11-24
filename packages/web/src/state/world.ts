@@ -1,3 +1,4 @@
+import { RECENT_DONE_WINDOW_SEC } from '@cafe/core';
 import type {
   AgentId,
   AgentState as AgentStatus,
@@ -41,6 +42,21 @@ export interface ReportCard {
   submittedAt: number | null;
 }
 
+/**
+ * A customer, one for each order (decision 029). Walk-in customers are anonymous: all that is known of
+ * one is its order, so everything the picture shows of a customer comes from what happened to that order.
+ */
+export interface CustomerState {
+  orderId: number;
+  source: 'walk_in' | 'regular';
+  status: OrderStatus;
+  /** When the order came in, and when it was done (`null` while it is not). */
+  createdAt: number;
+  doneAt: number | null;
+  /** `open` from a complaint about the order until the cashier has answered it. */
+  complaint: 'none' | 'open';
+}
+
 /** The last clock the server sent, and the real time (ms) at which it arrived. */
 export interface ClockState {
   time: TimeView;
@@ -55,6 +71,10 @@ export interface WorldState {
   stock: Record<string, StockLevel>;
   orders: Record<OrderStatus, number>;
   reports: ReportCard[];
+  /** The customers, by order id: the orders that are not done and the ones done a short while ago. */
+  customers: Record<number, CustomerState>;
+  /** The complaints that are not answered yet, as complaint id to order id. */
+  openComplaints: Record<number, number>;
   /** The newest events, oldest first (the event log panel). */
   log: StoredEvent[];
 }
@@ -93,6 +113,24 @@ export function applySnapshot(snapshot: Snapshot, atMs: number): WorldState {
         createdAt: report.created_at_sim,
         submittedAt: report.submitted_at_sim,
       })),
+    customers: Object.fromEntries(
+      snapshot.recent_orders.map((order) => [
+        order.id,
+        {
+          orderId: order.id,
+          source: order.source,
+          status: order.status,
+          createdAt: order.created_at_sim,
+          doneAt: order.done_at_sim,
+          complaint: snapshot.open_complaints.some((c) => c.order_id === order.id)
+            ? ('open' as const)
+            : ('none' as const),
+        },
+      ]),
+    ),
+    openComplaints: Object.fromEntries(
+      snapshot.open_complaints.map((complaint) => [complaint.complaint_id, complaint.order_id]),
+    ),
     log: snapshot.events.slice(-LOG_LIMIT),
   };
 }
@@ -102,6 +140,26 @@ function moveOrder(state: WorldState, from: OrderStatus, to: OrderStatus): World
     ...state,
     orders: { ...state.orders, [from]: state.orders[from] - 1, [to]: state.orders[to] + 1 },
   };
+}
+
+function changeCustomer(
+  state: WorldState,
+  orderId: number,
+  change: (customer: CustomerState) => CustomerState,
+): WorldState {
+  const customer = state.customers[orderId];
+  if (!customer) return state;
+  return { ...state, customers: { ...state.customers, [orderId]: change(customer) } };
+}
+
+/** Customers that are done for long are no use any more: dropped when time has moved well past them. */
+function forgetOldCustomers(state: WorldState, now: number): WorldState {
+  const keep = Object.entries(state.customers).filter(
+    ([, customer]) =>
+      customer.doneAt === null || now - customer.doneAt <= 2 * RECENT_DONE_WINDOW_SEC,
+  );
+  if (keep.length === Object.keys(state.customers).length) return state;
+  return { ...state, customers: Object.fromEntries(keep) };
 }
 
 function changeStock(
@@ -129,16 +187,84 @@ function changeReport(
 
 function react(state: WorldState, event: StoredEvent): WorldState {
   switch (event.type) {
-    case 'order_created':
-      return { ...state, orders: { ...state.orders, placed: state.orders.placed + 1 } };
+    case 'order_created': {
+      const { order_id, source } = event.payload;
+      return {
+        ...state,
+        orders: { ...state.orders, placed: state.orders.placed + 1 },
+        customers: {
+          ...state.customers,
+          [order_id]: {
+            orderId: order_id,
+            source,
+            status: 'placed',
+            createdAt: event.sim_time,
+            doneAt: null,
+            complaint: 'none',
+          },
+        },
+      };
+    }
     case 'order_held':
-      return moveOrder(state, 'placed', 'held');
+      return changeCustomer(
+        moveOrder(state, 'placed', 'held'),
+        event.payload.order_id,
+        (customer) => ({
+          ...customer,
+          status: 'held',
+        }),
+      );
     case 'cooking_started':
-      return moveOrder(state, 'placed', 'cooking');
+      return changeCustomer(
+        moveOrder(state, 'placed', 'cooking'),
+        event.payload.order_id,
+        (customer) => ({
+          ...customer,
+          status: 'cooking',
+        }),
+      );
     case 'cooking_done':
-      return moveOrder(state, 'cooking', 'done');
+      return changeCustomer(
+        moveOrder(state, 'cooking', 'done'),
+        event.payload.order_id,
+        (customer) => ({
+          ...customer,
+          status: 'done',
+          doneAt: event.sim_time,
+        }),
+      );
     case 'order_resumed':
-      return moveOrder(state, 'held', 'placed');
+      return changeCustomer(
+        moveOrder(state, 'held', 'placed'),
+        event.payload.order_id,
+        (customer) => ({
+          ...customer,
+          status: 'placed',
+        }),
+      );
+
+    case 'complaint_received':
+      return changeCustomer(
+        {
+          ...state,
+          openComplaints: {
+            ...state.openComplaints,
+            [event.payload.complaint_id]: event.payload.order_id,
+          },
+        },
+        event.payload.order_id,
+        (customer) => ({ ...customer, complaint: 'open' }),
+      );
+    case 'complaint_replied': {
+      const orderId = state.openComplaints[event.payload.complaint_id];
+      if (orderId === undefined) return state;
+      const openComplaints = { ...state.openComplaints };
+      delete openComplaints[event.payload.complaint_id];
+      return changeCustomer({ ...state, openComplaints }, orderId, (customer) => ({
+        ...customer,
+        complaint: 'none',
+      }));
+    }
 
     case 'stock_decreased':
       return changeStock(state, event.payload.ingredient_id, (row) => ({
@@ -233,7 +359,7 @@ function addReport(
  */
 export function applyEvent(state: WorldState, event: StoredEvent): WorldState {
   if (event.id <= state.lastEventId) return state;
-  const next = react(state, event);
+  const next = forgetOldCustomers(react(state, event), event.sim_time);
   return { ...next, lastEventId: event.id, log: [...next.log, event].slice(-LOG_LIMIT) };
 }
 
