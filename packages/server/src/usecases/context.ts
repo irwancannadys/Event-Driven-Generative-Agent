@@ -53,6 +53,6 @@ export function transact<T>(
 }
 
 /** Next id for an entity table, allocated inside the transaction that creates it (decision 012). */
-export function nextId(db: Db, table: 'orders'): number {
+export function nextId(db: Db, table: 'orders' | 'complaints'): number {
   return (db.prepare(`SELECT COALESCE(MAX(id), 0) + 1 FROM ${table}`).pluck().get() as number) ?? 1;
 }

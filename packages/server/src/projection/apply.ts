@@ -104,6 +104,22 @@ export function applyEvent(db: Db, event: StoredEvent): void {
       return;
     }
 
+    case 'complaint_received': {
+      const { complaint_id, order_id, cause } = event.payload;
+      const existing = db
+        .prepare('SELECT id FROM complaints WHERE order_id = ?')
+        .pluck()
+        .get(order_id);
+      if (existing !== undefined) {
+        throw new Error(`order ${order_id} already has complaint ${existing}`);
+      }
+      db.prepare(
+        `INSERT INTO complaints (id, order_id, cause, status, received_at_sim)
+         VALUES (?, ?, ?, 'received', ?)`,
+      ).run(complaint_id, order_id, cause, event.sim_time);
+      return;
+    }
+
     default:
       if (LOG_ONLY.has(event.type)) return;
       throw new ProjectionNotImplementedError(event.type);

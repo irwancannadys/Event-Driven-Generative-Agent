@@ -82,4 +82,19 @@ export const ev = {
       payload: { ingredient_id },
     };
   },
+
+  complaintReceived(
+    complaint_id: number,
+    order_id: number,
+    cause: 'slow_service' | 'wrong_order' | 'quality' = 'slow_service',
+    sim_time = AT,
+  ): Event {
+    return {
+      type: 'complaint_received',
+      sim_time,
+      actor: 'world',
+      origin: 'generator',
+      payload: { complaint_id, order_id, cause },
+    };
+  },
 };
