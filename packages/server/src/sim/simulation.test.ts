@@ -26,7 +26,7 @@ function boot(
   overrides: Partial<Omit<Scenario, 'seed'>> = {},
   bus?: EventBus,
 ): Simulation {
-  return bootSimulation({ db, bus, scenario: makeScenario(seed, overrides) });
+  return bootSimulation({ db, bus, agents: false, scenario: makeScenario(seed, overrides) });
 }
 
 function runTo(sim: Simulation, time: number): void {

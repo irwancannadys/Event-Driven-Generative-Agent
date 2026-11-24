@@ -38,7 +38,7 @@ function describeEvent(event: StoredEvent): string {
 
 function playTheDay(): string[] {
   const db = openSeededMemoryDb();
-  const simulation = bootSimulation({ db, scenario: makeScenario(42) });
+  const simulation = bootSimulation({ db, agents: false, scenario: makeScenario(42) });
   simulation.clock.advance(SECONDS_PER_DAY - simulation.clock.now());
   return listEvents(db).map(describeEvent);
 }

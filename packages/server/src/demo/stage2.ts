@@ -41,7 +41,7 @@ export function runStage2Demo(
       if (line !== null) log(line);
     }
   });
-  const simulation = bootSimulation({ db, bus, scenario });
+  const simulation = bootSimulation({ db, bus, scenario, agents: false });
   simulation.clock.advance(SECONDS_PER_DAY - simulation.clock.now());
   const events = listEvents(db);
 
@@ -79,9 +79,9 @@ export function runStage2Demo(
 
   // Restart check: the same day with the server restarted halfway.
   const restartDb = openSeededMemoryDb();
-  const before = bootSimulation({ db: restartDb, scenario });
+  const before = bootSimulation({ db: restartDb, scenario, agents: false });
   before.clock.advance(RESTART_AT - before.clock.now());
-  const after = bootSimulation({ db: restartDb, scenario }); // the "restart": a new simulation on the same database
+  const after = bootSimulation({ db: restartDb, scenario, agents: false }); // the "restart": a new simulation on the same database
   after.clock.advance(SECONDS_PER_DAY - after.clock.now());
   const restartOk = after.recovered && isDeepStrictEqual(listEvents(restartDb), events);
 

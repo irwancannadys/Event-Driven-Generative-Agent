@@ -1,6 +1,7 @@
 import { complaintCause, type DueItem, type Scenario } from '@cafe/core';
 import { DomainError, nextId, transact, type Context } from '../usecases/context';
 import { createOrder } from '../usecases/orders';
+import { finishTask } from '../agents/engine';
 
 /** Does what a due item says. Runs with `ctx.clock.now()` equal to the time of the item. */
 export function handleDueItem(ctx: Context, item: DueItem, scenario: Scenario): void {
@@ -42,10 +43,31 @@ export function handleDueItem(ctx: Context, item: DueItem, scenario: Scenario): 
       return;
 
     case 'task_end':
+      // The agent's time is up. The reactions decide what comes next (decision 022).
+      transact(ctx, (emit) => finishTask(emit, item.agent_id, item.task_id));
+      return;
+
     case 'restock_arrival':
-      // Dynamic items are handled by the agent engine (stage 3, step 6).
-      throw new Error(`no handler for dynamic item "${item.kind}" yet`);
+      handleRestockArrival(ctx, item.restock_id);
+      return;
   }
+}
+
+/** The supplier delivers what was ordered. */
+function handleRestockArrival(ctx: Context, restockId: number): void {
+  const itemsJson = ctx.db
+    .prepare("SELECT items_json FROM restock_orders WHERE id = ? AND status = 'ordered'")
+    .pluck()
+    .get(restockId) as string | undefined;
+  if (itemsJson === undefined) throw new Error(`restock ${restockId} is not waiting for delivery`);
+  transact(ctx, (emit) => {
+    emit({
+      type: 'restock_arrived',
+      actor: 'world',
+      origin: 'generator',
+      payload: { restock_id: restockId, items: JSON.parse(itemsJson) },
+    });
+  });
 }
 
 interface WaitingOrderRow {

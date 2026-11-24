@@ -2,16 +2,19 @@ import {
   OPEN_TIME_SEC,
   VirtualClock,
   makeStaticSource,
+  priorityOf,
   type DueItem,
   type Scenario,
   type SimTime,
 } from '@cafe/core';
 import type { Db } from '../db/database';
 import type { EventBus } from '../events/bus';
+import { reactToEvent } from '../agents/reactions';
 import { rebuildProjections } from '../projection/rebuild';
 import { transact, type Context } from '../usecases/context';
 import { hasWorld, initializeWorld } from '../usecases/world';
 import { readClockState } from './clock-state';
+import { nextDynamicDue } from './dynamic-due';
 import { handleDueItem } from './handlers';
 
 /** A brand new world starts 10 virtual minutes before opening, so `day_opened` follows quickly. */
@@ -34,7 +37,11 @@ export interface BootOptions {
   db: Db;
   bus?: EventBus;
   /** `scenario.seed` is only used to create a new world, later boots read the seed from the log. */
-  scenario: Scenario;
+  scenario: Scenario; /**
+   * Whether the characters work (decision 022). The real world always has them. Tests of the earlier
+   * stages, which rely on "nobody cooks yet", switch them off. Default `true`.
+   */
+  agents?: boolean;
 }
 
 /**
@@ -47,6 +54,7 @@ export interface BootOptions {
  */
 export function bootSimulation(options: BootOptions): Simulation {
   const { db, bus } = options;
+  const agents = options.agents ?? true;
   const existing = hasWorld(db);
 
   let scenario = options.scenario;
@@ -62,12 +70,25 @@ export function bootSimulation(options: BootOptions): Simulation {
   // so the context is filled in right after the clock exists.
   const holder: { ctx?: Context } = {};
   const staticSource = makeStaticSource(scenario);
-  const clock = new VirtualClock<DueItem>(
-    start,
-    (after, upTo) => staticSource(after, upTo),
-    (item) => handleDueItem(requireContext(holder.ctx), item, scenario),
+  const due = (after: SimTime, upTo: SimTime): DueItem[] => {
+    const fromSchedule = staticSource(after, upTo);
+    const fromWorld = agents ? nextDynamicDue(db, after, upTo) : [];
+    if (fromWorld.length === 0) return fromSchedule;
+    if (fromSchedule.length === 0) return fromWorld;
+    const [first] = fromSchedule as [DueItem];
+    const [other] = fromWorld as [DueItem];
+    if (first.time !== other.time) return first.time < other.time ? fromSchedule : fromWorld;
+    return [...fromSchedule, ...fromWorld].sort((a, b) => priorityOf(a) - priorityOf(b));
+  };
+  const clock = new VirtualClock<DueItem>(start, due, (item) =>
+    handleDueItem(requireContext(holder.ctx), item, scenario),
   );
-  const context: Context = { db, clock, publish: bus?.publish };
+  const context: Context = {
+    db,
+    clock,
+    publish: bus?.publish,
+    react: agents ? reactToEvent : undefined,
+  };
   holder.ctx = context;
 
   if (!existing) initializeWorld(context, { seed: scenario.seed });
