@@ -153,8 +153,16 @@ export const ORDER_SPOT: Spot = { x: -2.8, z: -2.8, facing: Math.PI };
 export const PICKUP_SPOT: Spot = { x: 2.2, z: KITCHEN.hatchZ, facing: Math.PI / 2 };
 
 /** Three places along the counter to order, so that customers who arrive together do not stand inside each other. */
-export function orderSpot(orderId: number): Spot {
-  return { ...ORDER_SPOT, x: ORDER_SPOT.x + ((orderId % 3) - 1) * 0.9 };
+/**
+ * Where a customer stands at the cashier. `key` is what the scene knows the customer by (`customerKey`): the
+ * number of a customer that came in at the door, which is the number of its minute and its place in the
+ * minute, or a negative number made from the order for an order made by hand. Customers that come one
+ * after another stand a little apart.
+ */
+export function orderSpot(key: number): Spot {
+  const number = Math.abs(key);
+  const place = (Math.floor(number / 100) + (number % 100)) % 3;
+  return { ...ORDER_SPOT, x: ORDER_SPOT.x + (place - 1) * 0.9 };
 }
 
 /** Three places along the hatch to take the food. */

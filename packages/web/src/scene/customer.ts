@@ -1,21 +1,20 @@
+import { TASK_DURATION_SEC, WALK_IN_SEC, WALK_SEC_PER_UNIT } from '@cafe/core';
 import type { CustomerState } from '../state/world';
 import { findPath, pathLength, pointAlong } from './navigation';
 import { DOOR, orderSpot, pickupSpot, waitingSpot, type Spot } from './registry';
 
-// What a customer does and where it is, worked out from its order and the virtual time (decisions 027
-// and 029). A customer comes in when the order comes in, goes to the cashier, waits where it is told
-// for the food, fetches it when it is done and goes home. Walking takes as long per step as it does for
-// the staff. Nothing is remembered between calls: after a jump in time, or a refresh, the answer is
-// right again.
+// What a customer does and where it is, worked out from what happened to it and the virtual time
+// (decisions 027, 029 and 032). A customer comes in at the door (`customer_arrived`) and walks to the
+// cashier, exactly as long as the domain says (`WALK_IN_SEC`), so that it stands at the counter when its
+// order is placed. It stays there until the cashier has written the order down, goes to its waiting place,
+// fetches the food when it is done and goes home. Nothing is remembered between calls: after a jump in
+// time, or a refresh, the answer is right again.
 
 /**
- * How long a customer takes for one layout unit. Faster than the staff (20 s): the order comes in when
- * the customer is at the door, and the cashier is done writing it down after 45 s, so a customer that
- * walked as slowly as the staff would reach the counter minutes after the log says it ordered.
+ * How long a customer takes for one layout unit once it is inside: as long as the staff (decision 031), so
+ * that nobody on the floor moves faster than the rest.
  */
-export const CUSTOMER_SEC_PER_UNIT = 8;
-/** How long a customer stands at the cashier after arriving. */
-export const ORDER_HOLD_SEC = 40;
+export const CUSTOMER_SEC_PER_UNIT = WALK_SEC_PER_UNIT;
 /** How long it stands at the kitchen counter, taking the food. */
 export const PICKUP_HOLD_SEC = 40;
 /** The most customers drawn at once (one for every place to wait); the rest are only counted (decision 029). */
@@ -63,6 +62,16 @@ const walk = (from: Point, to: Point, start: number, facing: number): Stage => {
   return { from, to, path, start, end: start + pathLength(path) * CUSTOMER_SEC_PER_UNIT, facing };
 };
 
+/** A walk that takes exactly from `start` to `end`, whatever its length: the domain says how long. */
+const walkOver = (from: Point, to: Point, start: number, end: number, facing: number): Stage => ({
+  from,
+  to,
+  path: findPath(from, to),
+  start,
+  end,
+  facing,
+});
+
 const stay = (at: Point, start: number, end: number, facing: number): Stage => ({
   from: at,
   to: at,
@@ -72,19 +81,73 @@ const stay = (at: Point, start: number, end: number, facing: number): Stage => (
   facing,
 });
 
-/** In at the door, a minute at the cashier, then to the waiting place, where it stays. */
+/**
+ * What the scene remembers a customer by (its look, the place it stands at the counter): the customer that
+ * came in at the door, or, for an order made by hand, a negative number made from the order.
+ */
+export const customerKey = (customer: CustomerState): number =>
+  customer.customerId ?? -customer.orderId;
+
+/** When a customer shows: at the door `WALK_IN_SEC` before its order, or at the counter for a hand-made order. */
+const appearsAt = (customer: CustomerState): number =>
+  customer.customerId === null ? customer.createdAt : customer.createdAt - WALK_IN_SEC;
+
+/**
+ * When the cashier has written the order down and the customer leaves the counter, `Infinity` while she
+ * has not. A world from before the page knew about it (`recordedAt` missing) gets the time she takes.
+ */
+function leavesCounterAt(customer: CustomerState): number {
+  if (customer.recordedAt !== null) return customer.recordedAt;
+  return customer.status === 'placed'
+    ? Number.POSITIVE_INFINITY
+    : customer.createdAt + TASK_DURATION_SEC.recording_order;
+}
+
+/** In at the door, to the cashier, there until the order is written down, then to the waiting place. */
 function stagesToWaiting(customer: CustomerState): {
   stages: Stage[];
   seated: boolean;
   waitingFrom: number;
 } {
   const spot = waitingSpot(customer.orderId);
-  const counter = orderSpot(customer.orderId);
-  const arrive = walk(DOOR, counter, customer.createdAt, counter.facing);
-  const order = stay(counter, arrive.end, arrive.end + ORDER_HOLD_SEC, counter.facing);
+  const counter = orderSpot(customerKey(customer));
+  const arrive =
+    customer.customerId === null
+      ? []
+      : [
+          walkOver(
+            DOOR,
+            counter,
+            customer.createdAt - WALK_IN_SEC,
+            customer.createdAt,
+            counter.facing,
+          ),
+        ];
+  const leaves = leavesCounterAt(customer);
+  if (!Number.isFinite(leaves)) {
+    return {
+      stages: [
+        ...arrive,
+        stay(counter, customer.createdAt, Number.POSITIVE_INFINITY, counter.facing),
+      ],
+      seated: false,
+      waitingFrom: leaves,
+    };
+  }
+  const order = stay(
+    counter,
+    customer.createdAt,
+    Math.max(customer.createdAt, leaves),
+    counter.facing,
+  );
   const toSpot = walk(counter, spot, order.end, spot.facing);
   return {
-    stages: [arrive, order, toSpot, stay(spot, toSpot.end, Number.POSITIVE_INFINITY, spot.facing)],
+    stages: [
+      ...arrive,
+      order,
+      toSpot,
+      stay(spot, toSpot.end, Number.POSITIVE_INFINITY, spot.facing),
+    ],
     seated: spot.seat,
     waitingFrom: order.end,
   };
@@ -131,7 +194,7 @@ function afterDone(customer: CustomerState, from: Point, doneAt: number) {
 }
 
 export function customerPose(customer: CustomerState, now: number): CustomerPose {
-  if (now < customer.createdAt) return HIDDEN;
+  if (now < appearsAt(customer)) return HIDDEN;
   const upset = customer.complaint === 'open';
   const before = stagesToWaiting(customer);
 
@@ -162,6 +225,27 @@ export function customerPose(customer: CustomerState, now: number): CustomerPose
   };
 }
 
+/**
+ * A customer that came in at the door and is on its way to the cashier, before its order exists. It
+ * arrives at the counter exactly when the order is placed, at the same spot where the customer of that
+ * order will stand.
+ */
+export function arrivalPose(customerId: number, arrivedAt: number, now: number): CustomerPose {
+  if (now < arrivedAt) return HIDDEN;
+  const counter = orderSpot(customerId);
+  const stages = [
+    walkOver(DOOR, counter, arrivedAt, arrivedAt + WALK_IN_SEC, counter.facing),
+    stay(counter, arrivedAt + WALK_IN_SEC, Number.POSITIVE_INFINITY, counter.facing),
+  ];
+  return {
+    visible: true,
+    ...at(stages, now),
+    seated: false,
+    carrying: false,
+    bubble: null,
+  };
+}
+
 /** When the food of a done order is taken off the counter, or `null` while the order is not done. */
 export function pickupTime(customer: CustomerState): number | null {
   if (customer.doneAt === null) return null;
@@ -181,41 +265,53 @@ export function dishesOnCounter(customers: Record<number, CustomerState>, now: n
   return count;
 }
 
+/** A person to draw: a customer with an order, or one that is still on its way to the cashier. */
 export interface ShownCustomer {
-  customer: CustomerState;
+  /** What the scene knows the person by: see `customerKey`. */
+  key: number;
+  /** `null` for a customer that has no order yet. */
+  customer: CustomerState | null;
   pose: CustomerPose;
 }
 
 /**
- * The customers to draw, at most the limit, and how many more there would be. The ones that are leaving
- * are always drawn, then the ones with a complaint, then the ones that have waited longest (they are the
- * next to be served); the newest arrivals are counted until there is room.
+ * The people to draw, at most the limit, and how many more there would be. The ones that are leaving are
+ * always drawn, then the ones with a complaint, then the ones at or on their way to the cashier (the
+ * cashier is working with them), then the ones that have waited longest (they are the next to be served);
+ * the newest arrivals are counted until there is room.
  */
 export function visibleCustomers(
   customers: Record<number, CustomerState>,
+  arrivals: Record<number, number>,
   now: number,
 ): { shown: ShownCustomer[]; hidden: number } {
-  const all: ShownCustomer[] = [];
+  const all: (ShownCustomer & { since: number })[] = [];
+  const known = new Set<number>();
   for (const customer of Object.values(customers)) {
     if (customer.source !== 'walk_in') continue; // the regulars of stage 5 are drawn with Rina
+    if (customer.customerId !== null) known.add(customer.customerId);
     const pose = customerPose(customer, now);
-    if (pose.visible) all.push({ customer, pose });
+    if (pose.visible)
+      all.push({ key: customerKey(customer), customer, pose, since: appearsAt(customer) });
   }
-  // leaving first, then the ones who complain, then the ones who have waited longest
-  const rank = (entry: ShownCustomer): number =>
-    entry.customer.doneAt !== null && now >= entry.customer.doneAt
-      ? 0
-      : entry.customer.complaint === 'open'
-        ? 1
-        : 2;
-  all.sort(
-    (a, b) =>
-      rank(a) - rank(b) ||
-      a.customer.createdAt - b.customer.createdAt ||
-      a.customer.orderId - b.customer.orderId,
-  );
+  for (const [id, arrivedAt] of Object.entries(arrivals)) {
+    const customerId = Number(id);
+    if (known.has(customerId)) continue;
+    const pose = arrivalPose(customerId, arrivedAt, now);
+    if (pose.visible) all.push({ key: customerId, customer: null, pose, since: arrivedAt });
+  }
+  const rank = (entry: ShownCustomer): number => {
+    const { customer } = entry;
+    if (customer === null) return 2;
+    if (customer.doneAt !== null && now >= customer.doneAt) return 0;
+    if (customer.complaint === 'open') return 1;
+    return now < leavesCounterAt(customer) ? 2 : 3;
+  };
+  all.sort((a, b) => rank(a) - rank(b) || a.since - b.since || a.key - b.key);
   return {
-    shown: all.slice(0, MAX_VISIBLE_CUSTOMERS),
+    shown: all
+      .slice(0, MAX_VISIBLE_CUSTOMERS)
+      .map(({ key, customer, pose }) => ({ key, customer, pose })),
     hidden: Math.max(0, all.length - MAX_VISIBLE_CUSTOMERS),
   };
 }

@@ -156,20 +156,20 @@ export function createScene(
       }
       shelf.update(Object.values(state.stock));
       papers.update(state.reports.filter((report) => report.status === 'submitted').length);
-      // The customers: drawn for the newest orders, the rest counted
-      const { shown, hidden } = visibleCustomers(state.customers, now);
-      const present = new Set(shown.map((entry) => entry.customer.orderId));
-      for (const [orderId, view] of customerViews) {
-        if (present.has(orderId)) continue;
+      // The customers (the ones on their way to the cashier too): as many as there are places, the rest counted
+      const { shown, hidden } = visibleCustomers(state.customers, state.arrivals, now);
+      const present = new Set(shown.map((entry) => entry.key));
+      for (const [id, view] of customerViews) {
+        if (present.has(id)) continue;
         scene.remove(view.object);
-        labels.remove(`customer:${orderId}`);
-        customerViews.delete(orderId);
+        labels.remove(`customer:${id}`);
+        customerViews.delete(id);
       }
-      for (const { customer, pose } of shown) {
-        let view = customerViews.get(customer.orderId);
+      for (const { key: id, pose } of shown) {
+        let view = customerViews.get(id);
         if (!view) {
-          view = createAvatar('customer', customer.orderId);
-          customerViews.set(customer.orderId, view);
+          view = createAvatar('customer', id);
+          customerViews.set(id, view);
           scene.add(view.object);
         }
         view.object.position.set(pose.x, 0, pose.z);
@@ -177,7 +177,7 @@ export function createScene(
         view.play(pose.moving ? 'walking' : 'idle', seconds, pose.walked);
         view.sit(pose.seated);
         view.carry(pose.carrying);
-        const key = `customer:${customer.orderId}`;
+        const key = `customer:${id}`;
         if (pose.bubble) {
           labels.set(key, t(`customer.${pose.bubble}`), `bubble bubble-${pose.bubble}`);
           const at = projectToScreen(camera, { x: pose.x, y: 2.2, z: pose.z }, width, height);
