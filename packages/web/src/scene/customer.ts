@@ -1,5 +1,6 @@
 import { WALK_SEC_PER_UNIT } from '@cafe/core';
 import type { CustomerState } from '../state/world';
+import { findPath, pathLength, pointAlong } from './navigation';
 import { DOOR, ORDER_SPOT, PICKUP_SPOT, waitingSpot, type Spot } from './registry';
 
 // What a customer does and where it is, worked out from its order and the virtual time (decisions 027
@@ -42,26 +43,23 @@ interface Point {
 interface Stage {
   from: Point;
   to: Point;
+  /** The way from one to the other, round the furniture and through the doors. */
+  path: Point[];
   start: number;
   end: number;
   /** The way the customer faces when it stays. */
   facing: number;
 }
 
-const walkSeconds = (from: Point, to: Point): number =>
-  Math.hypot(from.x - to.x, from.z - to.z) * WALK_SEC_PER_UNIT;
-
-const walk = (from: Point, to: Point, start: number, facing: number): Stage => ({
-  from,
-  to,
-  start,
-  end: start + walkSeconds(from, to),
-  facing,
-});
+const walk = (from: Point, to: Point, start: number, facing: number): Stage => {
+  const path = findPath(from, to);
+  return { from, to, path, start, end: start + pathLength(path) * WALK_SEC_PER_UNIT, facing };
+};
 
 const stay = (at: Point, start: number, end: number, facing: number): Stage => ({
   from: at,
   to: at,
+  path: [at],
   start,
   end,
   facing,
@@ -89,17 +87,12 @@ function at(
   time: number,
 ): { x: number; z: number; facing: number; moving: boolean } {
   const stage = stages.find((entry) => time < entry.end) ?? (stages.at(-1) as Stage);
-  const dx = stage.to.x - stage.from.x;
-  const dz = stage.to.z - stage.from.z;
-  if (dx === 0 && dz === 0)
+  if (stage.path.length < 2 || pathLength(stage.path) === 0) {
     return { x: stage.from.x, z: stage.from.z, facing: stage.facing, moving: false };
+  }
   const progress = Math.max(0, Math.min(1, (time - stage.start) / (stage.end - stage.start)));
-  return {
-    x: stage.from.x + dx * progress,
-    z: stage.from.z + dz * progress,
-    facing: Math.atan2(dx, dz),
-    moving: progress < 1,
-  };
+  const here = pointAlong(stage.path, progress);
+  return { x: here.x, z: here.z, facing: here.heading, moving: progress < 1 };
 }
 
 const HIDDEN: CustomerPose = {

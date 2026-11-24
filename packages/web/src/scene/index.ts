@@ -1,5 +1,5 @@
-import { AmbientLight, DirectionalLight, PerspectiveCamera, Scene, WebGLRenderer } from 'three';
-import { AGENT_IDS, AGENT_NAME_ID, STATION_NAME_ID, type AgentId } from '@cafe/core';
+import { PerspectiveCamera, Scene, WebGLRenderer } from 'three';
+import { AGENT_IDS, AGENT_NAME_ID, type AgentId } from '@cafe/core';
 import { t } from '../i18n';
 import { agentActivity } from '../state/agent-text';
 import { virtualNow, type WorldState } from '../state/world';
@@ -12,12 +12,13 @@ import {
   fovForAspect,
 } from './camera';
 import { createAvatar, type Avatar } from './avatar';
+import { lightTheScene } from './environment';
 import { LabelLayer } from './labels';
 import { agentPose, potTilt } from './pose';
 import { visibleCustomers, dishesOnCounter } from './customer';
 import { DishesView, PapersView, ShelfView } from './shelf';
 import { projectToScreen } from './projection';
-import { BOSS_SPOT, FURNITURE, WAITING_SPOTS } from './registry';
+import { BOSS_SPOT, WAITING_SPOTS } from './registry';
 import { buildRoom } from './room';
 
 // The 3D picture of the cafe (decisions 027 and 028). It only reads the state of the world and draws it:
@@ -27,20 +28,6 @@ import { buildRoom } from './room';
 export interface SceneHandle {
   dispose(): void;
 }
-
-/** Labels above the furniture: (text, x, height, z). */
-const STATION_LABELS: [string, number, number, number][] = [
-  [STATION_NAME_ID.cashier, FURNITURE.cashierDesk.x, 2.1, FURNITURE.cashierDesk.z],
-  [STATION_NAME_ID.kitchen, FURNITURE.kitchen.x, 2.1, FURNITURE.kitchen.z],
-  [STATION_NAME_ID.stock_shelf, FURNITURE.shelf.x, 2.7, FURNITURE.shelf.z],
-  [STATION_NAME_ID.boss_desk, FURNITURE.bossDesk.x, 1.5, FURNITURE.bossDesk.z + 0.4],
-  ...FURNITURE.tables.map((table, index): [string, number, number, number] => [
-    STATION_NAME_ID[`table_${index + 1}` as 'table_1'],
-    table.x,
-    1.4,
-    table.z,
-  ]),
-];
 
 /** Builds the scene inside `container` and starts drawing. Throws when the browser has no WebGL. */
 export function createScene(
@@ -52,12 +39,7 @@ export function createScene(
   container.append(renderer.domElement);
 
   const scene = new Scene();
-  // Lights are physically based since three r155: the intensities of the prototype (0.8 and 0.6, made for
-  // r128) are multiplied by pi to give the same brightness.
-  scene.add(new AmbientLight(0xffffff, 0.8 * Math.PI));
-  const sun = new DirectionalLight(0xffffff, 0.6 * Math.PI);
-  sun.position.set(5, 12, 9);
-  scene.add(sun);
+  lightTheScene(renderer, scene);
 
   const room = buildRoom();
   scene.add(room.group);
@@ -90,7 +72,6 @@ export function createScene(
   aim();
 
   const labels = new LabelLayer(container, 'scene-label');
-  for (const [text] of STATION_LABELS) labels.set(`station:${text}`, text, 'station');
   labels.set('boss', t('scene.boss'), 'boss');
 
   let width = 1;
@@ -202,7 +183,7 @@ export function createScene(
       dishes.update(dishesOnCounter(state.customers, now));
       if (hidden > 0) {
         labels.set('queue-more', `+${hidden} ${t('customer.queueMore')}`, 'queue-more');
-        const spot = WAITING_SPOTS[8] as { x: number; z: number };
+        const spot = WAITING_SPOTS[15] as { x: number; z: number };
         const at = projectToScreen(camera, { x: spot.x, y: 1.4, z: spot.z }, width, height);
         labels.place('queue-more', at.x, at.y, at.visible);
       } else {
@@ -218,10 +199,6 @@ export function createScene(
       height,
     );
     labels.place('boss', bossAt.x, bossAt.y, bossAt.visible);
-    for (const [text, x, y, z] of STATION_LABELS) {
-      const at = projectToScreen(camera, { x, y, z }, width, height);
-      labels.place(`station:${text}`, at.x, at.y, at.visible);
-    }
     renderer.render(scene, camera);
   };
   draw();

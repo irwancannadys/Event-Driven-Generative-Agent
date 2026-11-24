@@ -26,8 +26,8 @@ describe('camera', () => {
   });
 
   it('swings the room along with the hand, and stops at the limit', () => {
-    expect(dragAzimuth(0, 60)).toBeCloseTo(-0.3);
-    expect(dragAzimuth(0, -40)).toBeCloseTo(0.2);
+    expect(dragAzimuth(0, 40)).toBeCloseTo(-0.2);
+    expect(dragAzimuth(0, -30)).toBeCloseTo(0.15);
     expect(dragAzimuth(0, 1000)).toBe(-AZIMUTH_LIMIT);
     expect(dragAzimuth(0.3, -1000)).toBe(AZIMUTH_LIMIT);
   });
@@ -35,17 +35,17 @@ describe('camera', () => {
 
 describe('fovForAspect', () => {
   it('is the base field of view on a wide picture', () => {
-    expect([2, 2.4, 3].map(fovForAspect)).toEqual([BASE_FOV, BASE_FOV, BASE_FOV]);
+    expect([16 / 9, 2.4, 3].map(fovForAspect)).toEqual([BASE_FOV, BASE_FOV, BASE_FOV]);
   });
 
   it('grows as the picture gets narrower, so the room keeps its width', () => {
     const at = (aspect: number) => fovForAspect(aspect);
-    expect(at(1.78)).toBeGreaterThan(BASE_FOV);
-    expect(at(1.5)).toBeGreaterThan(at(1.78));
-    // the horizontal view is the same as on a picture of aspect 2
+    expect(at(1.5)).toBeGreaterThan(BASE_FOV);
+    expect(at(1.2)).toBeGreaterThan(at(1.5));
+    // the horizontal view is the same as on a picture of the shape of a video
     const horizontal = (aspect: number) => Math.tan((at(aspect) * Math.PI) / 360) * aspect;
-    expect(horizontal(1.5)).toBeCloseTo(horizontal(2));
-    expect(horizontal(1.78)).toBeCloseTo(horizontal(2));
+    expect(horizontal(1.5)).toBeCloseTo(horizontal(16 / 9));
+    expect(horizontal(1.2)).toBeCloseTo(horizontal(16 / 9));
   });
 
   it('never goes past a wide-angle that would bend the room', () => {

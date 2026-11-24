@@ -96,16 +96,11 @@ export function createPanels(
   banner.style.display = 'none';
   sceneSlot.append(banner);
   if (view.mode === 'panel') sceneSlot.style.display = 'none';
-  // Like a video page: the picture big on the left with the characters, orders and stock under it, and a
-  // column on the right with the boss desk on top and the log below.
+  // Like a video page: the picture big on the left with the characters, the orders and the boss desk under
+  // it, and a column on the right with the log (it scrolls) and the stock below it.
   const topbar = el('header', 'topbar', el('h1', '', t('app.title')), strip);
-  const main = el(
-    'div',
-    'main',
-    sceneSlot,
-    el('div', 'info', agents.root, orders.root, stock.root),
-  );
-  const side = el('aside', 'side', boss.root, log.root);
+  const main = el('div', 'main', sceneSlot, el('div', 'info', agents.root, orders.root, boss.root));
+  const side = el('aside', 'side', log.root, stock.root);
   root.replaceChildren(topbar, notice, el('main', 'watch', main, side));
 
   const drawControls = (paused: boolean, speed: number, enabled: boolean): void => {

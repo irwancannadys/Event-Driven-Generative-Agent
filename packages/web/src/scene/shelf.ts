@@ -17,7 +17,7 @@ import type { StockLevel } from '@cafe/core';
 export const MAX_BOXES = 4;
 /** Ingredients per board. */
 const SLOTS_PER_BOARD = 4;
-const SLOT_SPACING = 0.7;
+const SLOT_SPACING = 0.5;
 const BOX = { width: 0.4, height: 0.35, depth: 0.4 };
 const BOARD_TOPS = [1.05, 2.05]; // the two boards of the room are at 1 and 2, 0.1 thick
 const COLORS = { ok: 0xba7517, low: 0xe0602a, paper: 0xffffff };
@@ -141,7 +141,7 @@ export class DishesView {
     for (let index = 0; index < count; index += 1) {
       const dish = new Group();
       dish.name = 'dish';
-      dish.position.set(index * 0.5, 0.02, 0);
+      dish.position.set(index * 0.42, 0.02, 0);
       const plate = new Mesh(this.plate, this.plateMaterial);
       const meal = new Mesh(this.meal, this.mealMaterial);
       meal.position.y = 0.1;

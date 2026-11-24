@@ -24,6 +24,9 @@ vi.mock('three', async (importOriginal) => {
   class FakeRenderer {
     domElement = new Fake('canvas');
     rendered = 0;
+    shadowMap = { enabled: false, type: 0 };
+    toneMapping = 0;
+    toneMappingExposure = 1;
     setPixelRatio(): void {}
     setSize(): void {}
     render(): void {
@@ -119,24 +122,13 @@ const customersWorld = (): WorldState =>
   );
 
 describe('createScene', () => {
-  it('draws on its own and labels the stations and the boss from the start', () => {
+  it('draws on its own and labels the boss from the start, with no characters before the first snapshot', () => {
     const slot = container();
     createScene(slot as unknown as HTMLElement, () => undefined);
     frame();
     const texts = labelTexts(slot);
-    for (const text of [
-      'Kasir',
-      'Dapur',
-      'Rak Stok',
-      'Meja Bos',
-      'Meja 1',
-      'Meja 2',
-      'Meja 3',
-      'Bos (kamu)',
-    ]) {
-      expect(texts, text).toContain(text);
-    }
-    expect(texts.some((text) => text.includes('·'))).toBe(false); // no characters before the first snapshot
+    expect(texts).toContain('Bos (kamu)');
+    expect(texts.some((text) => text.includes('·'))).toBe(false);
   });
 
   it('labels each character with the name and what they are doing, once it has the world', () => {

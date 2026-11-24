@@ -1,42 +1,96 @@
 import { describe, expect, it } from 'vitest';
-import { FURNITURE } from './registry';
+import { FURNITURE, KITCHEN, OFFICE, ROOM, TABLES } from './registry';
 import { buildRoom } from './room';
 
 // The picture itself needs a browser, but the room can be built without one: the objects and where they
 // stand are plain data.
 describe('buildRoom', () => {
   const room = buildRoom();
+  const named = (name: string) => room.group.getObjectByName(name);
 
-  it('has the floor, the wall, the desks, the stove, the shelf and three tables', () => {
-    for (const name of [
+  it('has the hall, the walls, the counters, the stove, the shelf, the desk and the seven tables', () => {
+    const names = [
       'floor',
-      'wall',
-      'cashier-desk',
-      'till',
-      'kitchen-counter',
+      'kitchen-floor',
+      'office-floor',
+      'wall-back',
+      'wall-left-1',
+      'wall-right-1',
+      'cashier-counter',
+      'espresso-machine',
+      'pastry-case',
+      'menu-board',
+      'kitchen-island',
       'stove',
       'pot',
+      'fridge',
       'boss-desk',
+      'bookshelf',
+      'laptop',
       'shelf-board-1',
       'shelf-board-2',
-      'table-1-top',
-      'table-2-top',
-      'table-3-top',
-    ]) {
-      expect(room.group.getObjectByName(name), name).toBeDefined();
+      'hatch-sill',
+    ];
+    for (const name of [...names, ...TABLES.map((_, index) => `table-${index + 1}`)]) {
+      expect(named(name), name).toBeDefined();
     }
   });
 
-  it('hands back the parts that change with the world, standing where the furniture is', () => {
-    expect(room.group.getObjectByName('pot')).toBe(room.pot);
+  it('has a door for the entrance, the office, the kitchen, the side and the toilet', () => {
+    for (const name of ['door-entrance', 'door-office', 'door-kitchen', 'door-side', 'door-wc']) {
+      expect(named(name), name).toBeDefined();
+    }
+  });
+
+  it('separates the kitchen and the office from the hall with walls of wood and glass', () => {
+    for (const name of [
+      'office-front',
+      'office-side-1',
+      'office-side-2',
+      'kitchen-side',
+      'kitchen-front-1',
+      'kitchen-front-2',
+    ]) {
+      for (const layer of ['wood', 'glass', 'rail'])
+        expect(named(`${name}-${layer}`), `${name}-${layer}`).toBeDefined();
+    }
+  });
+
+  it('has seven tables, each with chairs and something on it', () => {
+    expect(TABLES).toHaveLength(7);
+    for (let index = 1; index <= 7; index += 1) {
+      const table = named(`table-${index}`);
+      expect(table?.children.filter((child) => child.name === 'chair')).toHaveLength(4);
+      for (const name of ['plate', 'cup', 'vase'])
+        expect(table?.getObjectByName(name), name).toBeDefined();
+    }
+  });
+
+  it('is decorated: paintings, a clock, plants, windows and lamps over the tables', () => {
+    const count = (name: string) =>
+      room.group.children.filter((child) => child.name === name).length;
+    expect(count('plant')).toBeGreaterThanOrEqual(4);
+    expect(count('window')).toBeGreaterThanOrEqual(3);
+    expect(count('pendant-lamp')).toBe(TABLES.length + 3); // one over each table, three over the counter
+    for (const name of ['painting-1', 'painting-2', 'painting-3', 'diploma', 'clock'])
+      expect(named(name), name).toBeDefined();
+  });
+
+  it('hands back the parts that change with the world, standing where they belong', () => {
+    expect(named('pot')).toBe(room.pot);
     expect(room.shelfBoxes.position.x).toBe(FURNITURE.shelf.x);
-    expect(room.shelfBoxes.position.z).toBe(FURNITURE.shelf.z);
-    expect(room.reportPapers.position.x).toBe(FURNITURE.bossDesk.x);
-    expect(room.shelfBoxes.children).toHaveLength(0);
-    expect(room.reportPapers.children).toHaveLength(0);
-    expect(room.dishes.children).toHaveLength(0);
-    expect(room.dishes.position.x).toBeLessThan(FURNITURE.kitchen.x); // the near end of the counter
-    expect(room.dishes.position.y).toBe(1); // on the counter top
+    expect(room.reportPapers.position.z).toBeCloseTo(FURNITURE.bossDesk.z, 0);
+    expect(room.dishes.position.x).toBeLessThan(KITCHEN.xMin + 0.5); // at the hatch of the kitchen wall
+    expect(room.dishes.position.y).toBeGreaterThan(1); // on the sill
+    for (const group of [room.shelfBoxes, room.reportPapers, room.dishes])
+      expect(group.children).toHaveLength(0);
+  });
+
+  it('keeps the office and the kitchen inside the room', () => {
+    expect(OFFICE.xMin).toBeGreaterThanOrEqual(ROOM.xMin);
+    expect(OFFICE.zMax).toBeLessThanOrEqual(ROOM.zMax);
+    expect(KITCHEN.xMax).toBeLessThanOrEqual(ROOM.xMax);
+    expect(KITCHEN.zMin).toBeGreaterThanOrEqual(ROOM.zMin);
   });
 
   it('keeps everything inside a box around the room, with no broken numbers', () => {
@@ -44,10 +98,11 @@ describe('buildRoom', () => {
     room.group.traverse((object) => {
       const { x, y, z } = object.position;
       expect(Number.isFinite(x + y + z), object.name).toBe(true);
-      expect(Math.abs(x)).toBeLessThan(10);
-      expect(Math.abs(z)).toBeLessThan(6);
-      expect(y).toBeGreaterThanOrEqual(0);
-      expect(y).toBeLessThan(5);
+      expect(Math.abs(x)).toBeLessThan(12);
+      expect(z).toBeGreaterThan(-6.5);
+      expect(z).toBeLessThan(8.5);
+      expect(y).toBeGreaterThanOrEqual(-0.5); // the slab under the floor
+      expect(y).toBeLessThan(6);
     });
   });
 

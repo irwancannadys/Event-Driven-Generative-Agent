@@ -84,6 +84,7 @@ export function createAvatar(role: AvatarRole, variant = 0): Avatar {
   cup.name = 'cup';
   cup.position.set(0.3, 0.8, 0.22);
   cup.visible = false;
+  for (const piece of [body, head, nose, cup]) piece.castShadow = true;
   figure.add(body, head, nose, cup);
 
   return {

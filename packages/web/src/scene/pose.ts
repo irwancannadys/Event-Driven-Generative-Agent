@@ -1,4 +1,5 @@
 import type { AgentState } from '../state/world';
+import { findPath, pathLength, pointAlong } from './navigation';
 import { standingPoint } from './registry';
 
 // Where a character is and what pose it has, worked out from its state and the virtual time (decision
@@ -37,15 +38,11 @@ export function agentPose(agent: AgentState, now: number): Pose {
   // Arrived (the server notes the next state a moment later): stand at the station, facing its work.
   if (progress >= 1) return standing('idle');
 
-  const dx = to.x - from.x;
-  const dz = to.z - from.z;
-  return {
-    x: from.x + dx * progress,
-    z: from.z + dz * progress,
-    // While walking the character faces the way it goes.
-    facing: dx === 0 && dz === 0 ? to.facing : Math.atan2(dx, dz),
-    status: 'walking',
-  };
+  // The way goes round the tables and through the doors, and takes as long as the domain says.
+  const path = findPath(from, to);
+  if (pathLength(path) === 0) return { x: to.x, z: to.z, facing: to.facing, status: 'walking' };
+  const here = pointAlong(path, progress);
+  return { x: here.x, z: here.z, facing: here.heading, status: 'walking' };
 }
 
 /** How far the pot on the stove tilts: it wobbles while the cook is cooking and stands still otherwise. */

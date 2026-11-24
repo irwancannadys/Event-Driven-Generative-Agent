@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { AgentState } from '../state/world';
 import { agentPose, potTilt } from './pose';
+import { findPath, pathLength, pointAlong } from './navigation';
 import { STATION_SPOTS, standingPoint } from './registry';
 
 const agent = (overrides: Partial<AgentState>): AgentState => ({
@@ -52,29 +53,38 @@ describe('agentPose', () => {
     });
   });
 
-  it('walks in a straight line from where it set off to where it is going, over the time of the task', () => {
+  it('walks along the way from where it set off to where it is going, over the time of the task', () => {
     const from = standingPoint('stock_shelf', 'stock_admin');
     const to = standingPoint('boss_desk', 'stock_admin');
+    const way = findPath(from, to);
     const start = agentPose(walking('stock_shelf', 'boss_desk'), 1000);
     expect(start).toMatchObject({ x: from.x, z: from.z, status: 'walking' });
-    const middle = agentPose(walking('stock_shelf', 'boss_desk'), 1100);
-    expect(middle.x).toBeCloseTo((from.x + to.x) / 2);
-    expect(middle.z).toBeCloseTo((from.z + to.z) / 2);
-    expect(middle.status).toBe('walking');
-    const quarter = agentPose(walking('stock_shelf', 'boss_desk'), 1050);
-    expect(quarter.x).toBeCloseTo(from.x + (to.x - from.x) / 4);
+    for (const fraction of [0.25, 0.5, 0.75]) {
+      const now = 1000 + 200 * fraction;
+      const pose = agentPose(walking('stock_shelf', 'boss_desk'), now);
+      const there = pointAlong(way, fraction);
+      expect(pose.x).toBeCloseTo(there.x);
+      expect(pose.z).toBeCloseTo(there.z);
+      expect(pose.status).toBe('walking');
+    }
+    expect(pathLength(way)).toBeGreaterThan(Math.hypot(from.x - to.x, from.z - to.z) - 1e-9);
+  });
+
+  it('goes round the furniture: the way from the shelf to the office is not a straight line', () => {
+    const from = standingPoint('stock_shelf', 'stock_admin');
+    const to = standingPoint('boss_desk', 'stock_admin');
+    expect(findPath(from, to).length).toBeGreaterThan(2); // round the end of the counter and through the door
   });
 
   it('faces the way it goes while walking', () => {
-    // From the cashier (left) to the kitchen (right) is straight along +x: facing = atan2(dx, dz) = pi/2
-    const pose = agentPose(walking('cashier', 'kitchen'), 1100);
-    expect(pose.facing).toBeCloseTo(Math.PI / 2, 0);
-    // The facing is the direction of the line, whatever the pair of stations
-    const a = standingPoint('stock_shelf', 'stock_admin');
-    const b = standingPoint('boss_desk', 'stock_admin');
-    expect(agentPose(walking('stock_shelf', 'boss_desk'), 1100).facing).toBeCloseTo(
-      Math.atan2(b.x - a.x, b.z - a.z),
+    const way = findPath(
+      standingPoint('stock_shelf', 'stock_admin'),
+      standingPoint('boss_desk', 'stock_admin'),
     );
+    for (const fraction of [0.1, 0.5, 0.9]) {
+      const pose = agentPose(walking('stock_shelf', 'boss_desk'), 1000 + 200 * fraction);
+      expect(pose.facing).toBeCloseTo(pointAlong(way, fraction).heading);
+    }
   });
 
   it('has arrived at the ETA: it stands at the station, facing its work, and stays there when time runs on', () => {
@@ -98,7 +108,7 @@ describe('agentPose', () => {
   });
 
   it('puts each character at its own place along the boss desk', () => {
-    const at = (id: AgentState['id']) => agentPose(agent({ id, station: 'boss_desk' }), 0).x;
+    const at = (id: AgentState['id']) => agentPose(agent({ id, station: 'boss_desk' }), 0).z;
     expect(new Set([at('cashier'), at('cook'), at('stock_admin'), at('waiter')]).size).toBe(4);
   });
 
