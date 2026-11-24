@@ -25,6 +25,7 @@ const row = (
   unit: 'g',
   qty,
   min_qty,
+  base_min_qty: min_qty,
   capacity_qty,
   low: qty <= min_qty,
   out: qty === 0,

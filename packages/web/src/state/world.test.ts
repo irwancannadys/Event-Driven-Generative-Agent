@@ -632,3 +632,25 @@ describe('customers', () => {
     expect(Object.keys(state.customers)).toEqual(['2']); // order 2 is still waiting, however old
   });
 });
+
+describe('a report of the kind policy (decision 034)', () => {
+  it('lands among the reports of the boss, drafted until it is on his desk, like a proposal of stock', () => {
+    const proposed = event('policy_proposed', {
+      report: { report_id: 5, title: 'Usul kebijakan: batas minimum Susu', body: 'Naikkan.' },
+      change: { ingredient_id: 'susu', from: 1000, to: 1500 },
+      rationale: 'Susu sering menahan pesanan.',
+    });
+    const state = apply(applySnapshot(snapshot(), 0), proposed);
+    expect(state.reports).toEqual([
+      {
+        id: 5,
+        type: 'policy',
+        status: 'drafted',
+        title: 'Usul kebijakan: batas minimum Susu',
+        body: 'Naikkan.',
+        createdAt: proposed.sim_time,
+        submittedAt: null,
+      },
+    ]);
+  });
+});

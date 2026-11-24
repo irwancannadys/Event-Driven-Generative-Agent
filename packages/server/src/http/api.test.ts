@@ -57,6 +57,7 @@ describe('GET /stock', () => {
       unit: 'ml',
       qty: 2500,
       min_qty: 1000,
+      base_min_qty: 1000,
       capacity_qty: 6000,
       low: false,
       out: false,

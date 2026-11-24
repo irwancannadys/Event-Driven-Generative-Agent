@@ -30,6 +30,7 @@ describe('read queries', () => {
       unit: 'ml',
       qty: 2500,
       min_qty: 1000,
+      base_min_qty: 1000,
       capacity_qty: 6000,
       low_flagged: false,
       out_flagged: false,

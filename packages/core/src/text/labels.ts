@@ -50,6 +50,7 @@ export const ORDER_STATUS_NAME_ID = {
 export const REPORT_TYPE_NAME_ID = {
   restock: 'belanja',
   complaint: 'komplain',
+  policy: 'kebijakan',
 } as const;
 
 export const SUPPLIER_NAME_ID = {

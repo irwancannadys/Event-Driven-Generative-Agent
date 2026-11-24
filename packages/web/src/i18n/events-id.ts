@@ -100,6 +100,14 @@ export function describeEventId(event: StoredEvent, names: Names = PLAIN_NAMES):
 
     case 'restock_proposed':
       return `Admin Stok mengusulkan belanja: ${event.payload.report.title} (urgensi ${event.payload.urgency})`;
+    case 'daily_review_created':
+      return `Admin Stok menulis review hari ${event.payload.day}: ${event.payload.summary}`;
+    case 'policy_proposed':
+      return `Admin Stok mengusulkan kebijakan: ${event.payload.report.title}`;
+    case 'policy_changed':
+      return `Batas minimum ${names.ingredient(event.payload.ingredient_id)} diubah dari ${event.payload.from} ke ${event.payload.to}`;
+    case 'memory_created':
+      return `Admin Stok mencatat: ${event.payload.text}`;
     case 'report_submitted':
       return `${AGENT_NAME_ID[event.actor as keyof typeof AGENT_NAME_ID] ?? event.actor} menyerahkan laporan #${event.payload.report_id} ke meja bos`;
     case 'report_decided':

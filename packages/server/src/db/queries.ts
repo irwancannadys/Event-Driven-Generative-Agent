@@ -22,7 +22,10 @@ export interface StockRow {
   name: string;
   unit: 'g' | 'ml' | 'pcs';
   qty: number;
+  /** The minimum stock in force: what the boss approved, or else the value of the seed (decision 034). */
   min_qty: number;
+  /** The minimum stock the cafe started with. */
+  base_min_qty: number;
   capacity_qty: number;
   low_flagged: boolean;
   out_flagged: boolean;
@@ -47,9 +50,12 @@ export function readRecipe(db: Db): RecipeLine[] {
 export function readStock(db: Db): StockRow[] {
   const rows = db
     .prepare(
-      `SELECT s.ingredient_id, i.name, i.unit, s.qty, i.min_qty, i.capacity_qty,
-              s.low_flagged, s.out_flagged
-       FROM stock s JOIN ingredients i ON i.id = s.ingredient_id
+      `SELECT s.ingredient_id, i.name, i.unit, s.qty,
+              COALESCE(p.min_qty, i.min_qty) AS min_qty, i.min_qty AS base_min_qty,
+              i.capacity_qty, s.low_flagged, s.out_flagged
+       FROM stock s
+       JOIN ingredients i ON i.id = s.ingredient_id
+       LEFT JOIN stock_policy p ON p.ingredient_id = s.ingredient_id
        ORDER BY s.ingredient_id`,
     )
     .all() as (Omit<StockRow, 'low_flagged' | 'out_flagged'> & {
@@ -95,7 +101,7 @@ export type ReportStatus = 'drafted' | 'submitted' | 'approved' | 'rejected';
 
 export interface ReportRow {
   id: number;
-  type: 'restock' | 'complaint';
+  type: 'restock' | 'complaint' | 'policy';
   status: ReportStatus;
   title: string;
   body: string;

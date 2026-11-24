@@ -56,7 +56,7 @@ SQLite lewat `better-sqlite3`. Migrasi awal: `0001_init.sql` (Langkah 10). Dafta
 
 **`agent_tasks`**: `id` INTEGER PK, `agent_id` FK, `kind` (`goto`, `work`), `params_json` (station, label, ref), `status` (`queued`, `active`, `done`), `duration_sim_sec`, `started_at_sim` nullable, `ends_at_sim` nullable. Urutan antrean = urutan `id`. `ends_at_sim` dipakai klien untuk interpolasi animasi.
 
-**`reports`**: `id` INTEGER PK, `type` (`restock`, `complaint`), `title`, `body`, `status` (`drafted`, `submitted`, `approved`, `rejected`), `subject_json` (item usulan belanja, atau `complaint_id`), `created_at_sim`, `submitted_at_sim` nullable, `decided_at_sim` nullable. Bos hanya melihat laporan berstatus `submitted` (sudah sampai di meja).
+**`reports`**: `id` INTEGER PK, `type` (`restock`, `complaint`, `policy`), `title`, `body`, `status` (`drafted`, `submitted`, `approved`, `rejected`), `subject_json` (item usulan belanja, atau `complaint_id`), `created_at_sim`, `submitted_at_sim` nullable, `decided_at_sim` nullable. Bos hanya melihat laporan berstatus `submitted` (sudah sampai di meja).
 
 **`restock_orders`**: `id` INTEGER PK (= `restock_id`), `report_id` FK, `items_json`, `supplier` (`on_time`, `late`, `out`), `status` (`ordered`, `arrived`, `failed`), `ordered_at_sim`, `eta_sim` nullable, `arrived_at_sim` nullable.
 
@@ -66,7 +66,9 @@ SQLite lewat `better-sqlite3`. Migrasi awal: `0001_init.sql` (Langkah 10). Dafta
 
 **`cafe_tables`**: `id` INTEGER PK (1 sampai 3), `state` (`empty`, `prepared`, `occupied`), `regular_id` FK nullable, `last_tidied_sim` nullable (dipakai aturan "rapikan meja kalau sepi sekitar 45 menit").
 
-**`memories`**: `id` INTEGER PK, `agent_id` TEXT, `regular_id` FK nullable, `kind` (`observation`, `reflection`), `text` TEXT, `sim_time`. Refleksi hanya ada di sini (kolom `insight_text` di `regulars` dibuang). V1 hanya membuat `reflection`.
+**`stock_policy`**: `ingredient_id` PK FK, `min_qty` INTEGER >= 0. Batas minimum stok yang berlaku setelah bos menyetujui usulan kebijakan (keputusan 034); tanpa baris berarti nilai `ingredients.min_qty` dari seed. Batas efektif = `COALESCE(stock_policy.min_qty, ingredients.min_qty)`.
+
+**`memories`**: `id` INTEGER PK, `agent_id` TEXT, `regular_id` FK nullable, `ingredient_id` FK nullable, `kind` (`observation`, `reflection`), `text` TEXT, `sim_time`. Refleksi hanya ada di sini (kolom `insight_text` di `regulars` dibuang). V1 hanya membuat `reflection`.
 
 ### Event ke proyeksi
 
@@ -80,6 +82,9 @@ SQLite lewat `better-sqlite3`. Migrasi awal: `0001_init.sql` (Langkah 10). Dafta
 | `stock_decreased` | `stock.qty` |
 | `stock_low` / `stock_out` | `stock.low_flagged` / `out_flagged` |
 | `restock_proposed` | `reports` (drafted) |
+| `policy_proposed` | `reports` (drafted, jenis `policy`; keputusan 034) |
+| `policy_changed` | `stock_policy` (batas minimum yang berlaku) |
+| `memory_created` | `memories` (observation atau reflection, dengan `ingredient_id` bila ada) |
 | `report_submitted` / `report_decided` | `reports.status`, `submitted_at_sim`, `decided_at_sim` |
 | `restock_ordered` | `restock_orders` (ordered) |
 | `restock_arrived` | `restock_orders` (arrived), `stock.qty` bertambah, penanda direset |
@@ -95,7 +100,7 @@ SQLite lewat `better-sqlite3`. Migrasi awal: `0001_init.sql` (Langkah 10). Dafta
 | `agent_task_assigned` | `agent_tasks` (queued) |
 | `agent_state_changed` | `agents.state`, `agents.station`, `agent_tasks` (active, `started_at_sim`, `ends_at_sim`) |
 | `agent_task_finished` | `agent_tasks` (done) |
-| `day_opened`, `day_closed`, `sim_time_advanced`, `customer_arrived`, `regular_expected`, `regular_greeted`, `agent_think_requested`, `agent_decided` | Tidak mengubah proyeksi (hanya tercatat di log) |
+| `day_opened`, `day_closed`, `sim_time_advanced`, `customer_arrived`, `daily_review_created`, `regular_expected`, `regular_greeted`, `agent_think_requested`, `agent_decided` | Tidak mengubah proyeksi (hanya tercatat di log) |
 
 ## 5. Operasional
 

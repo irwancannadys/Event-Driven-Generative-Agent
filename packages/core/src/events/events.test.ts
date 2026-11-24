@@ -69,6 +69,39 @@ const FIXTURES: Record<EventType, Raw> = {
     urgency: 'normal',
     rationale: 'Susu hampir habis sebelum jam makan siang.',
   }),
+  daily_review_created: ev('daily_review_created', 'stock_admin', 'llm', {
+    day: 0,
+    summary: 'Hari 0: 75 pesanan, 9 kali ditahan. Susu paling bermasalah.',
+    metrics: {
+      orders: 75,
+      done: 70,
+      held: 9,
+      complaints: 4,
+      held_by_ingredient: { susu: 9 },
+      stockout_sec: { susu: 2400 },
+    },
+  }),
+  policy_proposed: ev('policy_proposed', 'stock_admin', 'llm', {
+    report: {
+      report_id: 2,
+      title: 'Usul kebijakan: batas minimum Susu',
+      body: 'Naikkan ke 1500 ml.',
+    },
+    change: { ingredient_id: 'susu', from: 1000, to: 1500 },
+    rationale: 'Susu sering menahan pesanan.',
+  }),
+  policy_changed: ev('policy_changed', 'system', 'rule', {
+    ingredient_id: 'susu',
+    from: 1000,
+    to: 1500,
+    report_id: 2,
+  }),
+  memory_created: ev('memory_created', 'stock_admin', 'rule', {
+    agent_id: 'stock_admin',
+    kind: 'reflection',
+    ingredient_id: 'susu',
+    text: 'Batas Susu dinaikkan dari 1000 ke 1500 ml: membantu.',
+  }),
   report_submitted: ev('report_submitted', 'stock_admin', 'rule', { report_id: 1 }),
   report_decided: ev('report_decided', 'boss', 'boss', { report_id: 1, decision: 'approved' }),
   restock_ordered: ev('restock_ordered', 'stock_admin', 'generator', {
@@ -187,8 +220,8 @@ function expectRejected(raw: unknown, path?: string) {
 }
 
 describe('event catalog', () => {
-  it('has 34 event types and a fixture for each', () => {
-    expect(EVENT_TYPES).toHaveLength(34);
+  it('has 38 event types and a fixture for each', () => {
+    expect(EVENT_TYPES).toHaveLength(38);
     expect(Object.keys(FIXTURES).sort()).toEqual([...EVENT_TYPES].sort());
   });
 

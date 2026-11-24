@@ -16,6 +16,7 @@ const ORDER_BY: Record<(typeof PROJECTION_TABLES)[number], string> = {
   regular_state: 'regular_id',
   cafe_tables: 'id',
   stock: 'ingredient_id',
+  stock_policy: 'ingredient_id',
 };
 
 /** All projection rows as plain data, e.g. to compare the live state with a rebuilt one. */

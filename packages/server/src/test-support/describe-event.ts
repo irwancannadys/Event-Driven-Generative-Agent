@@ -56,6 +56,16 @@ function detail(event: StoredEvent): string {
     case 'agent_think_requested':
     case 'agent_decided':
       return `${payload.agent_id} ${payload.purpose}`;
+    case 'daily_review_created':
+      return `day=${payload.day} ${payload.summary}`;
+    case 'policy_proposed': {
+      const change = payload.change as { ingredient_id: string; from: number; to: number };
+      return `report=#${(payload.report as { report_id: number }).report_id} ${change.ingredient_id} min ${change.from} -> ${change.to}`;
+    }
+    case 'policy_changed':
+      return `${payload.ingredient_id} min ${payload.from} -> ${payload.to}`;
+    case 'memory_created':
+      return `${payload.kind}${payload.ingredient_id ? ` ${payload.ingredient_id}` : ''}: ${payload.text}`;
     case 'restock_proposed': {
       const report = payload.report as { report_id: number };
       return `report=#${report.report_id} ${payload.urgency} ${lines(payload.items)}`;

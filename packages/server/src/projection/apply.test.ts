@@ -304,3 +304,108 @@ describe('the customer and the moment of recording on an order (decision 032)', 
     expect(column(db, 'recorded_at_sim', 1)).toBeNull();
   });
 });
+
+describe('policy_proposed, policy_changed and memory_created (decision 034)', () => {
+  it('puts a proposal for the boss among the reports, as a report of the kind policy', () => {
+    const db = createInitializedDb();
+    appendInTransaction(db, ev.policyProposed(1));
+    expect(db.prepare('SELECT id, type, status, subject_json FROM reports').get()).toEqual({
+      id: 1,
+      type: 'policy',
+      status: 'drafted',
+      subject_json: JSON.stringify({
+        change: { ingredient_id: 'susu', from: 1000, to: 1500 },
+        rationale: 'Susu sering menahan pesanan.',
+      }),
+    });
+  });
+
+  it('changes the minimum stock that is in force, and only that of the ingredient', () => {
+    const db = createInitializedDb();
+    expect(readStock(db).find((row) => row.ingredient_id === 'susu')).toMatchObject({
+      min_qty: 1000,
+      base_min_qty: 1000,
+    });
+    appendInTransaction(db, ev.policyChanged(1, { ingredient_id: 'susu', from: 1000, to: 1500 }));
+    const rows = readStock(db);
+    expect(rows.find((row) => row.ingredient_id === 'susu')).toMatchObject({
+      min_qty: 1500,
+      base_min_qty: 1000,
+    });
+    expect(rows.find((row) => row.ingredient_id === 'kopi')?.min_qty).toBe(
+      rows.find((row) => row.ingredient_id === 'kopi')?.base_min_qty,
+    );
+  });
+
+  it('can change it again, and the last change counts', () => {
+    const db = createInitializedDb();
+    appendInTransaction(
+      db,
+      ev.policyChanged(1, { ingredient_id: 'susu', from: 1000, to: 1500 }),
+      ev.policyChanged(2, { ingredient_id: 'susu', from: 1500, to: 2000 }),
+    );
+    expect(readStock(db).find((row) => row.ingredient_id === 'susu')?.min_qty).toBe(2000);
+    expect(countRows(db, 'stock_policy')).toBe(1);
+  });
+
+  it('keeps a note of the stock admin, with the ingredient it is about when it has one', () => {
+    const db = createInitializedDb();
+    appendInTransaction(
+      db,
+      ev.memoryCreated('Hari 0: 75 pesanan.', 'observation', undefined, 100),
+      ev.memoryCreated('Batas Susu dinaikkan: membantu.', 'reflection', 'susu', 200),
+    );
+    expect(
+      db
+        .prepare(
+          'SELECT agent_id, regular_id, kind, ingredient_id, text, sim_time FROM memories ORDER BY id',
+        )
+        .all(),
+    ).toEqual([
+      {
+        agent_id: 'stock_admin',
+        regular_id: null,
+        kind: 'observation',
+        ingredient_id: null,
+        text: 'Hari 0: 75 pesanan.',
+        sim_time: 100,
+      },
+      {
+        agent_id: 'stock_admin',
+        regular_id: null,
+        kind: 'reflection',
+        ingredient_id: 'susu',
+        text: 'Batas Susu dinaikkan: membantu.',
+        sim_time: 200,
+      },
+    ]);
+  });
+
+  it('judges whether a delivery brings the stock above the minimum by the new minimum', () => {
+    const db = createInitializedDb();
+    // milk is low (800 <= 1500) and flagged; a delivery to 1700 clears the flag with the minimum of 1500, not of 1000
+    db.prepare("UPDATE stock SET qty = 800, low_flagged = 1 WHERE ingredient_id = 'susu'").run();
+    appendInTransaction(
+      db,
+      ev.policyChanged(1, { ingredient_id: 'susu', from: 1000, to: 1500 }),
+      ev.restockProposed(2, [{ ingredient_id: 'susu', qty: 800 }]),
+      ev.reportSubmitted(2),
+      ev.reportDecided(2, 'approved'),
+      ev.restockOrdered(1, 2, [{ ingredient_id: 'susu', qty: 800 }], 'on_time', 7200),
+      ev.restockArrived(1, [{ ingredient_id: 'susu', qty: 800 }]),
+    );
+    const row = readStock(db).find((entry) => entry.ingredient_id === 'susu');
+    expect(row).toMatchObject({ qty: 1600, low_flagged: false });
+    db.prepare("UPDATE stock SET qty = 800, low_flagged = 1 WHERE ingredient_id = 'susu'").run();
+    appendInTransaction(
+      db,
+      ev.restockOrdered(2, 2, [{ ingredient_id: 'susu', qty: 400 }], 'on_time', 7200),
+    );
+    appendInTransaction(db, ev.restockArrived(2, [{ ingredient_id: 'susu', qty: 400 }]));
+    // 1200 is above the old minimum (1000) but not above the new one (1500): the flag stays
+    expect(readStock(db).find((entry) => entry.ingredient_id === 'susu')).toMatchObject({
+      qty: 1200,
+      low_flagged: true,
+    });
+  });
+});

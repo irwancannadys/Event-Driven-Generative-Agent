@@ -67,6 +67,41 @@ const SENTENCES: [StoredEvent, string][] = [
     'Admin Stok mengusulkan belanja: Usul belanja: Susu (urgensi normal)',
   ],
   [
+    event('daily_review_created', {
+      day: 1,
+      summary: 'Susu paling bermasalah.',
+      metrics: {
+        orders: 75,
+        done: 70,
+        held: 9,
+        complaints: 4,
+        held_by_ingredient: {},
+        stockout_sec: {},
+      },
+    }),
+    'Admin Stok menulis review hari 1: Susu paling bermasalah.',
+  ],
+  [
+    event('policy_proposed', {
+      report: { report_id: 4, title: 'Usul kebijakan: batas minimum Susu', body: 'x' },
+      change: { ingredient_id: 'susu', from: 1000, to: 1500 },
+      rationale: 'Susu sering menahan pesanan.',
+    }),
+    'Admin Stok mengusulkan kebijakan: Usul kebijakan: batas minimum Susu',
+  ],
+  [
+    event('policy_changed', { ingredient_id: 'susu', from: 1000, to: 1500, report_id: 4 }),
+    'Batas minimum susu diubah dari 1000 ke 1500',
+  ],
+  [
+    event('memory_created', {
+      agent_id: 'stock_admin',
+      kind: 'reflection',
+      text: 'Naik ke 1500 membantu.',
+    }),
+    'Admin Stok mencatat: Naik ke 1500 membantu.',
+  ],
+  [
     event('report_submitted', { report_id: 3 }, { actor: 'cashier' }),
     'Kasir menyerahkan laporan #3 ke meja bos',
   ],

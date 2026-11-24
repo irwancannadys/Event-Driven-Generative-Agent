@@ -22,6 +22,7 @@ const EXPECTED_TABLES = [
   'schema_migrations',
   'sim_clock',
   'stock',
+  'stock_policy',
   'suppliers_mock',
 ];
 
@@ -70,6 +71,65 @@ describe('migration runner', () => {
     });
   });
 
+  it('builds the reports table again in 0003, keeping its rows and what points to them', () => {
+    // a world from before stage 5, with a report that a complaint and a restock order point to
+    const db = openDatabase(':memory:');
+    const all = loadMigrations();
+    runMigrations(db, all.slice(0, 2));
+    db.exec(`
+      INSERT INTO orders (id, status, source, created_at_sim) VALUES (1, 'placed', 'walk_in', 100);
+      INSERT INTO reports (id, type, title, body, status, subject_json, created_at_sim)
+        VALUES (1, 'restock', 'Usul belanja', 'Susu', 'approved', '{}', 200),
+               (2, 'complaint', 'Komplain', 'Lama', 'submitted', '{}', 300);
+      INSERT INTO complaints (id, order_id, cause, status, report_id, received_at_sim)
+        VALUES (1, 1, 'slow_service', 'triaged', 2, 300);
+      INSERT INTO restock_orders (id, report_id, items_json, supplier, status, ordered_at_sim)
+        VALUES (1, 1, '[]', 'on_time', 'ordered', 250);
+    `);
+
+    expect(runMigrations(db, all)).toEqual(['0003_policy_and_memory.sql']);
+
+    expect(db.prepare('SELECT id, type, status FROM reports ORDER BY id').all()).toEqual([
+      { id: 1, type: 'restock', status: 'approved' },
+      { id: 2, type: 'complaint', status: 'submitted' },
+    ]);
+    expect(db.pragma('foreign_key_check')).toEqual([]);
+    expect(db.pragma('foreign_keys', { simple: true })).toBe(1); // switched on again
+    // the children still point at the reports, and the new kind of report is allowed
+    expect(db.prepare('SELECT report_id FROM complaints').pluck().get()).toBe(2);
+    expect(db.prepare('SELECT report_id FROM restock_orders').pluck().get()).toBe(1);
+    db.prepare(
+      "INSERT INTO reports (id, type, title, body, status, subject_json, created_at_sim) VALUES (3, 'policy', 't', 'b', 'drafted', '{}', 400)",
+    ).run();
+    expect(() =>
+      db
+        .prepare(
+          "INSERT INTO reports (id, type, title, body, status, subject_json, created_at_sim) VALUES (4, 'bogus', 't', 'b', 'drafted', '{}', 400)",
+        )
+        .run(),
+    ).toThrow();
+    // and a parent is still needed: the keys are checked again
+    expect(() => db.prepare('UPDATE complaints SET report_id = 99 WHERE id = 1').run()).toThrow();
+  });
+
+  it('rolls back a migration that leaves a broken foreign key, and switches the keys on again', () => {
+    const db = openDatabase(':memory:');
+    const migrations = [
+      {
+        name: '0001_ok.sql',
+        sql: 'CREATE TABLE p (id INTEGER PRIMARY KEY) STRICT; CREATE TABLE c (id INTEGER PRIMARY KEY, p_id INTEGER REFERENCES p (id)) STRICT;',
+      },
+      {
+        name: '0002_bad.sql',
+        sql: '-- foreign_keys: off\nINSERT INTO c (id, p_id) VALUES (1, 42);',
+      },
+    ];
+    expect(() => runMigrations(db, migrations)).toThrow(/broken foreign keys/);
+    expect(db.pragma('foreign_keys', { simple: true })).toBe(1);
+    expect(db.prepare('SELECT COUNT(*) FROM c').pluck().get()).toBe(0);
+    expect(db.prepare('SELECT name FROM schema_migrations').pluck().all()).toEqual(['0001_ok.sql']);
+  });
+
   it('creates every table from docs/schema.md', () => {
     expect(tableNames(migratedDb())).toEqual(EXPECTED_TABLES);
   });
@@ -77,7 +137,7 @@ describe('migration runner', () => {
   it('is safe to run twice and records each migration once', () => {
     const db = openDatabase(':memory:');
     const migrations = loadMigrations();
-    const all = ['0001_init.sql', '0002_order_customer.sql'];
+    const all = ['0001_init.sql', '0002_order_customer.sql', '0003_policy_and_memory.sql'];
     expect(runMigrations(db, migrations)).toEqual(all);
     expect(runMigrations(db, migrations)).toEqual([]);
     const recorded = db.prepare('SELECT name FROM schema_migrations').pluck().all();

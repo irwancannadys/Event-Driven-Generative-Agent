@@ -185,6 +185,62 @@ export const ev = {
     };
   },
 
+  policyProposed(
+    report_id: number,
+    change = { ingredient_id: 'susu', from: 1000, to: 1500 },
+    sim_time = AT,
+  ): Event {
+    return {
+      type: 'policy_proposed',
+      sim_time,
+      actor: 'stock_admin',
+      origin: 'rule',
+      payload: {
+        report: {
+          report_id,
+          title: 'Usul kebijakan: batas minimum Susu 1000 jadi 1500 ml',
+          body: 'Naikkan batas minimum.',
+        },
+        change,
+        rationale: 'Susu sering menahan pesanan.',
+      },
+    };
+  },
+
+  policyChanged(
+    report_id: number,
+    change = { ingredient_id: 'susu', from: 1000, to: 1500 },
+    sim_time = AT,
+  ): Event {
+    return {
+      type: 'policy_changed',
+      sim_time,
+      actor: 'system',
+      origin: 'rule',
+      payload: { ...change, report_id },
+    };
+  },
+
+  memoryCreated(
+    text: string,
+    kind: 'observation' | 'reflection' = 'observation',
+    ingredient_id?: string,
+    sim_time = AT,
+  ): Event {
+    return {
+      type: 'memory_created',
+      sim_time,
+      actor: 'stock_admin',
+      origin: 'rule',
+      payload: {
+        agent_id: 'stock_admin',
+        kind,
+        ...(ingredient_id !== undefined && { ingredient_id }),
+        text,
+      },
+    };
+  },
+
   reportSubmitted(
     report_id: number,
     actor: 'cashier' | 'stock_admin' = 'stock_admin',

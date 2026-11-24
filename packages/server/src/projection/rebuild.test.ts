@@ -27,6 +27,7 @@ describe('snapshotProjections', () => {
         'reports',
         'restock_orders',
         'stock',
+        'stock_policy',
       ].sort(),
     );
     expect(snapshot.stock).toHaveLength(8);
@@ -89,5 +90,39 @@ describe('rebuildProjections', () => {
     ).run(JSON.stringify({ ingredient_id: 'kopi', qty: 18, new_qty: 5, order_id: 1 }));
     expect(() => rebuildProjections(db)).toThrow(/cannot be 5/);
     expect(snapshotProjections(db)).toEqual(before);
+  });
+});
+
+describe('the policy and the notes of the stock admin (decision 034)', () => {
+  const story = () => [
+    ev.policyProposed(1),
+    ev.reportSubmitted(1),
+    ev.reportDecided(1, 'approved'),
+    ev.policyChanged(1),
+    ev.memoryCreated('Hari 0: 75 pesanan, 9 kali ditahan.', 'observation'),
+    ev.memoryCreated('Batas Susu dinaikkan: membantu.', 'reflection', 'susu'),
+  ];
+
+  it('gives the same state when it is replayed as when it ran', () => {
+    const db = createInitializedDb();
+    appendInTransaction(db, ...story());
+    const live = snapshotProjections(db);
+    expect(live.stock_policy).toEqual([{ ingredient_id: 'susu', min_qty: 1500 }]);
+    rebuildProjections(db);
+    expect(snapshotProjections(db)).toEqual(live);
+  });
+
+  it('forgets the policy and the notes when a new world starts', () => {
+    const db = createInitializedDb();
+    appendInTransaction(db, ...story());
+    appendInTransaction(db, {
+      type: 'world_initialized',
+      sim_time: 90_000,
+      actor: 'system',
+      origin: 'system',
+      payload: { seed: 43, initial_stock: INITIAL_STOCK, initial_visits: INITIAL_VISITS },
+    });
+    expect(countRows(db, 'stock_policy')).toBe(0);
+    expect(countRows(db, 'memories')).toBe(0);
   });
 });

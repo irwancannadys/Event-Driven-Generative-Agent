@@ -19,6 +19,7 @@ const LOG_ONLY: ReadonlySet<EventType> = new Set<EventType>([
   'day_closed',
   'sim_time_advanced',
   'customer_arrived',
+  'daily_review_created',
   'regular_expected',
   'regular_greeted',
   'agent_think_requested',
@@ -31,6 +32,7 @@ export const PROJECTION_TABLES = [
   'restock_orders',
   'reports',
   'memories',
+  'stock_policy',
   'agent_tasks',
   'agents',
   'order_items',
@@ -217,6 +219,39 @@ export function applyEvent(db: Db, event: StoredEvent): void {
       return;
     }
 
+    case 'policy_proposed': {
+      const { report, change, rationale } = event.payload;
+      db.prepare(
+        `INSERT INTO reports (id, type, title, body, status, subject_json, created_at_sim)
+         VALUES (?, 'policy', ?, ?, 'drafted', ?, ?)`,
+      ).run(
+        report.report_id,
+        report.title,
+        report.body,
+        JSON.stringify({ change, rationale }),
+        event.sim_time,
+      );
+      return;
+    }
+
+    case 'policy_changed': {
+      const { ingredient_id, to } = event.payload;
+      db.prepare(
+        `INSERT INTO stock_policy (ingredient_id, min_qty) VALUES (?, ?)
+         ON CONFLICT (ingredient_id) DO UPDATE SET min_qty = excluded.min_qty`,
+      ).run(ingredient_id, to);
+      return;
+    }
+
+    case 'memory_created': {
+      const { agent_id, kind, ingredient_id, text } = event.payload;
+      db.prepare(
+        `INSERT INTO memories (agent_id, regular_id, kind, text, sim_time, ingredient_id)
+         VALUES (?, NULL, ?, ?, ?, ?)`,
+      ).run(agent_id, kind, text, event.sim_time, ingredient_id ?? null);
+      return;
+    }
+
     case 'report_submitted': {
       const info = db
         .prepare(
@@ -295,7 +330,9 @@ export function applyEvent(db: Db, event: StoredEvent): void {
       const refill = db.prepare(
         `UPDATE stock SET
            qty = qty + @qty,
-           low_flagged = CASE WHEN qty + @qty > (SELECT min_qty FROM ingredients WHERE id = ingredient_id)
+           low_flagged = CASE WHEN qty + @qty > COALESCE(
+                                (SELECT min_qty FROM stock_policy WHERE ingredient_id = stock.ingredient_id),
+                                (SELECT min_qty FROM ingredients WHERE id = stock.ingredient_id))
                               THEN 0 ELSE low_flagged END,
            out_flagged = CASE WHEN qty + @qty > 0 THEN 0 ELSE out_flagged END
          WHERE ingredient_id = @ingredient_id`,

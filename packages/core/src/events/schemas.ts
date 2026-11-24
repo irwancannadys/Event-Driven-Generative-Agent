@@ -144,6 +144,42 @@ const baseEventSchema = z.discriminatedUnion('type', [
       rationale: z.string().min(1).max(200),
     }),
   ),
+  defineEvent(
+    'daily_review_created',
+    z.object({
+      day: z.number().int().nonnegative(),
+      summary: z.string().min(1).max(300),
+      metrics: z.object({
+        orders: QtySchema,
+        done: QtySchema,
+        held: QtySchema,
+        complaints: QtySchema,
+        held_by_ingredient: z.record(z.string(), QtySchema),
+        stockout_sec: z.record(z.string(), QtySchema),
+      }),
+    }),
+  ),
+  defineEvent(
+    'policy_proposed',
+    z.object({
+      report: ReportDraftSchema,
+      change: z.object({ ingredient_id: nonEmpty, from: QtySchema, to: QtySchema }),
+      rationale: z.string().min(1).max(200),
+    }),
+  ),
+  defineEvent(
+    'policy_changed',
+    z.object({ ingredient_id: nonEmpty, from: QtySchema, to: QtySchema, report_id: id }),
+  ),
+  defineEvent(
+    'memory_created',
+    z.object({
+      agent_id: AgentIdSchema,
+      kind: z.enum(['observation', 'reflection']),
+      ingredient_id: nonEmpty.optional(),
+      text: z.string().min(1).max(300),
+    }),
+  ),
   defineEvent('report_submitted', z.object({ report_id: id })),
   defineEvent(
     'report_decided',
@@ -273,6 +309,10 @@ export const EVENT_META = {
   stock_low: { origins: ['rule'], actors: ['system'] },
   stock_out: { origins: ['rule'], actors: ['system'] },
   restock_proposed: { origins: DECISION_ORIGINS, actors: ['stock_admin'] },
+  daily_review_created: { origins: DECISION_ORIGINS, actors: ['stock_admin'] },
+  policy_proposed: { origins: DECISION_ORIGINS, actors: ['stock_admin'] },
+  policy_changed: { origins: ['rule'], actors: ['system'] },
+  memory_created: { origins: DECISION_ORIGINS, actors: ['stock_admin'] },
   report_submitted: { origins: ['rule'], actors: ['cashier', 'stock_admin'] },
   report_decided: { origins: ['boss'], actors: ['boss'] },
   restock_ordered: { origins: ['generator'], actors: ['stock_admin'] },

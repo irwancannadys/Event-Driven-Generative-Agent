@@ -37,7 +37,7 @@ export interface AgentState {
 /** A report that is not decided yet: on its way to the boss desk (`drafted`) or on it (`submitted`). */
 export interface ReportCard {
   id: number;
-  type: 'restock' | 'complaint';
+  type: 'restock' | 'complaint' | 'policy';
   status: 'drafted' | 'submitted';
   title: string;
   body: string;
@@ -397,6 +397,8 @@ function react(state: WorldState, event: StoredEvent): WorldState {
 
     case 'restock_proposed':
       return addReport(state, event.payload.report, 'restock', event.sim_time);
+    case 'policy_proposed':
+      return addReport(state, event.payload.report, 'policy', event.sim_time);
     case 'complaint_triaged': {
       const complaint = state.complaints[event.payload.complaint_id];
       const judged: WorldState = complaint

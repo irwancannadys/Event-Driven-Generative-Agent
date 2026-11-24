@@ -2,7 +2,7 @@
 
 Daftar event adalah **kontrak** antara `core`, `server`, `web`, dan LLM. Dokumen ini jadi acuan skema zod di `packages/core` (ada tes yang memastikan keduanya tidak berbeda). Latar belakang konsep: [`concept.md`](concept.md). Keputusan terkait: [`decisions/`](decisions/).
 
-Jumlah: **34 event** (21 dari brief, 13 baru, ditandai `*`).
+Jumlah: **38 event** (21 dari brief, 17 baru, ditandai `*`).
 
 ## 1. Konvensi
 
@@ -11,7 +11,7 @@ Setiap event adalah satu baris di tabel `events`:
 | Kolom | Isi |
 |---|---|
 | `id` | Integer autoincrement. Menentukan urutan global. Event dengan `sim_time` sama diurutkan menurut `id` |
-| `type` | Salah satu dari 34 tipe di bawah |
+| `type` | Salah satu dari 38 tipe di bawah |
 | `sim_time` | Integer detik virtual sejak hari 0 pukul 00:00 (`28800` = jam buka 08:00 hari 0) |
 | `actor` | Siapa pelakunya: `cashier`, `cook`, `stock_admin`, `waiter`, `boss`, `world` (pelanggan, pemasok), atau `system` |
 | `origin` | Apa yang menyebabkannya: `generator`, `scheduler`, `rule`, `llm`, `fallback`, `boss`, `system` |
@@ -60,6 +60,10 @@ Aturan umum:
 | `stock_low` | rule | system | Stok turun ke batas minimum atau kurang; sekali sampai stok diisi ulang | Admin stok | Aturan |
 | `stock_out` | rule | system | Stok mencapai 0; sekali sampai stok diisi ulang | Admin stok | Aturan |
 | `restock_proposed` | rule, llm, atau fallback | stock_admin | Hasil keputusan `stock_proposal` | Admin stok (jalan ke meja bos) | LLM, fallback aturan "isi sampai penuh" |
+| `daily_review_created` * | rule, llm, atau fallback | stock_admin | Kafe tutup: Admin Stok menulis review harinya (hasil keputusan `policy_review`; keputusan 034) | Tampilan (kartu Admin Stok) | LLM, fallback aturan |
+| `policy_proposed` * | rule, llm, atau fallback | stock_admin | Review malam mengusulkan mengubah batas minimum satu bahan | Admin stok (jalan ke meja bos), bos | LLM, fallback aturan |
+| `policy_changed` * | rule | system | Bos menyetujui laporan kebijakan: batas minimum bahan itu berubah | Proyeksi `stock_policy`, tampilan | Aturan |
+| `memory_created` * | rule, llm, atau fallback | stock_admin | Pengamatan harian atau refleksi tentang hasil usulan kebijakan | Memori (konteks keputusan berikutnya) | Aturan (templat) |
 | `report_submitted` | rule | cashier atau stock_admin | Karakter tiba di meja bos | Bos | Aturan |
 | `report_decided` | boss | boss | Bos klik Setujui atau Tolak | Admin stok atau kasir | Aturan |
 | `restock_ordered` * | generator | stock_admin | Bos menyetujui usulan; pemasok tiruan menentukan perilakunya (undian seeded) | Pemasok tiruan | Aturan |
@@ -146,7 +150,32 @@ complaint_triaged: {
 complaint_replied: { complaint_id: number; compensation: Compensation; reply_text: string }
 ```
 
-### Langganan dan Rina
+### Kebijakan dan ingatan Admin Stok
+
+```ts
+daily_review_created: {
+  day: number;
+  summary: string;          // maks 300 karakter
+  metrics: { orders: number; done: number; held: number; complaints: number;
+             held_by_ingredient: Record<string, number>; stockout_sec: Record<string, number> };
+}
+policy_proposed: {
+  report: ReportDraft;      // laporan jenis `policy` untuk Meja Bos
+  change: { ingredient_id: string; from: Qty; to: Qty };   // batas minimum
+  rationale: string;        // maks 200 karakter
+}
+policy_changed: { ingredient_id: string; from: Qty; to: Qty; report_id: number }
+memory_created: {
+  agent_id: AgentId;
+  kind: 'observation' | 'reflection';
+  ingredient_id?: string;
+  text: string;             // maks 300 karakter
+}
+```
+
+### Langganan dan Rina (tidak dipakai di v1, keputusan 034)
+
+Event di bawah ini tetap ada di katalog tetapi tidak pernah ditulis di v1: peran pelayan dan pelanggan langganan dibuang dari Tahap 5.
 
 ```ts
 regular_expected: { regular_id: string; table_id: TableId; expected_at: SimTime }

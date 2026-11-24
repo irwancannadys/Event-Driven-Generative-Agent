@@ -27,6 +27,7 @@ export const stockRow = (ingredient_id: string, qty: number, min_qty: number): S
   unit: 'g',
   qty,
   min_qty,
+  base_min_qty: min_qty,
   capacity_qty: 1000,
   low: qty <= min_qty,
   out: qty === 0,

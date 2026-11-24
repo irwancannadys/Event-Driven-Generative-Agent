@@ -53,7 +53,10 @@ export interface StockLevel {
   name: string;
   unit: string;
   qty: number;
+  /** The minimum stock in force: the one the boss approved, or else the one the cafe started with. */
   min_qty: number;
+  /** The minimum stock the cafe started with (decision 034). */
+  base_min_qty: number;
   capacity_qty: number;
   low: boolean;
   out: boolean;
@@ -61,7 +64,7 @@ export interface StockLevel {
 
 export interface ReportView {
   id: number;
-  type: 'restock' | 'complaint';
+  type: 'restock' | 'complaint' | 'policy';
   status: ReportStatus;
   title: string;
   body: string;
