@@ -3,5 +3,18 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Halaman browser (Vite + Three.js). Stub sampai Tahap 4."
+  "description": "Halaman browser (Vite + Three.js): membaca aliran event dari server dan menampilkannya sebagai scene 3D dan panel. Tidak membuat keputusan.",
+  "dependencies": {
+    "@cafe/core": "*",
+    "three": "0.187.0"
+  },
+  "devDependencies": {
+    "@types/three": "0.187.0",
+    "vite": "8.3.8"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json"
+  }
 }

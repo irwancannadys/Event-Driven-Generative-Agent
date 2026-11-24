@@ -21,7 +21,8 @@
     "dev": "npm run dev -w @cafe/server",
     "demo:stage2": "npm run demo:stage2 -w @cafe/server",
     "watch": "npm run watch -w @cafe/server --",
-    "demo:stage3": "npm run demo:stage3 -w @cafe/server"
+    "demo:stage3": "npm run demo:stage3 -w @cafe/server",
+    "web": "npm run dev -w @cafe/web --"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
