@@ -55,7 +55,7 @@ describe('runWatch', () => {
     const code = await runWatch({ apiUrl: url, once: true, write: (text) => out.push(text) });
     expect(code).toBe(0);
     expect(out).toHaveLength(1);
-    expect(out[0]).toContain('=== Kafe Virtual ===');
+    expect(out[0]).toContain("=== Cand's Coffee ===");
     expect(out[0]).toContain('KARAKTER');
     expect(out[0]).not.toContain('\x1b');
   });

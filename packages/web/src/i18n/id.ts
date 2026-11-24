@@ -1,7 +1,9 @@
 // Texts of the page in Indonesian (decision 028). Names of events, enums and ids stay English; the
 // names of characters, stations and tasks live in the dictionary of core (`text/labels.ts`).
 export const ID = {
-  'app.title': 'Kafe Virtual',
+  'app.title': "Cand's Coffee",
+  'app.title.first': "Cand's",
+  'app.title.second': 'Coffee',
 
   'status.connecting': 'Menyambung ke server...',
   'status.open': 'Tersambung',

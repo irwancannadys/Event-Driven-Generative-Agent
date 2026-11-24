@@ -74,7 +74,7 @@ describe('the panels', () => {
     expect(text).toContain('Hari 0, 08:20');
     expect(text).toContain('kecepatan 60x');
     expect(text).toContain('Kasir');
-    expect(text).toContain('menganggur');
+    expect(text).toContain('idle');
     expect(text).toContain('Susu');
     expect(text).toContain('1000 / 6000 ml RENDAH');
     expect(text).toContain('Kafe buka (hari 0)');
@@ -234,11 +234,12 @@ describe('the sidebar', () => {
     return store;
   };
 
-  it('holds the log, the complaints and the stock, and none of the time controls', () => {
+  it('holds the log and the stock, and none of the time controls or the complaints', () => {
     const { root, panels } = setup();
     panels.update({ state: world(), status: 'open', nowMs: 1000 });
     const sidebar = side(root).textContent;
-    for (const text of ['Kejadian', 'Komplain', 'Stok']) expect(sidebar).toContain(text);
+    for (const text of ['Kejadian', 'Stok']) expect(sidebar).toContain(text);
+    expect(sidebar).not.toContain('Komplain');
     for (const text of ['Jeda', '600x', '+1 jam', 'Panel saja', 'Kontrol waktu'])
       expect(sidebar).not.toContain(text);
   });
@@ -247,11 +248,7 @@ describe('the sidebar', () => {
     const { root, panels } = setup();
     panels.update({ state: world(), status: 'open', nowMs: 1000 });
     const toggle = side(root).findAll((node) => node.className === 'panel-toggle');
-    expect(toggle.map((node) => node.attributes['aria-expanded'])).toEqual([
-      'true',
-      'true',
-      'true',
-    ]);
+    expect(toggle.map((node) => node.attributes['aria-expanded'])).toEqual(['true', 'true']);
     root.button('Kejadian\u25be').click();
     expect(body(root, 'Kejadian').style.display).toBe('none');
     expect(body(root, 'Stok').style.display).toBe('');
@@ -280,12 +277,12 @@ describe('the complaints panel', () => {
       (node) => node.tag === 'section' && node.className.startsWith('panel complaints'),
     )[0];
 
-  it('has a section of its own in the sidebar, which says so when nobody complained', () => {
+  it('has a card of its own next to the orders, which says so when nobody complained', () => {
     const { root, panels } = setup();
     panels.update({ state: world(), status: 'open', nowMs: 1000 });
     expect(complaintsPanel(root)?.textContent).toContain('Komplain');
     expect(complaintsPanel(root)?.textContent).toContain('Belum ada komplain.');
-    expect(complaintsPanel(root)?.parent?.className).toBe('side');
+    expect(complaintsPanel(root)?.parent?.className).toBe('info');
   });
 
   it('shows each complaint with its order, its cause, where it stands and what is offered', () => {
@@ -320,17 +317,22 @@ describe('the complaints panel', () => {
 });
 
 describe('the time menu', () => {
+  const toggle = (root: FakeNode) =>
+    root.findAll((node) => node.className === 'menu-button')[0] as FakeNode;
   const part = (root: FakeNode, className: string) =>
     root.findAll((node) => node.className === className)[0] as FakeNode;
   const topbar = (root: FakeNode) =>
     root.findAll((node) => node.tag === 'header' && node.className === 'topbar')[0] as FakeNode;
   const shown = (root: FakeNode) => part(root, 'menu-panel').style.display === '';
 
-  it('is a button at the top of the page that shows only the status and the clock besides', () => {
+  it('is the clock at the top of the page, and the name of the cafe beside it, with no card of status', () => {
     const { root, panels } = setup();
     panels.update({ state: world(), status: 'open', nowMs: 1000 });
+    expect(topbar(root).textContent).toContain("Cand's Coffee");
     expect(topbar(root).textContent).toContain('Hari 0, 08:20');
-    expect(topbar(root).textContent).toContain('Kontrol waktu');
+    expect(toggle(root).textContent).toContain('Hari 0, 08:20');
+    expect(toggle(root).attributes['aria-label']).toBe('Kontrol waktu');
+    expect(root.findAll((node) => node.className === 'status-strip')).toHaveLength(0);
     expect(shown(root)).toBe(false); // the controls are not on the page until they are asked for
     expect(part(root, 'menu-backdrop').style.display).toBe('none');
   });
@@ -338,20 +340,30 @@ describe('the time menu', () => {
   it('opens with the button, with the controls and the link to the panels in it, and closes with it', () => {
     const { root, panels } = setup();
     panels.update({ state: world(), status: 'open', nowMs: 1000 });
-    root.button('Kontrol waktu\u25b8').click();
+    toggle(root).click();
     expect(shown(root)).toBe(true);
-    expect(root.button('Kontrol waktu\u25be').attributes['aria-expanded']).toBe('true');
+    expect(toggle(root).attributes['aria-expanded']).toBe('true');
     const menu = part(root, 'menu-panel').textContent;
-    for (const text of ['Jeda', '1x', '600x', '+10 menit', '+1 jam', 'Panel saja'])
+    for (const text of [
+      'Kontrol waktu',
+      'Tersambung',
+      'kecepatan 60x',
+      'Jeda',
+      '1x',
+      '600x',
+      '+10 menit',
+      '+1 jam',
+      'Panel saja',
+    ])
       expect(menu).toContain(text);
-    root.button('Kontrol waktu\u25be').click();
+    toggle(root).click();
     expect(shown(root)).toBe(false);
   });
 
   it('stays open while the controls are used, so that several can be pressed one after another', () => {
     const { root, panels, calls } = setup();
     panels.update({ state: world(), status: 'open', nowMs: 1000 });
-    root.button('Kontrol waktu\u25b8').click();
+    toggle(root).click();
     root.button('600x').click();
     root.button('+30 menit').click();
     expect(calls.time).toEqual([{ speed: 600 }, { advance_seconds: 1800 }]);
@@ -361,10 +373,10 @@ describe('the time menu', () => {
   it('is put away by a click anywhere else on the page, and by Escape', () => {
     const { root, panels } = setup();
     panels.update({ state: world(), status: 'open', nowMs: 1000 });
-    root.button('Kontrol waktu\u25b8').click();
+    toggle(root).click();
     part(root, 'menu-backdrop').click();
     expect(shown(root)).toBe(false);
-    root.button('Kontrol waktu\u25b8').click();
+    toggle(root).click();
     root.fire('keydown', { key: 'Enter' });
     expect(shown(root)).toBe(true);
     root.fire('keydown', { key: 'Escape' });

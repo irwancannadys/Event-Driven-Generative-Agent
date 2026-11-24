@@ -19,9 +19,9 @@ import {
   type ReportRowView,
 } from './view-models';
 
-// The panels of the page: status, characters, orders, the boss desk, the time controls in a menu that
-// opens from the top of the page, and in the sidebar the event log, the complaints and the stock (each can
-// be folded away). What each shows comes from `view-models.ts`; this file only puts it on the screen and passes
+// The panels of the page: the characters, the orders, the complaints and the boss desk under the picture, the
+// event log and the stock in the sidebar (each can be folded away), and the clock with the time controls in a
+// menu that opens from the top of the page. What each shows comes from `view-models.ts`; this file only puts it on the screen and passes
 // the boss's clicks on. It makes no decisions.
 
 export interface PanelActions {
@@ -65,7 +65,7 @@ export function createPanels(
   let latest: PanelInput | undefined;
   let noticeTimer: ReturnType<typeof setTimeout> | undefined;
 
-  // --- the strip on top: connection, time and the time controls ---
+  // --- the top of the page: the name of the cafe, and the clock with the time controls ---
   const dot = el('span', 'dot');
   const connection = el('span', 'conn');
   const clock = el('strong', 'clock');
@@ -81,12 +81,20 @@ export function createPanels(
     link.href = view.mode === 'scene' ? '?view=panel' : '?view=3d';
     viewControl.append(link);
   }
-  // The time controls are only needed now and then: a button in the strip opens them as a menu, and a click
-  // anywhere else (or Escape) puts them away again.
+  // The clock is a button: it opens a menu with the connection, the speed and the time controls, which are only
+  // needed now and then. A click anywhere else (or Escape) puts them away again.
   const menuMark = el('span', 'fold-mark');
-  const menuButton = el('button', 'menu-button', t('panel.time'), menuMark);
+  const menuButton = el('button', 'menu-button', dot, clock, menuMark);
   menuButton.type = 'button';
-  const menuPanel = el('div', 'menu-panel', controls, viewControl);
+  menuButton.setAttribute('aria-label', t('panel.time'));
+  const menuPanel = el(
+    'div',
+    'menu-panel',
+    el('div', 'menu-title', t('panel.time')),
+    el('div', 'menu-status', connection, pace),
+    controls,
+    viewControl,
+  );
   const menuBackdrop = el('div', 'menu-backdrop');
   const menu = el('div', 'menu', menuBackdrop, menuButton, menuPanel);
   let menuOpen = false;
@@ -106,7 +114,6 @@ export function createPanels(
     if ((event as KeyboardEvent).key === 'Escape') setMenu(false);
   });
   showMenu();
-  const strip = el('header', 'status-strip', dot, connection, clock, pace, menu);
 
   const showNotice = (message: string): void => {
     notice.textContent = message;
@@ -144,20 +151,37 @@ export function createPanels(
 
   const agents = section('panel.agents', 'agents');
   const orders = section('panel.orders', 'orders');
+  const complaints = section('panel.complaints', 'complaints');
   const boss = section('panel.boss', 'boss');
   const log = foldable('log', 'panel.log', 'log');
-  const complaints = foldable('complaints', 'panel.complaints', 'complaints');
   const stock = foldable('stock', 'panel.stock', 'stock');
   const sceneSlot = el('section', 'scene-slot');
   const banner = el('div', 'scene-banner', t('status.closed'));
   banner.style.display = 'none';
   sceneSlot.append(banner);
   if (view.mode === 'panel') sceneSlot.style.display = 'none';
-  // Like a video page: the picture big on the left with the characters, the orders and the boss desk under
-  // it, and a column on the right with the log (it scrolls) and the stock below it.
-  const topbar = el('header', 'topbar', el('h1', '', t('app.title')), strip);
-  const main = el('div', 'main', sceneSlot, el('div', 'info', agents.root, orders.root, boss.root));
-  const side = el('aside', 'side', log.root, complaints.root, stock.root);
+  // Like a video page: the picture big on the left with the characters, the orders, the complaints and the boss
+  // desk under it, and a column on the right with the log (it scrolls) and the stock below it.
+  const brand = el(
+    'h1',
+    'brand',
+    el('span', 'brand-mark', 'C'),
+    el(
+      'span',
+      'brand-name',
+      t('app.title.first'),
+      ' ',
+      el('span', 'brand-accent', t('app.title.second')),
+    ),
+  );
+  const topbar = el('header', 'topbar', brand, menu);
+  const main = el(
+    'div',
+    'main',
+    sceneSlot,
+    el('div', 'info', agents.root, orders.root, complaints.root, boss.root),
+  );
+  const side = el('aside', 'side', log.root, stock.root);
   root.replaceChildren(topbar, notice, el('main', 'watch', main, side));
 
   const drawControls = (paused: boolean, speed: number, enabled: boolean): void => {
@@ -246,8 +270,8 @@ export function createPanels(
       });
       if (!state) {
         changed('clock', 'none', () => {
-          clock.textContent = t('waiting.world');
-          pace.textContent = '';
+          clock.textContent = '--:--';
+          pace.textContent = t('waiting.world');
           controls.replaceChildren();
         });
         return;

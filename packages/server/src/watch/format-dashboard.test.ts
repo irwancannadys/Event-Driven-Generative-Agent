@@ -115,13 +115,13 @@ describe('formatDashboard', () => {
   it('draws the whole board', () => {
     expect(formatDashboard(view)).toBe(
       [
-        '=== Kafe Virtual ===  hari 0, 12:30  ·  kecepatan 60x',
+        "=== Cand's Coffee ===  hari 0, 12:30  ·  kecepatan 60x",
         '────────────────────────────────────────────────────────────────────────',
         'KARAKTER',
         '  Kasir           Kasir      bekerja: mencatat pesanan (sampai 12:30), antre 2',
-        '  Koki            Dapur      menganggur',
+        '  Koki            Dapur      idle',
         '  Admin Stok      Rak Stok   berjalan ke Meja Bos (sampai 12:35), antre 1',
-        '  Rina (pelayan)  Meja 2     menganggur',
+        '  Rina (pelayan)  Meja 2     idle',
         '',
         'PESANAN',
         '  menunggu 1 · dimasak 1 · ditahan (bahan kurang) 1',
@@ -154,7 +154,7 @@ describe('formatDashboard', () => {
   it('says so when the clock is paused', () => {
     const paused = { ...view, time: { ...view.time, paused: true } };
     expect(formatDashboard(paused).split('\n')[0]).toBe(
-      '=== Kafe Virtual ===  hari 0, 12:30  ·  JEDA',
+      "=== Cand's Coffee ===  hari 0, 12:30  ·  JEDA",
     );
   });
 

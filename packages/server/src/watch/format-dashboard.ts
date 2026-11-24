@@ -93,7 +93,7 @@ export function formatDashboard(view: DashboardView): string {
   const { time } = view;
   const pace = time.paused ? 'JEDA' : `kecepatan ${time.speed}x`;
   return [
-    `=== Kafe Virtual ===  hari ${time.day}, ${time.clock}  ·  ${pace}`,
+    `=== Cand's Coffee ===  hari ${time.day}, ${time.clock}  ·  ${pace}`,
     RULE,
     'KARAKTER',
     ...view.agents.map(agentLine),

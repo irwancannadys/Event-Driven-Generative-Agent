@@ -46,15 +46,44 @@ h1 {
   white-space: nowrap;
   color: var(--brand);
 }
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.brand-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  background: linear-gradient(145deg, #14b8a6, #0b4f4a);
+  box-shadow: 0 3px 10px rgba(11, 79, 74, 0.3);
+  color: #fff;
+  font:
+    700 22px/1 Georgia,
+    'Times New Roman',
+    serif;
+}
+.brand-name {
+  font:
+    700 24px/1 Georgia,
+    'Times New Roman',
+    serif;
+  letter-spacing: 0.01em;
+}
+.brand-accent {
+  color: var(--accent);
+  font-style: italic;
+  font-weight: 400;
+}
 
 .topbar {
   display: flex;
   flex-wrap: wrap;
   gap: 8px 16px;
   align-items: center;
-}
-.topbar .status-strip {
-  flex: 1;
+  justify-content: space-between;
 }
 h2 {
   margin: 0 0 8px;
@@ -68,17 +97,6 @@ h2 {
   color: var(--muted);
 }
 
-.status-strip {
-  font-size: 13px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 14px;
-  align-items: center;
-  padding: 8px 12px;
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-}
 .clock {
   font-size: 16px;
   font-variant-numeric: tabular-nums;
@@ -149,10 +167,41 @@ button.reject {
 }
 
 .panel {
-  padding: 10px 12px;
-  background: var(--card);
+  --tone: var(--accent);
+  --tint: #e9f6f5;
+  padding: 10px 12px 12px;
+  background: linear-gradient(180deg, var(--tint) 0, var(--card) 150px);
   border: 1px solid var(--line);
+  border-top: 3px solid var(--tone);
   border-radius: 10px;
+}
+.panel h2,
+.panel .panel-toggle {
+  color: var(--tone);
+}
+.panel.agents {
+  --tone: #0e7490;
+  --tint: #e6f4f8;
+}
+.panel.orders {
+  --tone: #a16207;
+  --tint: #fbf3e0;
+}
+.panel.complaints {
+  --tone: #c2410c;
+  --tint: #fdeee6;
+}
+.panel.boss {
+  --tone: #5b4bb5;
+  --tint: #efecfa;
+}
+.panel.log {
+  --tone: #0f766e;
+  --tint: #e5f4f2;
+}
+.panel.stock {
+  --tone: #3f7d3a;
+  --tint: #ebf5e7;
 }
 
 .row {
@@ -262,9 +311,9 @@ button.reject {
   border: 1px solid var(--line);
   border-radius: 12px;
   background:
-    radial-gradient(ellipse at 10% 0%, rgba(94, 196, 188, 0.4), transparent 55%),
-    radial-gradient(ellipse at 92% 100%, rgba(255, 207, 160, 0.22), transparent 50%),
-    radial-gradient(ellipse at 50% 35%, #fbffff 0%, #dff0ef 55%, #c6e2e0 100%);
+    radial-gradient(ellipse at 10% 0%, rgba(40, 120, 118, 0.35), transparent 55%),
+    radial-gradient(ellipse at 90% 100%, rgba(20, 70, 80, 0.3), transparent 55%),
+    radial-gradient(ellipse at 50% 35%, #9fc4c1 0%, #7aa7a4 55%, #5f8d8b 100%);
   color: #2c2c2a;
   cursor: grab;
   touch-action: none;
@@ -355,8 +404,10 @@ button.reject {
 }
 .info {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
   gap: 12px;
+  /* every card is as tall as its own content: a long boss desk does not stretch the others */
+  align-items: start;
 }
 .side {
   display: flex;
@@ -371,9 +422,6 @@ button.reject {
 }
 @media (max-width: 1000px) {
   .watch {
-    grid-template-columns: 1fr;
-  }
-  .info {
     grid-template-columns: 1fr;
   }
   .side .log .panel-body {
@@ -423,7 +471,7 @@ button.reject {
   cursor: pointer;
 }
 .panel-toggle:hover:not(:disabled) {
-  color: var(--accent);
+  filter: brightness(0.85);
 }
 .fold-mark {
   font-size: 15px;
@@ -432,8 +480,8 @@ button.reject {
 .panel.folded h2 {
   margin-bottom: 0;
 }
-.side .complaints .panel-body {
-  max-height: 260px;
+.info .complaints .panel-body {
+  max-height: 220px;
   overflow-y: auto;
 }
 .complaint-summary {
@@ -466,23 +514,40 @@ button.reject {
 }
 
 /* The time controls: a button in the strip at the top opens them as a menu. */
-.status-strip .menu {
+.menu {
   position: relative;
-  margin-left: auto;
 }
 .menu-button {
   position: relative;
   z-index: 12;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  border-color: var(--accent);
-  color: var(--accent);
-  font-weight: 600;
+  gap: 10px;
+  padding: 6px 14px;
+  border-color: var(--line);
+  border-radius: 999px;
+  box-shadow: 0 1px 3px rgba(11, 79, 74, 0.1);
+  color: var(--fg);
+}
+.menu-button .clock {
+  font-size: 15px;
 }
 .menu-button[aria-expanded='true'] {
-  background: var(--accent);
-  color: #fff;
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.menu-title {
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.menu-status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  color: var(--muted);
 }
 .menu-backdrop {
   position: fixed;

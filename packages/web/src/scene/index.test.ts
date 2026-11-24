@@ -157,10 +157,10 @@ describe('createScene', () => {
     createScene(slot as unknown as HTMLElement, () => world());
     frame();
     const texts = labelTexts(slot);
-    expect(texts).toContain('Kasir · menganggur');
+    expect(texts).toContain('Kasir · idle');
     expect(texts).toContain('Koki · bekerja: memasak');
     expect(texts).toContain('Admin Stok · berjalan ke Meja Bos');
-    expect(texts).toContain('Rina (pelayan) · menganggur');
+    expect(texts).toContain('Rina (pelayan) · idle');
   });
 
   it('places every label at a real spot on the screen, and keeps going frame after frame', () => {

@@ -62,7 +62,7 @@ describe('agentRows', () => {
       ],
     });
     expect(agentRows(state)).toEqual([
-      { id: 'cashier', name: 'Kasir', where: 'Kasir', doing: 'menganggur', until: null },
+      { id: 'cashier', name: 'Kasir', where: 'Kasir', doing: 'idle', until: null },
       { id: 'cook', name: 'Koki', where: 'Dapur', doing: 'bekerja: memasak', until: '08:35' },
       {
         id: 'stock_admin',

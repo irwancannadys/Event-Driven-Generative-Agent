@@ -23,7 +23,7 @@ export const STATION_NAME_ID: Record<StationId, string> = {
 };
 
 export const AGENT_STATE_NAME_ID = {
-  idle: 'menganggur',
+  idle: 'idle',
   walking: 'berjalan',
   working: 'bekerja',
   thinking: 'berpikir',

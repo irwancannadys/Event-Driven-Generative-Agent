@@ -219,13 +219,13 @@ curl -s -X POST localhost:3000/time -H 'content-type: application/json' -d '{"sp
 Setelah `day_opened` (08:00) dan pesanan mulai masuk, papan menampilkan seperti ini (cuplikan asli dari jalan sungguhan, bagian atasnya):
 
 ```
-=== Kafe Virtual ===  hari 0, 13:11  ·  kecepatan 600x
+=== Cand's Coffee ===  hari 0, 13:11  ·  kecepatan 600x
 ────────────────────────────────────────────────────────────────────────
 KARAKTER
   Kasir           Kasir      bekerja: mencatat pesanan (sampai 13:11)
   Koki            Dapur      bekerja: memasak (sampai 13:23), antre 4
   Admin Stok      Rak Stok   berjalan ke Rak Stok (sampai 13:12)
-  Rina (pelayan)  Meja 2     menganggur
+  Rina (pelayan)  Meja 2     idle
 
 PESANAN
   menunggu 5 · dimasak 1 · ditahan (bahan kurang) 0
@@ -376,19 +376,20 @@ Buka alamat yang dicetak tab 2 (biasanya `http://localhost:5173`; kalau port itu
 
 ### 9.2 Yang dicari
 
-- **Pojok atas:** titik hijau "Tersambung", jam virtual yang berjalan, dan tombol **Kontrol waktu**. Tampilannya terang berwarna teal (putih, abu kehijauan, teal tua untuk tombol), tidak ikut mode gelap sistem.
-- **Kontrol waktu** hanya muncul kalau lu klik tombolnya: Jeda, kecepatan (1x sampai 3600x), majukan waktu, dan tautan Panel saja. Menu tetap terbuka selagi lu menekan beberapa kontrol; klik di mana saja di luar menu atau tekan Escape untuk menutupnya. Klik **600x** supaya cepat.
-- **Sidebar kanan:** **Kejadian**, **Komplain**, dan **Stok**. Klik judul sebuah bagian untuk melipatnya (panah ▾ dan ▸); lipatan diingat di browser.
+- **Pojok atas:** logo dan nama **Cand's Coffee** di kiri, dan di kanan satu tombol berisi titik koneksi dan jam virtual (tanpa kartu status). Tampilannya terang berwarna teal, tidak ikut mode gelap sistem.
+- **Tombol jam** membuka menu **Kontrol waktu**: status koneksi dan kecepatan, Jeda, kecepatan (1x sampai 3600x), majukan waktu, dan tautan Panel saja. Menu tetap terbuka selagi lu menekan beberapa kontrol; klik di mana saja di luar menu atau tekan Escape untuk menutupnya. Klik **600x** supaya cepat.
+- **Sidebar kanan:** **Kejadian** dan **Stok**. Klik judul sebuah bagian untuk melipatnya (panah ▾ dan ▸); lipatan diingat di browser.
+- **Kartu** punya warna masing-masing (Karakter biru-teal, Pesanan amber, Komplain jingga, Meja Bos ungu, Kejadian teal, Stok hijau). Kartu di bawah gambar setinggi isinya sendiri: kalau Meja Bos panjang, hanya kartu itu yang memanjang.
 - **Gambar besar di kiri:** kafe potong di atas alas. Dapur (kanan belakang) dan ruang bos (kiri belakang) dipisah sekat kaca dengan pintu. Pintu masuk kaca di depan, tujuh meja, kasir di tengah belakang dengan etalase dan papan menu, rak stok di belakang, bangku, lukisan, tanaman, lampu gantung.
 - **Karyawan** berbaju hijau dan bercelana putih (koki bertopi putih), bos berjas gelap di ruangnya. Label di atas kepala menyebut nama dan sedang apa. Ada cewek (kasir dan Rina: rambut panjang atau sanggul, bibir merah) dan cowok (admin stok, koki berjenggot, bos). Pelanggan juga campur: ada yang berambut panjang atau dikuncir, ada yang berjenggot.
-- **Rina (pelayan) diam.** Dia sudah ada di denah dan di panel Karakter, tapi perilakunya (ingatan, inisiatif, melayani meja) baru dikerjakan di Tahap 5, jadi untuk sekarang dia memang cuma menganggur di mejanya.
+- **Rina (pelayan) diam.** Dia sudah ada di denah dan di panel Karakter, tapi perilakunya (ingatan, inisiatif, melayani meja) baru dikerjakan di Tahap 5, jadi untuk sekarang dia memang cuma idle di mejanya.
 - **Langkah kaki** mengikuti jarak yang ditempuh: ayunan kaki dan tangan sesuai panjang langkah, dan berhenti begitu karakter berhenti. Di kecepatan sangat tinggi ayunannya dibatasi supaya tidak berkedip.
 - **Pelanggan** masuk lewat pintu depan (log: "Pelanggan masuk ke kafe"), berjalan ke kasir selama 200 detik virtual (sepelan karyawan), dan **sampai di kasir tepat saat log mencatat "Pesanan #N masuk"**. Saat itu label kasir jadi "bekerja: mencatat pesanan" dan pelanggan berdiri di depannya sampai kasir selesai (bukan semenit tetap). Lalu ia duduk atau berdiri menunggu, mengambil pesanan di **jendela dapur** (piringnya muncul di sana), dan pulang. Gelembung `!` merah = komplain, "Menunggu bahan" = pesanan ditahan, "Siap!" hijau = masakan selesai. Lebih dari 20 orang jadi tulisan "+N antre". Keramaian bawaan (`CROWD_PCT=150`) membuat pesanan masuk lebih rapat.
 - **Admin stok** jalan ke rak, ke ruang bos lewat pintunya, menaruh **kertas laporan** di meja bos, lalu pulang. Kotak di **rak stok** berkurang sesuai stok (merah-oranye = hampir habis).
-- **Komplain:** bagian sendiri di sidebar. Tiap komplain menunjukkan pesanannya, penyebabnya (layanan lambat, pesanan salah, kualitas), posisinya (**dicatat kasir**, **menunggu keputusan bos**, **dibalas**), berapa lama menunggu atau dibalas dalam berapa lama, dan kompensasinya (usulan kasir selagi menunggu bos, yang diberikan setelah dibalas). Yang menangani tetap kasir, sesuai brief. Untuk melihatnya cepat: `COMPLAINT_CHANCE_PCT=100 COMPLAINT_WAIT_MIN=10 npm run dev`, lalu **+1 jam** beberapa kali.
-- **Di bawah gambar:** Karakter, Pesanan, dan **Meja Bos** dengan tombol **Setujui/Tolak** (ganti `curl`).
+- **Komplain:** kartu sendiri di sebelah Pesanan. Tiap komplain menunjukkan pesanannya, penyebabnya (layanan lambat, pesanan salah, kualitas), posisinya (**dicatat kasir**, **menunggu keputusan bos**, **dibalas**), berapa lama menunggu atau dibalas dalam berapa lama, dan kompensasinya (usulan kasir selagi menunggu bos, yang diberikan setelah dibalas). Yang menangani tetap kasir, sesuai brief. Untuk melihatnya cepat: `COMPLAINT_CHANCE_PCT=100 COMPLAINT_WAIT_MIN=10 npm run dev`, lalu **+1 jam** beberapa kali.
+- **Di bawah gambar:** Karakter, Pesanan, Komplain, dan **Meja Bos** dengan tombol **Setujui/Tolak** (ganti `curl`). Karyawan yang tidak sedang bekerja tertulis `idle`.
 - **Geser** gambar dengan mouse: kiri-kanan memutar kamera sedikit, **atas-bawah** menurunkan atau mengangkat kamera (dari sejajar meja sampai hampir tegak lurus dari atas). Seluruh kafe tetap masuk gambar di semua sudut.
-- Di belakang kafe ada alas bulat berwarna pasir dengan latar krem-persik yang terang.
+- Latar gambar dan alas kafe berwarna teal redup supaya tidak silau.
 
 ### 9.3 Uji ketahanan
 
@@ -405,6 +406,6 @@ Buka alamat yang dicetak tab 2 (biasanya `http://localhost:5173`; kalau port itu
 - Kalau lu melihat pelanggan "melompat", cek dulu apakah waktu baru dimajukan: itu wajar.
 - Pesanan manual lewat `curl` (`POST /orders`) tidak punya pelanggan yang masuk lewat pintu: pelanggannya langsung muncul di kasir. Pesanan dari generator selalu didahului pelanggan yang masuk.
 - Karyawan bisa berjalan menembus pelanggan yang sedang berdiri (jalurnya hanya menghindari perabot, belum menghindari orang).
-- Gua sudah mengaudit gerak lawan log selama satu hari penuh (`tools/scene-audit.test.ts`, di keramaian 100% dan 250%): kasir yang "mencatat" pesanan X selalu punya pelanggan X berdiri di depannya, kasir tidak pernah menganggur selagi ada yang menunggu dicatat, pelanggan masuk lewat pintu dan sampai tepat saat pesanan tercatat, tak ada yang berjalan menembus perabot atau melompat, dan tak ada dua pelanggan di titik yang sama. Itu bukan jaminan bebas bug: kalau lu lihat yang janggal, kirim screenshot dan jamnya.
+- Gua sudah mengaudit gerak lawan log selama satu hari penuh (`tools/scene-audit.test.ts`, di keramaian 100% dan 250%): kasir yang "mencatat" pesanan X selalu punya pelanggan X berdiri di depannya, kasir tidak pernah idle selagi ada yang menunggu dicatat, pelanggan masuk lewat pintu dan sampai tepat saat pesanan tercatat, tak ada yang berjalan menembus perabot atau melompat, dan tak ada dua pelanggan di titik yang sama. Itu bukan jaminan bebas bug: kalau lu lihat yang janggal, kirim screenshot dan jamnya.
 - Rina belum mengantar makanan: pelanggan mengambil sendiri di jendela dapur. Mengantar ke meja ikut Tahap 5 bersama Rina (butuh meja yang dikenal domain).
 

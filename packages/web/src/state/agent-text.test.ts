@@ -16,7 +16,7 @@ const agent = (overrides: Partial<AgentState>): AgentState => ({
 
 describe('agentActivity', () => {
   it('says what the agent is doing', () => {
-    expect(agentActivity(agent({}))).toBe('menganggur');
+    expect(agentActivity(agent({}))).toBe('idle');
     expect(agentActivity(agent({ state: 'walking', station: 'boss_desk', from: 'kitchen' }))).toBe(
       'berjalan ke Meja Bos',
     );
