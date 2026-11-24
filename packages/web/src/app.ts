@@ -1,0 +1,32 @@
+import { changeTime, decideReport } from './net/api';
+import { connect, type ConnectionStatus } from './net/connection';
+import { socketUrl } from './net/url';
+import { createPanels } from './panels/render';
+import { applyMessage, type WorldState } from './state/world';
+
+/** How often the panels are redrawn, which keeps the virtual clock ticking between server messages. */
+const REDRAW_MS = 250;
+
+/** Connects to the server, keeps the state of the world and shows it. */
+export function startApp(root: HTMLElement): void {
+  let state: WorldState | undefined;
+  let status: ConnectionStatus = 'connecting';
+  const panels = createPanels(root, {
+    decide: (reportId, decision) => decideReport(reportId, decision),
+    changeTime: (request) => changeTime(request),
+  });
+  const draw = (): void => panels.update({ state, status, nowMs: performance.now() });
+
+  connect(socketUrl(window.location), {
+    onMessage(message) {
+      state = applyMessage(state, message, performance.now());
+      draw();
+    },
+    onStatus(next) {
+      status = next;
+      draw();
+    },
+  });
+  setInterval(draw, REDRAW_MS);
+  draw();
+}
