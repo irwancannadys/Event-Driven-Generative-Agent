@@ -121,20 +121,28 @@ Hasil Tahap 1, bahan untuk materi:
 
 ### Tahap 2: Mesin kejadian, waktu virtual, replay
 
-**Tujuan:** semua kejadian lewat satu jalur yang tercatat, dan satu hari bisa diputar ulang dengan hasil sama.
+**Tujuan:** semua kejadian lewat satu jalur yang tercatat, dunia berjalan sendiri lewat jam virtual dan generator, dan satu hari bisa diputar ulang dengan hasil sama. Server yang mati lalu nyala melanjutkan dunia dari log.
+
+**Pembagian tugas (keputusan 020 dan 021):** bagian murni "kapan apa terjadi" ada di `core` (`VirtualClock`, jadwal, generator, RNG), sedangkan `server` menjalankan handler-nya. Pacing real-time (kecepatan, pause) ada di `server` dan bukan event.
 
 **Tugas:**
-- [ ] Penulis event lengkap (tabel `events` sudah ada sejak Tahap 0, append-only lewat trigger SQLite)
-- [ ] Event bus dalam proses (persist-then-publish)
-- [ ] `SimClock`: jam virtual (detik), kecepatan, `advance(seconds)` yang memproses semua jadwal yang terlewat secara berurutan
-- [ ] Penjadwal event berbasis waktu (buka kafe, `regular_expected`, tutup, dan `agent_think_requested` untuk agent yang menganggur)
-- [ ] **Generator dunia** (seeded): pesanan dengan pola jam, komplain karena sebab (pesanan menunggu lama plus peluang acak), undian perilaku pemasok. Semua jadi event berasal `generator` lewat API kasir mock
-- [ ] Proyeksi: `replay(events) -> state` (stok, pesanan, laporan) dan **pemulihan saat boot** (bangun ulang proyeksi dan antrean tugas agent dari log)
-- [ ] RNG tanpa-state `rand(seed, key)` dan pelarangan `Math.random` / `Date.now` di `core` (aturan lint)
+- [ ] RNG tanpa state `rand(seed, key)` di `core` (lint sudah melarang `Math.random` dan `Date.now`)
+- [ ] `VirtualClock`: jam virtual (detik), `advance(seconds)` memproses semua jadwal yang terlewat secara berurutan, hasil sama berapa pun granularitas tick-nya
+- [ ] Jadwal dan generator dunia (seeded, murni): buka dan tutup kafe, `regular_expected`, pesanan dengan pola jam, komplain `slow_service` (pesanan menunggu lama plus undian per pesanan), undian perilaku pemasok (fungsi murni, dipakai Tahap 3)
+- [ ] Event bus dalam proses (persist-then-publish); terminal log berlangganan
+- [ ] Proyeksi `complaint_received`
+- [ ] Simulasi di `server`: `bootSimulation` (dunia baru, atau **pemulihan saat boot** lewat replay log), handler jadwal dan generator (generator memakai use case `createOrder`, pintu yang sama dengan `POST /orders`), `skipTime` (`sim_time_advanced`), penyimpanan jam di `sim_clock`
+- [ ] `Pacer`: kecepatan 1 sampai 3600, pause, resume; `tick` bisa dipanggil manual oleh tes
+- [ ] Kontrol waktu di API: `GET /time` dan `POST /time` (`speed`, `paused`, `advance_seconds`)
+- [ ] Konfigurasi (`PORT`, `SPEED`, `SEED`, `CROWD_PCT`, `COMPLAINT_CHANCE_PCT`) dan `npm run dev`
+- [ ] Golden test satu hari dan `npm run demo:stage2` (Replay check dan Restart check)
+- [ ] `docs/testing.md`: panduan uji manual
 
-**Tes:** golden test satu hari terskrip; replay sama dengan live; boot ulang dari log menghasilkan state yang sama; seed yang sama menghasilkan event generator yang sama; `advance(1800)` (30 menit) menghasilkan event yang sama berapa pun granularitas tick-nya.
+**Ditunda ke Tahap 3 dan seterusnya:** timer dinamis (akhir tugas agent), `agent_think_requested` dari scheduler, proyeksi `restock_*`, `regular_arrived` dan `regular_left`. Di Tahap 2 belum ada yang memasak, jadi pesanan dari generator menumpuk berstatus `placed` dan komplain muncul karena itu.
 
-**Selesai jika:** tes golden dan replay lulus.
+**Tes:** golden test satu hari; replay sama dengan live; boot ulang dari log menghasilkan state yang sama; **restart di tengah hari memberi log identik** dengan jalan sekali jalan; seed yang sama menghasilkan event generator yang sama; `advance(1800)` (30 menit) menghasilkan event yang sama berapa pun granularitas tick-nya.
+
+**Selesai jika:** tes golden dan replay lulus, restart di tengah hari terbukti identik, dan `npm run dev` nyala, merespons `curl`, dan pulih setelah dimatikan.
 
 **Catatan pelajaran:** kenapa event log jadi sumber kebenaran, nilai replay untuk debugging.
 

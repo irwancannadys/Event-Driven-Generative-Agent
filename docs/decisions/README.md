@@ -23,3 +23,5 @@ Satu file per keputusan, beberapa baris tiap file. Brief menang jika ada bentura
 | [017](017-tooling-npm-workspaces-typescript.md) | Tooling: npm workspaces dan TypeScript |
 | [018](018-extra-readonly-pages.md) | Halaman tambahan read-only (Stok, Menu, Laporan) |
 | [019](019-sql-projections-with-pure-rules.md) | Proyeksi lewat SQL, aturan murni di core |
+| [020](020-pure-time-engine.md) | Mesin waktu: sumber murni, jam virtual, seed dari log |
+| [021](021-pacing-and-time-controls.md) | Pacing dan kontrol waktu |
