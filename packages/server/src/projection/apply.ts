@@ -25,7 +25,7 @@ const LOG_ONLY: ReadonlySet<EventType> = new Set<EventType>([
 ]);
 
 // Children before parents, so foreign keys stay satisfied while clearing.
-const PROJECTION_TABLES = [
+export const PROJECTION_TABLES = [
   'complaints',
   'restock_orders',
   'reports',
