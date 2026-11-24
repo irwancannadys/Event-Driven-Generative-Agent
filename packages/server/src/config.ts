@@ -1,6 +1,11 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { makeScenario, type Scenario } from '@cafe/core';
+import {
+  DEFAULT_COMPLAINT_WAIT_SEC,
+  SECONDS_PER_MINUTE,
+  makeScenario,
+  type Scenario,
+} from '@cafe/core';
 import { DEFAULT_SPEED, MAX_SPEED, MIN_SPEED } from './sim/pacer';
 
 export interface Config {
@@ -44,6 +49,15 @@ export function parseConfig(env: Env, repoRoot: string): Config {
       {
         crowdPct: intSetting(env, 'CROWD_PCT', 100, 0, 1000),
         complaintChancePct: intSetting(env, 'COMPLAINT_CHANCE_PCT', 15, 0, 100),
+        // In minutes, like people think about it. Complaints about a slow order arise at exactly this wait.
+        complaintWaitSec:
+          intSetting(
+            env,
+            'COMPLAINT_WAIT_MIN',
+            DEFAULT_COMPLAINT_WAIT_SEC / SECONDS_PER_MINUTE,
+            1,
+            1440,
+          ) * SECONDS_PER_MINUTE,
       },
     ),
   };

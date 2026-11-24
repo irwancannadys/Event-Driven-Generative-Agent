@@ -23,13 +23,19 @@ describe('parseConfig', () => {
         SEED: '7',
         CROWD_PCT: '250',
         COMPLAINT_CHANCE_PCT: '30',
+        COMPLAINT_WAIT_MIN: '45',
       },
       root,
     );
     expect(config.databasePath).toBe('/repo/var/other.db');
     expect(config.port).toBe(3100);
     expect(config.speed).toBe(600);
-    expect(config.scenario).toMatchObject({ seed: 7, crowdPct: 250, complaintChancePct: 30 });
+    expect(config.scenario).toMatchObject({
+      seed: 7,
+      crowdPct: 250,
+      complaintChancePct: 30,
+      complaintWaitSec: 45 * 60,
+    });
   });
 
   it('keeps an absolute database path as it is', () => {
@@ -51,7 +57,14 @@ describe('parseConfig', () => {
   });
 
   it('rejects values that are not whole numbers, naming the variable', () => {
-    for (const name of ['PORT', 'SPEED', 'SEED', 'CROWD_PCT', 'COMPLAINT_CHANCE_PCT']) {
+    for (const name of [
+      'PORT',
+      'SPEED',
+      'SEED',
+      'CROWD_PCT',
+      'COMPLAINT_CHANCE_PCT',
+      'COMPLAINT_WAIT_MIN',
+    ]) {
       expect(() => parseConfig({ [name]: 'abc' }, root), name).toThrow(
         new RegExp(`${name} must be a whole number, got "abc"`),
       );
@@ -68,6 +81,12 @@ describe('parseConfig', () => {
     );
     expect(() => parseConfig({ COMPLAINT_CHANCE_PCT: '101' }, root)).toThrow(
       /COMPLAINT_CHANCE_PCT must be between 0 and 100/,
+    );
+    expect(() => parseConfig({ COMPLAINT_WAIT_MIN: '0' }, root)).toThrow(
+      /COMPLAINT_WAIT_MIN must be between 1 and 1440/,
+    );
+    expect(() => parseConfig({ COMPLAINT_WAIT_MIN: '1441' }, root)).toThrow(
+      /COMPLAINT_WAIT_MIN must be between 1 and 1440/,
     );
   });
 });

@@ -188,7 +188,8 @@ Semua lewat variabel lingkungan atau file `.env` (salin dari `.env.example`):
 | `SPEED` | detik virtual per detik asli (1 sampai 3600) | 60 |
 | `SEED` | seed dunia **baru** | 42 |
 | `CROWD_PCT` | keramaian, 100 = normal, 200 = dua kali lipat | 100 |
-| `COMPLAINT_CHANCE_PCT` | peluang pesanan yang menunggu 20 menit jadi komplain | 15 |
+| `COMPLAINT_CHANCE_PCT` | peluang pesanan yang menunggu sampai batas waktu komplain jadi komplain | 15 |
+| `COMPLAINT_WAIT_MIN` | menit virtual menunggu sebelum pesanan bisa dikomplain (1 sampai 1440) | 20 |
 
 Nilai yang salah (mis. `SPEED=abc`) membuat server menolak nyala dengan pesan yang menyebut nama variabelnya.
 
@@ -309,10 +310,34 @@ curl -s -X POST localhost:3000/reports/2/decision -H 'content-type: application/
 
 Laporan yang dibiarkan menunggu terus menunggu (aturan v1, keputusan 024). Bahan itu tidak dipesan, jadi pesanan yang butuh bahan itu `ditahan (bahan kurang)` dan menumpuk di papan. Itu **wajar**, bukan bug: itulah akibat bos yang tidak bekerja. Setujui laporannya, dan pesanan yang tertahan lanjut sendiri.
 
+### 6.9 Komplain yang sampai ke bos
+
+Aturan kasir: menunggu kurang dari 40 menit dijawab sendiri (permintaan maaf), 40 sampai 60 menit mengusulkan diskon 10%, lebih dari itu item gratis. Dua yang terakhir harus disetujui bos. Karena komplain muncul tepat di batas `COMPLAINT_WAIT_MIN` (bawaan 20 menit), geser batasnya dan percepat dunia, jadi tidak perlu menunggu:
+
+```
+rm -f data/cafe.db*
+COMPLAINT_WAIT_MIN=45 COMPLAINT_CHANCE_PCT=100 npm run dev          # tab 1 (65 untuk item gratis)
+curl -s -X POST localhost:3000/time -H 'content-type: application/json' -d '{"speed":600}'   # tab 3
+```
+
+Pada 600x, komplain pertama tiba di meja bos sendiri sekitar pukul 14:00 (gua ukur 38 detik asli), tanpa lu ngapa-ngapain. Mau lebih cepat lagi: pesan 10 nasi goreng (dimasak 80 menit, jadi pasti terlambat) dan majukan waktu `{"advance_seconds":3600}`. Papan menampilkan:
+
+```
+MEJA BOS  (1 laporan menunggu keputusan lu)
+  #1 [komplain] Komplain: layanan lambat (pesanan #1)
+     Pesanan #1 menunggu 46 menit. Usul balasan: Mohon maaf atas keterlambatan pesanan #1. Kami beri diskon 10% untuk pesanan berikutnya. Kompensasi usulan: diskon 10% untuk pesanan berikutnya.
+     setujui: curl -s -X POST http://127.0.0.1:3000/reports/1/decision -H 'content-type: application/json' -d '{"decision":"approved"}'
+     tolak  : curl -s -X POST http://127.0.0.1:3000/reports/1/decision -H 'content-type: application/json' -d '{"decision":"rejected"}'
+```
+
+**Yang dicari:** kasir berjalan ke meja bos membawa laporan (papan: `berjalan ke Meja Bos`, lalu `bekerja: menyerahkan laporan`), dan **pelanggan belum dijawab sampai lu memutuskan**. Setujui: kasir kembali ke mejanya dan `complaint_replied ... compensation=discount_10` muncul. Tolak: `compensation=none`. Batas 65 menit memberi `free_item`.
+
+Gua uji keempatnya di server sungguhan (45 menit disetujui, 45 menit ditolak, 65 menit, dan satu hari biasa dengan 100% peluang komplain): semuanya selesai dalam hitungan detik asli.
+
 ## 7. Yang wajar dilihat, dan yang belum ada
 
 - **Koki kewalahan di jam makan siang.** Ada satu koki dan pesanan sekitar 14 per jam, jadi antrean menumpuk dan komplain "layanan lambat" muncul. Itu perilaku yang wajar dan bahan pelajaran tentang bottleneck, bukan bug. Kasir menjawab komplain sendiri dengan template permohonan maaf.
-- **Komplain yang butuh bos belum bisa dilihat di dunia bawaan.** Komplain muncul tepat di menit ke-20, dan aturan kasir baru meminta persetujuan bos untuk pesanan yang menunggu lebih dari 40 menit. Jalurnya (kompensasi, laporan, keputusan bos, balasan) sudah dibuat dan dites otomatis, tapi tidak akan muncul di uji manual sampai ada pengaturan yang mengubah waktu komplain (lihat catatan di keputusan 024). Gua tidak menyembunyikannya.
+- **Komplain ringan dijawab kasir sendiri.** Di pengaturan bawaan komplain muncul di menit ke-20 menunggu, dan kasir (kurang dari 40 menit) langsung membalas dengan permintaan maaf tanpa menyusahkan bos. Mau lihat komplain yang sampai ke meja bos? Lihat bagian 6.9.
 - Teks laporan dan balasan komplain masih **template** (bukan LLM). LLM baru di Tahap 5 dan 6.
 - Rina (pelayan) ada di papan di Meja 2 tapi belum melakukan apa pun (Tahap 5). Status `berpikir` juga belum dipakai (Tahap 6).
 - Belum ada tampilan 3D (Tahap 4).

@@ -20,7 +20,7 @@ Baca brief dan plan sebelum bekerja. Jika keduanya berbenturan, **brief menang**
 8. Jangan menyentuh 3D (Tahap 4) atau LLM (Tahap 5 dan 6) sebelum tahapnya tiba.
 9. Catat keputusan penting di `docs/decisions/` dalam beberapa baris.
 10. Jujur soal ketidakpastian: model lokal kecil bisa salah, hasil simulasi bukan prediksi.
-11. Jangan `git push`, dan jangan mengubah isi `PROJECT_BRIEF.md` atau `docs/PLAN.md` (selain mencentang tugas), tanpa persetujuan pemilik.
+11. Jangan `git push` di tengah tahap: push hanya setelah satu tahap selesai dan atas persetujuan pemilik (commit tetap per langkah). Jangan mengubah isi `PROJECT_BRIEF.md` atau `docs/PLAN.md` (selain mencentang tugas), tanpa persetujuan pemilik.
 12. Pemilik menguji sendiri hasil tiap tahap. Setelah tahap selesai, perbarui `docs/testing.md` (panduan uji manual) dan **jalankan sendiri langkah-langkahnya** (proses sungguhan, bukan hanya tes otomatis) sebelum menyatakan selesai. File sementara dari uji manual ditaruh di folder scratchpad, bukan `/tmp`.
 
 ## Invarian desain (jangan dilanggar)
