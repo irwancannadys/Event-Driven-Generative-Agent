@@ -52,22 +52,45 @@ const STORY = new Set([
 /** Where the "server" is switched off and on again in the restart check: 12:07:30 on day 1. */
 const RESTART_AT = simTime(1, 12, 7) + 30;
 
-/** Every restock report is approved. A proposal of policy is approved when the cafe learns, refused when not. */
-const bossOf =
-  (learning: boolean) =>
-  (report: ReportRow): 'approved' | 'rejected' =>
-    report.type === 'policy' && !learning ? 'rejected' : 'approved';
+/**
+ * What is switched on. The experiment pulls the two ways the admin learns apart:
+ * - `baseline`: the cafe of stage 3 (rules alone, no look ahead, every proposal of policy refused)
+ * - `forecast`: she looks ahead at 10:00 and 15:00, but the boss refuses every proposal of policy
+ * - `policy`: she reviews every night and the boss approves, but she does not look ahead
+ * - `both`: all of it (what the cafe does when it learns)
+ */
+export type Variant = 'baseline' | 'forecast' | 'policy' | 'both';
 
-function playDays(seed: number, days: number, learning: boolean, until: number, bus?: EventBus) {
+const lookAhead = (variant: Variant): boolean => variant === 'forecast' || variant === 'both';
+const bossApprovesPolicy = (variant: Variant): boolean =>
+  variant === 'policy' || variant === 'both';
+
+/** Every restock report is approved. A proposal of policy only when the variant has the boss approve them. */
+const bossOf =
+  (variant: Variant) =>
+  (report: ReportRow): 'approved' | 'rejected' =>
+    report.type === 'policy' && !bossApprovesPolicy(variant) ? 'rejected' : 'approved';
+
+function playDays(
+  seed: number,
+  days: number,
+  variant: Variant,
+  until: number,
+  bus?: EventBus,
+  crowdPct?: number,
+) {
   const db = openSeededMemoryDb();
-  const scenario = makeScenario(seed, { stockForecast: learning });
+  const scenario = makeScenario(seed, {
+    stockForecast: lookAhead(variant),
+    ...(crowdPct !== undefined && { crowdPct }),
+  });
   const sim = bootSimulation({
     db,
     bus,
     scenario,
-    ...(learning && { llm: new FakeLLM(DEFAULT_FAKE_SCRIPT) }),
+    ...(variant !== 'baseline' && { llm: new FakeLLM(DEFAULT_FAKE_SCRIPT) }),
   });
-  new AutoBoss(sim, { decide: bossOf(learning) }).advanceTo(until);
+  new AutoBoss(sim, { decide: bossOf(variant) }).advanceTo(until);
   return { db, scenario, sim, days };
 }
 
@@ -85,6 +108,7 @@ export function runStage5Demo(options: Stage5Options = {}): Stage5Result {
   const seed = options.seed ?? 42;
   const dayCount = options.days ?? 4;
   const learning = options.learning ?? true;
+  const variant: Variant = learning ? 'both' : 'baseline';
   const until = dayCount * 86400;
 
   log(
@@ -99,7 +123,7 @@ export function runStage5Demo(options: Stage5Options = {}): Stage5Result {
       if (line !== null) log(line);
     }
   });
-  const { db, scenario } = playDays(seed, dayCount, learning, until, bus);
+  const { db, scenario } = playDays(seed, dayCount, variant, until, bus);
   const events = listEvents(db);
   const counts: Record<string, number> = {};
   for (const event of events) counts[event.type] = (counts[event.type] ?? 0) + 1;
@@ -154,12 +178,16 @@ export function runStage5Demo(options: Stage5Options = {}): Stage5Result {
 
   // Restart check: the same days, with the server restarted in the middle of day 1.
   const restartDb = openSeededMemoryDb();
-  const llm = () => (learning ? new FakeLLM(DEFAULT_FAKE_SCRIPT) : undefined);
-  const make = () => bootSimulation({ db: restartDb, scenario, ...(learning && { llm: llm() }) });
+  const make = () =>
+    bootSimulation({
+      db: restartDb,
+      scenario,
+      ...(variant !== 'baseline' && { llm: new FakeLLM(DEFAULT_FAKE_SCRIPT) }),
+    });
   const before = make();
-  new AutoBoss(before, { decide: bossOf(learning) }).advanceTo(RESTART_AT);
+  new AutoBoss(before, { decide: bossOf(variant) }).advanceTo(RESTART_AT);
   const after = make(); // the "restart": a new simulation, and a new model, on the same database
-  new AutoBoss(after, { decide: bossOf(learning) }).advanceTo(until);
+  new AutoBoss(after, { decide: bossOf(variant) }).advanceTo(until);
   const restartOk = after.recovered && isDeepStrictEqual(listEvents(restartDb), events);
 
   log(
@@ -173,4 +201,42 @@ export function runStage5Demo(options: Stage5Options = {}): Stage5Result {
       : `Restart check: GAGAL (restart hari 1 pukul ${formatClock(RESTART_AT)} memberi log yang berbeda)`,
   );
   return { days, events, counts, replayOk, restartOk };
+}
+
+export interface Measured {
+  days: DayMetrics[];
+  held: number;
+  complaints: number;
+  /** Seconds that an ingredient was out of stock, summed over the ingredients and the days. */
+  stockoutSec: number;
+  policyChanges: number;
+}
+
+/** Plays the days without printing anything and adds up the trouble: for comparing the cafe that learns with the one that does not. */
+export function measureDays(options: {
+  seed: number;
+  days: number;
+  variant: Variant;
+  crowdPct?: number;
+}): Measured {
+  const { db } = playDays(
+    options.seed,
+    options.days,
+    options.variant,
+    options.days * 86400,
+    undefined,
+    options.crowdPct,
+  );
+  const events = listEvents(db);
+  const days = Array.from({ length: options.days }, (_, day) => dayMetrics(events, day));
+  return {
+    days,
+    held: days.reduce((sum, day) => sum + day.held, 0),
+    complaints: days.reduce((sum, day) => sum + day.complaints, 0),
+    stockoutSec: days.reduce(
+      (sum, day) => sum + Object.values(day.stockout_sec).reduce((a, b) => a + b, 0),
+      0,
+    ),
+    policyChanges: events.filter((event) => event.type === 'policy_changed').length,
+  };
 }
