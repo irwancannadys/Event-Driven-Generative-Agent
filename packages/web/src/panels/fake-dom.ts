@@ -11,16 +11,32 @@ export class FakeNode {
   type = '';
   disabled = false;
   style: Record<string, string> = {};
+  clientWidth = 800;
+  clientHeight = 400;
+  /** Class names added with `classList` (the scene marks a drag this way). */
+  readonly classes = new Set<string>();
+  readonly classList = {
+    add: (name: string): void => void this.classes.add(name),
+    remove: (name: string): void => void this.classes.delete(name),
+  };
+  parent: FakeNode | undefined;
   private readonly listeners = new Map<string, (() => void)[]>();
 
   constructor(readonly tag: string) {}
 
   append(...nodes: Child[]): void {
+    for (const node of nodes) if (typeof node !== 'string') node.parent = this;
     this.children.push(...nodes);
   }
 
   replaceChildren(...nodes: Child[]): void {
+    for (const node of nodes) if (typeof node !== 'string') node.parent = this;
     this.children = [...nodes];
+  }
+
+  remove(): void {
+    this.parent?.children.splice(this.parent.children.indexOf(this), 1);
+    this.parent = undefined;
   }
 
   set textContent(value: string) {
@@ -35,6 +51,13 @@ export class FakeNode {
 
   addEventListener(type: string, listener: () => void): void {
     this.listeners.set(type, [...(this.listeners.get(type) ?? []), listener]);
+  }
+
+  removeEventListener(type: string, listener: () => void): void {
+    this.listeners.set(
+      type,
+      (this.listeners.get(type) ?? []).filter((existing) => existing !== listener),
+    );
   }
 
   /** What a click on the element does. A disabled button does nothing, as in a browser. */

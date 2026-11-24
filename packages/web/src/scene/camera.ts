@@ -1,11 +1,13 @@
 // The camera of the room: from above and the front, turned a little left or right by dragging. The maths
 // is kept apart from Three.js and from the DOM so that it can be tested.
 
-export const CAMERA_FOV = 40;
-export const CAMERA_RADIUS = 13;
-export const CAMERA_HEIGHT = 8;
+// Wider and further than the prototype (40 degrees, radius 13, height 8) so that the whole room is in the
+// picture also at the widest swing and at the sizes of this page; a test checks the framing.
+export const CAMERA_FOV = 42;
+export const CAMERA_RADIUS = 15;
+export const CAMERA_HEIGHT = 8.5;
 /** The camera looks at this point of the room. */
-export const CAMERA_TARGET = { x: 0, y: 0.6, z: 0.5 } as const;
+export const CAMERA_TARGET = { x: 0, y: 0.6, z: 1 } as const;
 /** How far the camera may swing to either side, in radians. */
 export const AZIMUTH_LIMIT = 0.5;
 export const AZIMUTH_START = 0.15;

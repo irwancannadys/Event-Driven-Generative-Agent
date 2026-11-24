@@ -1,17 +1,16 @@
 import {
   AGENT_NAME_ID,
-  AGENT_STATE_NAME_ID,
   REPORT_TYPE_NAME_ID,
   STATION_NAME_ID,
   dayOf,
   formatClock,
   isHiddenFromLog,
   logLabel,
-  taskName,
   type LogLabel,
   type OrderStatus,
 } from '@cafe/core';
 import { describeEvent, type Names } from '../i18n';
+import { agentActivity } from '../state/agent-text';
 import { virtualNow, type ReportCard, type WorldState } from '../state/world';
 
 // What each panel shows, worked out from the state as plain data. The DOM code only draws it, so this is
@@ -41,18 +40,13 @@ export interface AgentRow {
 }
 
 export function agentRows(state: WorldState): AgentRow[] {
-  return Object.values(state.agents).map((agent) => {
-    let doing: string = AGENT_STATE_NAME_ID[agent.state];
-    if (agent.state === 'walking') doing = `${doing} ke ${STATION_NAME_ID[agent.station]}`;
-    if (agent.state === 'working') doing = `${doing}: ${taskName(agent.label)}`;
-    return {
-      id: agent.id,
-      name: AGENT_NAME_ID[agent.id],
-      where: STATION_NAME_ID[agent.station],
-      doing,
-      until: agent.endsAt === null ? null : formatClock(agent.endsAt),
-    };
-  });
+  return Object.values(state.agents).map((agent) => ({
+    id: agent.id,
+    name: AGENT_NAME_ID[agent.id],
+    where: STATION_NAME_ID[agent.station],
+    doing: agentActivity(agent),
+    until: agent.endsAt === null ? null : formatClock(agent.endsAt),
+  }));
 }
 
 export function orderCounts(state: WorldState): Record<OrderStatus, number> {

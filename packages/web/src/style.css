@@ -297,3 +297,24 @@ button.reject {
   background: rgba(44, 44, 42, 0.62);
   color: #fff;
 }
+.scene-label.agent {
+  background: rgba(255, 255, 255, 0.92);
+  border: 2px solid #888780;
+  font-weight: 600;
+}
+.scene-label.agent-cashier {
+  border-color: #d85a30;
+}
+.scene-label.agent-cook {
+  border-color: #1d9e75;
+}
+.scene-label.agent-stock_admin {
+  border-color: #7f77dd;
+}
+.scene-label.agent-waiter {
+  border-color: #ef9f27;
+}
+.scene-label.boss {
+  background: #2c2c2a;
+  color: #fff;
+}
