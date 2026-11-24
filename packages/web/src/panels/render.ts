@@ -218,7 +218,13 @@ export function createPanels(
     'div',
     'main',
     sceneSlot,
-    el('div', 'info', orders.root, complaints.root, agents.root, admin.root),
+    // two columns of their own, so a long card does not leave a hole under its neighbour
+    el(
+      'div',
+      'info',
+      el('div', 'info-col', orders.root, agents.root),
+      el('div', 'info-col', complaints.root, admin.root),
+    ),
   );
   const side = el('aside', 'side', boss.root, stock.root, log.root);
   root.replaceChildren(topbar, notice, el('main', 'watch', main, side));

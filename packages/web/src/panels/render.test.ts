@@ -288,7 +288,7 @@ describe('the complaints panel', () => {
     panels.update({ state: world(), status: 'open', nowMs: 1000 });
     expect(complaintsPanel(root)?.textContent).toContain('Komplain');
     expect(complaintsPanel(root)?.textContent).toContain('Belum ada komplain.');
-    expect(complaintsPanel(root)?.parent?.className).toBe('info');
+    expect(complaintsPanel(root)?.parent?.parent?.className).toBe('info');
   });
 
   it('shows each complaint with its order, its cause, where it stands and what is offered', () => {
@@ -404,7 +404,11 @@ describe('the cards of the page', () => {
       node.children.map((child) =>
         typeof child === 'string' ? '' : child.className.split(' ')[1],
       );
-    expect(names(under)).toEqual(['orders', 'complaints', 'agents', 'admin']);
+    const columns = under.children.filter((child): child is FakeNode => typeof child !== 'string');
+    expect(columns.map((column) => names(column))).toEqual([
+      ['orders', 'agents'],
+      ['complaints', 'admin'],
+    ]);
     expect(names(beside)).toEqual(['boss', 'stock', 'log']);
   });
 

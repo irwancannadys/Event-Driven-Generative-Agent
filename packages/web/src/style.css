@@ -425,6 +425,12 @@ a {
   /* every card is as tall as its own content: a long list does not stretch the others */
   align-items: start;
 }
+.info-col {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
 .side {
   display: flex;
   flex-direction: column;
