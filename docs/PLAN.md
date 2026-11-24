@@ -85,19 +85,19 @@ Hasil Tahap 0, bahan untuk materi:
 **Pembagian tugas (keputusan 019):** aturan murni (apa yang harus terjadi) ada di `core`, sedangkan `server` membaca state, menulis event, dan menerapkan proyeksi lewat SQL. Proyeksi ditulis oleh satu fungsi `applyEvent`, dipakai juga saat replay.
 
 **Tugas:**
-- [ ] Aturan murni di `core`: kebutuhan bahan dari resep, durasi masak (jumlah `qty x cook_time_sec` semua item), rencana masak (semua bahan cukup atau tidak sama sekali), sinyal ambang stok
-- [ ] Event store dan proyeksi di `server`: `appendEvent` (validasi zod, wajib dalam transaksi) dan `applyEvent` (SQL). Event yang proyeksinya belum dibuat dilempar sebagai error
-- [ ] Use case `createOrder`: validasi item ada, gabungkan baris menu yang sama, alokasi ID, tulis `order_created`
-- [ ] Use case `startCooking` (dipicu skrip demo, karena karakter baru ada di Tahap 3): cek bahan, lalu `cooking_started` + `stock_decreased` per bahan dalam satu transaksi, atau `order_held` jika bahan kurang
-- [ ] Use case `completeCooking`: menandai pesanan selesai (`cooking_done`)
-- [ ] Deteksi `stock_low` dan `stock_out` yang **idempoten** (muncul sekali sampai stok diisi ulang)
-- [ ] Kebijakan stok kurang: pesanan **ditahan**, bukan hilang
-- [ ] **Event-first:** setiap perubahan state = append ke tabel `events` + terapkan proyeksi dalam satu transaksi (tidak ada refaktor di Tahap 2)
-- [ ] Jam sementara `ManualClock` untuk `sim_time` (diganti `SimClock` sungguhan di Tahap 2)
-- [ ] Rebuild proyeksi dari log (`rebuildProjections`) dan snapshot untuk membandingkan state live dengan hasil replay
-- [ ] Kasir mock: API HTTP minimal lewat `node:http` (`POST /orders`, `GET /menu`, `GET /stock`), bind ke `127.0.0.1`, tanpa halaman web (nanti dipanggil generator dunia di Tahap 2). Skrip demo membuat pesanan lewat API
-- [ ] Log terminal yang rapi per kejadian, dengan label sesuai `docs/events.md` bagian 6
-- [ ] Skrip demo `npm run demo:stage1`
+- [x] Aturan murni di `core`: kebutuhan bahan dari resep, durasi masak (jumlah `qty x cook_time_sec` semua item), rencana masak (semua bahan cukup atau tidak sama sekali), sinyal ambang stok
+- [x] Event store dan proyeksi di `server`: `appendEvent` (validasi zod, wajib dalam transaksi) dan `applyEvent` (SQL). Event yang proyeksinya belum dibuat dilempar sebagai error
+- [x] Use case `createOrder`: validasi item ada, gabungkan baris menu yang sama, alokasi ID, tulis `order_created`
+- [x] Use case `startCooking` (dipicu skrip demo, karena karakter baru ada di Tahap 3): cek bahan, lalu `cooking_started` + `stock_decreased` per bahan dalam satu transaksi, atau `order_held` jika bahan kurang
+- [x] Use case `completeCooking`: menandai pesanan selesai (`cooking_done`)
+- [x] Deteksi `stock_low` dan `stock_out` yang **idempoten** (muncul sekali sampai stok diisi ulang)
+- [x] Kebijakan stok kurang: pesanan **ditahan**, bukan hilang
+- [x] **Event-first:** setiap perubahan state = append ke tabel `events` + terapkan proyeksi dalam satu transaksi (tidak ada refaktor di Tahap 2)
+- [x] Jam sementara `ManualClock` untuk `sim_time` (diganti `SimClock` sungguhan di Tahap 2)
+- [x] Rebuild proyeksi dari log (`rebuildProjections`) dan snapshot untuk membandingkan state live dengan hasil replay
+- [x] Kasir mock: API HTTP minimal lewat `node:http` (`POST /orders`, `GET /menu`, `GET /stock`), bind ke `127.0.0.1`, tanpa halaman web (nanti dipanggil generator dunia di Tahap 2). Skrip demo membuat pesanan lewat API
+- [x] Log terminal yang rapi per kejadian, dengan label sesuai `docs/events.md` bagian 6
+- [x] Skrip demo `npm run demo:stage1`
 
 **Ditunda ke Tahap 3:** baris `agents` di proyeksi (posisi awal pelayan belum diputuskan), proyeksi `restock_*`, dan `order_resumed`.
 
@@ -106,6 +106,16 @@ Hasil Tahap 0, bahan untuk materi:
 **Selesai jika:** menjalankan skrip demo menghasilkan urutan log yang benar: pesanan, masak, stok turun, `stock_low` (sekali), `stock_out`, `order_held`, dan "Replay check: OK".
 
 **Catatan pelajaran:** aturan vs LLM (belum ada LLM, semua aturan), idempotensi.
+
+Hasil Tahap 1, bahan untuk materi:
+
+- **Aturan vs LLM:** semua keputusan Tahap 1 (masak atau tahan, kapan `stock_low` muncul) adalah aturan murni. Deterministik, murah, dan bisa dites tanpa model. LLM baru nanti menambah titik yang butuh penilaian.
+- **Pisahkan "memutuskan" dari "mencatat":** `core` hanya menjawab apa yang harus terjadi (fungsi murni), `server` membaca state dan menuliskan hasilnya (keputusan 019). Aturan jadi gampang dites tanpa database.
+- **Idempotensi di dua lapis:** aturan di `core` tidak mengeluarkan `stock_low` dua kali, dan proyeksi juga menolak penanda yang sudah menyala. Satu lapis bisa bocor oleh bug, dua lapis tidak.
+- **Atomik:** event dan proyeksinya ditulis dalam satu transaksi, dan memasak itu semua-atau-tidak-sama-sekali. Tanpa transaksi, kegagalan di tengah meninggalkan sisa (contohnya ada di tes).
+- **Proyeksi yang curiga:** `applyEvent` menolak event yang bertentangan dengan state (mis. `stock_decreased` yang tidak cocok dengan stok sekarang). Bug ketahuan saat itu juga, bukan berminggu-minggu kemudian.
+- **Event-first membuat replay hampir gratis:** satu `applyEvent` dipakai saat live dan saat replay, jadi "Replay check" di demo membuktikan keduanya sama.
+- **Persist-then-publish:** log terminal hanya melihat event yang sudah ter-commit.
 
 ---
 

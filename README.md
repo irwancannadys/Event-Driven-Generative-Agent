@@ -6,7 +6,7 @@ Event-driven jadi tulang punggung (event log, antrean, replay). Generative agent
 
 ## Status
 
-**Tahap 0 (persiapan) selesai.** Fondasinya sudah ada: dokumen desain, skema database, seed data, dan kontrak event bertipe beserta tesnya. Belum ada yang bisa dimainkan. Tahap berikutnya (data dan kasir mock) dimulai setelah pemilik bilang lanjut.
+**Tahap 0 (persiapan) dan Tahap 1 (data dan kasir mock) selesai.** Pesanan masuk lewat API, stok berkurang sesuai resep, `stock_low` dan `stock_out` muncul sekali saja, pesanan ditahan kalau bahan kurang, dan semuanya tercatat sebagai event. Hasilnya berupa log di terminal (`npm run demo:stage1`). Belum ada jam virtual, karakter, atau tampilan web. Tahap berikutnya dimulai setelah pemilik bilang lanjut.
 
 ## Quickstart
 
@@ -19,6 +19,7 @@ npm run lint
 npm run typecheck
 npm run db:migrate    # membuat data/cafe.db
 npm run seed          # mengisi menu, bahan, resep, langganan, pemasok
+npm run demo:stage1   # demo Tahap 1: pesanan, stok turun, stock_low, replay check
 ```
 
 ## Dokumen

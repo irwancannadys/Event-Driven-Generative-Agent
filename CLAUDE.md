@@ -27,6 +27,7 @@ Baca brief dan plan sebelum bekerja. Jika keduanya berbenturan, **brief menang**
 Daftar lengkapnya ada di brief bagian 4. Yang paling sering tergoda dilanggar:
 
 - **Event log (`events`) adalah sumber kebenaran.** Tabel lain adalah proyeksi, ditulis dalam transaksi yang sama dengan append event.
+- **Proyeksi hanya ditulis lewat `applyEvent`** (SQL, di `server`), dan `appendEvent` wajib di dalam transaksi. `core` memutuskan apa yang harus terjadi (fungsi murni), `server` mencatatnya (keputusan 019). Event yang proyeksinya belum dibuat melempar `ProjectionNotImplementedError`: tahap berikutnya wajib menambahkannya.
 - **State hidup di server.** `web` hanya presentasi dan tidak membuat keputusan.
 - **Waktu virtual dalam detik (integer).** Di `packages/core` dilarang `Date.now()`, `Math.random()`, dan `new Date()` tanpa argumen (dijaga lint).
 - **`packages/core` tanpa I/O:** tidak ada fs, jaringan, atau `process`.
@@ -36,8 +37,8 @@ Daftar lengkapnya ada di brief bagian 4. Yang paling sering tergoda dilanggar:
 
 ## Peta repo
 
-- `packages/core`: domain murni (event, agent, aturan, sim clock).
-- `packages/server`: Node, SQLite, migrasi, seed. WebSocket dan API menyusul.
+- `packages/core`: domain murni (event, aturan masak dan ambang stok, label log, sim clock).
+- `packages/server`: Node, SQLite, migrasi, seed, event store dan proyeksi (`applyEvent`), use case (pesanan, memasak), API kasir mock (`node:http`), log terminal. WebSocket menyusul.
 - `packages/web`: stub sampai Tahap 4.
 - `tools/`: tes untuk tooling (aturan lint, tes drift `docs/events.md` terhadap kode).
 - `docs/`: plan, konsep, katalog event, skema, keputusan, referensi.
@@ -54,6 +55,7 @@ npm run format        # prettier --write (kode dan config saja, bukan docs)
 npm run format:check
 npm run db:migrate    # buat atau perbarui data/cafe.db
 npm run seed          # isi tabel referensi (menu, bahan, resep, langganan, pemasok)
+npm run demo:stage1   # demo Tahap 1 di database memori (pesanan lewat API, log, replay check)
 ```
 
 `docs/events.md` adalah kontrak event: ubah dokumen dan skema zod di `packages/core` bersamaan, tes drift akan gagal kalau keduanya berbeda.
