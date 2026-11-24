@@ -3,6 +3,7 @@
 > Dokumen ini adalah konteks lengkap proyek. Baca seluruhnya sebelum bertanya atau menulis kode.
 > Pemilik proyek sudah menjelaskan ini panjang lebar dan tidak mau mengulang dari awal.
 > Penjelasan ke pemilik: bahasa Indonesia santai. Kode, nama variabel, dan commit message: bahasa Inggris.
+> **Revisi 2026-11-24 (review Tahap 0, disetujui pemilik):** dunia berjalan otomatis lewat generator (tanpa tombol pemicu manual), keputusan LLM dicatat sebagai event, dunia pulih dari event log saat boot, dan tabel data dibagi jadi referensi, event log, proyeksi, operasional. Alasan lengkap ada di `docs/decisions/` dan riwayat git.
 
 ## 0. Dokumen pendamping (baca setelah brief ini)
 
@@ -53,10 +54,10 @@ Trigger -> Antrean event -> Agent memutuskan -> Animasi 3D dari status agent -> 
 Contoh: pesanan masuk (trigger) -> tugas ke koki -> koki memasak (aturan) -> stok berkurang -> stok di bawah batas -> admin stok menyusun usulan belanja (LLM) -> admin berjalan ke meja bos -> bos menyetujui -> admin memperbarui stok.
 
 ### 3.3 Empat jenis trigger
-1. **Data masuk:** pesanan baru dari kasir mock.
+1. **Data masuk:** pesanan baru lewat API kasir mock (`POST /orders`), dipanggil oleh generator dunia.
 2. **Jadwal:** jam buka, jam pelanggan langganan biasa datang, rekap sore.
 3. **Ambang kondisi:** stok di bawah batas minimum, antrean panjang.
-4. **Klik dari simulator:** tombol "pesanan ramai", "stok habis", "komplain", "langganan datang", "majukan waktu".
+4. **Generator dunia (otomatis):** pelanggan virtual yang memakai seeded RNG. Pesanan datang dengan pola jam (ramai di jam makan siang), komplain muncul karena sebab (pesanan menunggu terlalu lama, plus peluang acak), perilaku pemasok diundi dari bobot peluang. **Tidak ada tombol pemicu manual.** Masukan manusia hanya keputusan bos (Setujui/Tolak) dan kontrol waktu (pause, kecepatan, majukan waktu).
 
 ### 3.4 Event-driven vs generative agent (dan cara menggabungkannya)
 
@@ -82,6 +83,8 @@ Keduanya **bukan lawan**. Rancangan proyek ini: **event-driven menjadi tulang pu
 9. **Memori di database, bukan di prompt.** Kunjungan, preferensi, dan refleksi disimpan di tabel. Ke LLM hanya dikirim ringkasan beberapa baris.
 10. **Pisahkan logika dan tampilan.** Model 3D bisa diganti tanpa menyentuh otak agent.
 11. **Semua panggilan LLM dicatat** (input ringkas, output, latensi, valid atau tidak) untuk debugging dan replay.
+12. **Keputusan LLM dicatat sebagai event** (`agent_decided`). Replay membaca keputusan dari log dan tidak memanggil model lagi. Jam virtual tetap berjalan saat LLM berpikir (agent berstatus "mikir..."), dan jawaban dicek ulang saat diterapkan: jawaban basi atau tidak masuk akal ditolak lalu fallback ke aturan.
+13. **Dunia pulih dari event log saat server boot.** Server dimatikan lalu dinyalakan lagi, dunia lanjut dari titik terakhir (proyeksi dan antrean tugas agent dibangun ulang lewat replay).
 
 ## 5. Scope versi 1 (kafe)
 
@@ -99,7 +102,7 @@ Keduanya **bukan lawan**. Rancangan proyek ini: **event-driven menjadi tulang pu
 
 **Menu:** 5 sampai 6 item sederhana, masing-masing punya resep (bahan dan jumlah per porsi) dan waktu masak.
 
-**Stok:** tabel bahan dengan jumlah, satuan, batas minimum, dan lead time pemesanan. Pemasok tiruan yang responsnya bisa diatur dari simulator (tepat waktu, telat, kosong).
+**Stok:** tabel bahan dengan jumlah, satuan, batas minimum, dan lead time pemesanan. Pemasok tiruan yang responsnya diundi seeded dari bobot peluang (tepat waktu, telat, kosong), dan bobotnya bisa diatur lewat konfigurasi skenario.
 
 **Pelanggan langganan (data awal, boleh disesuaikan):**
 
@@ -109,7 +112,9 @@ Keduanya **bukan lawan**. Rancangan proyek ini: **event-driven menjadi tulang pu
 | Bu Sari | 12:00 | 2 | nasi goreng tanpa pedas | 2 |
 | Mas Joko | 17:00 | 3 | es teh manis dan roti bakar | 1 |
 
-**Kasir mock:** halaman web sederhana untuk membuat pesanan, ditambah **panel simulator** (tombol kejadian). Panel simulator juga akan dipakai murid kursus.
+**Kasir mock:** API `POST /orders` tanpa halaman web, dipanggil generator dunia lewat pintu yang sama seperti POS sungguhan.
+
+**Panel kontrol:** pause, kecepatan waktu, majukan waktu, dan meja bos (Setujui/Tolak). Tidak ada tombol pemicu kejadian manual. Murid kursus mengubah **konfigurasi skenario** (seed, keramaian, peluang komplain, stok awal, bobot perilaku pemasok), bukan mengklik tombol.
 
 ## 6. Perilaku khusus pelayan (generative agent)
 
@@ -166,7 +171,7 @@ Catatan bahasa: model kecil bisa lebih lemah berbahasa Indonesia. Struktur dan e
 ## 8. Arsitektur
 
 ```
- Panel simulator / Kasir mock (web)
+ Panel kontrol + meja bos (web)
             |
             v
    +----------------+       +---------------------+
@@ -174,7 +179,8 @@ Catatan bahasa: model kecil bisa lebih lemah berbahasa Indonesia. Struktur dan e
    |  - API kasir   |       |  events, orders,    |
    |  - Event bus   |       |  stock, memories,   |
    |  - Sim clock   |       |  reports, llm_calls |
-   |  - Agent loop  |       +---------------------+
+   |  - World gen.  |       +---------------------+
+   |  - Agent loop  |
    |  - LLM adapter | ---> FakeLLM | OllamaLLM (localhost)
    +-------+--------+
            | WebSocket (event stream + snapshot state)
@@ -186,26 +192,38 @@ Catatan bahasa: model kecil bisa lebih lemah berbahasa Indonesia. Struktur dan e
 
 ## 9. Model data (usulan awal, finalkan di Tahap 0)
 
-Tabel utama:
+Tabel dibagi empat golongan: **referensi** (statis, diisi seed), **event log** (sumber kebenaran), **proyeksi** (turunan event, bisa dibangun ulang lewat replay, ditulis dalam transaksi yang sama dengan event), dan **operasional** (jejak debugging). Semua waktu simulasi dalam **detik virtual**. Detail final ada di `docs/schema.md`.
 
+Referensi:
 - `menu_items` (id, name, price, cook_time_sec)
-- `ingredients` (id, name, unit, qty, min_qty, lead_time_min)
+- `ingredients` (id, name, unit, min_qty, capacity_qty, lead_time_min)
 - `recipe_items` (menu_item_id, ingredient_id, qty_per_portion)
+- `regulars` (id, name, usual_time_min, favorite_table, usual_order)
+- `suppliers_mock` (ingredient_id, weight_on_time, weight_late, weight_out)
+
+Event log:
+- `events` (id, type, sim_time, actor, origin, payload_json, created_at) **sumber kebenaran**, append-only. `origin`: generator, scheduler, rule, llm, fallback, boss, system
+
+Proyeksi:
+- `stock` (ingredient_id, qty)
 - `orders` (id, status, created_at_sim, source) dan `order_items`
-- `events` (id, type, sim_time, actor, payload_json, created_at) **sumber kebenaran**
-- `agents` (id, role, station, state, current_task_json)
-- `regulars` (id, name, usual_time_min, favorite_table, usual_order, visits, insight_text)
-- `memories` (id, agent_id, regular_id, kind, text, sim_time) kind: observation, reflection
+- `agents` (id, role, station, state)
+- `agent_tasks` (id, agent_id, kind, params_json, status, ends_at_sim)
+- `regular_state` (regular_id, visits, present)
+- `memories` (id, agent_id, regular_id, kind, text, sim_time) kind: observation, reflection (satu-satunya tempat refleksi)
 - `reports` (id, type, title, body, status, created_at_sim, decided_at_sim)
-- `suppliers_mock` (ingredient_id, behavior: on_time | late | out)
+- `sim_clock` (current_sim_sec, speed)
+
+Operasional:
 - `llm_calls` (id, purpose, input_summary, output_json, valid, latency_ms, model, fallback_used)
-- `sim_clock` (current_sim_minute, speed)
 
 ## 10. Katalog event (awal)
 
+> Katalog final (33 event) ada di `docs/events.md`, dan itulah yang berlaku. Tabel di bawah ini versi awal.
+
 | Event | Pemicu | Penangan | Aturan/LLM |
 |---|---|---|---|
-| `order_created` | Kasir mock | Kasir lalu koki | Aturan |
+| `order_created` | Generator dunia lewat API kasir mock | Kasir lalu koki | Aturan |
 | `cooking_started` / `cooking_done` | Koki | Koki | Aturan |
 | `stock_decreased` | Masakan selesai | Sistem stok | Aturan |
 | `stock_low` / `stock_out` | Ambang tercapai | Admin stok | Aturan |
@@ -213,16 +231,16 @@ Tabel utama:
 | `report_submitted` | Karakter tiba di meja bos | Bos | Aturan |
 | `report_decided` | Klik bos | Karakter terkait | Aturan |
 | `restock_arrived` | Pemasok tiruan | Admin stok | Aturan |
-| `complaint_received` | Simulator | Kasir | Aturan |
+| `complaint_received` | Generator dunia | Kasir | Aturan |
 | `complaint_triaged` | Kasir | Meja bos | LLM |
 | `regular_expected` | Jam virtual mendekati kebiasaan | Pelayan | Aturan (pemicu pemikiran) |
 | `table_prepared` | Pelayan (inisiatif) | Tampilan | LLM |
 | `table_tidied` | Pelayan (inisiatif) | Tampilan | LLM |
-| `regular_arrived` | Jadwal atau simulator | Pelayan | Aturan |
+| `regular_arrived` | Jadwal | Pelayan | Aturan |
 | `regular_greeted` | Pelayan | Tampilan | LLM atau template |
 | `regular_left` | Pelanggan selesai | Pelayan | Aturan |
 | `reflection_created` | Setelah kunjungan | Memori | LLM atau template |
-| `sim_time_advanced` | Simulator | Semua | Aturan |
+| `sim_time_advanced` | Bos (loncat waktu) | Semua | Aturan |
 | `agent_state_changed` | Agent | Tampilan | Aturan |
 
 Setiap event minimal punya: id, tipe, waktu virtual, pelaku, dan payload.
@@ -233,7 +251,7 @@ Setiap event minimal punya: id, tipe, waktu virtual, pelaku, dan payload.
 - Karakter punya tiga status yang terlihat: **diam, berjalan, bekerja** (dengan label aktivitas).
 - Label di atas karakter dan stasiun (diproyeksikan dari posisi 3D).
 - Kamera dari atas-depan, bisa digeser terbatas.
-- Panel di bawah scene: **log kejadian** (dengan label Trigger, Aturan, LLM, Inisiatif, Bos), **ingatan Rina**, **laporan di meja bos** (tombol Setujui/Tolak), **bar stok**, dan **panel simulator**.
+- Panel di bawah scene: **log kejadian** (dengan label Trigger, Aturan, LLM, Inisiatif, Bos), **ingatan Rina**, **laporan di meja bos** (tombol Setujui/Tolak), **bar stok**, dan **panel kontrol waktu** (pause, kecepatan, majukan waktu).
 - Rak stok di scene menampilkan jumlah kotak sesuai stok sebenarnya (visual dari state nyata, bukan dekorasi).
 
 **Tata letak referensi** (satuan Three.js, dari prototipe awal): meja kasir kiri belakang, dapur kanan belakang, rak stok kanan depan, meja bos kiri depan, tiga meja pelanggan di tengah, antrean pelanggan di sisi kiri. Koordinat lengkap dan prototipe yang bisa dibuka ada di `docs/reference/` (lihat `README.md` di sana, termasuk daftar apa yang **jangan** ditiru). Pemilik akan menyesuaikan animasinya nanti, jadi anggap ini gambaran, bukan spesifikasi final.
@@ -251,29 +269,35 @@ Siapkan sekitar 20 situasi uji (misalnya "Pak Budi biasanya datang 08:30, sekara
 
 ## 13. Stack (usulan, boleh dibahas di Tahap 0)
 
-- **Bahasa:** TypeScript (Node LTS terbaru) di server dan frontend, supaya satu bahasa.
-- **Database:** SQLite.
+- **Bahasa:** TypeScript strict, ESM (Node LTS) di server dan frontend, supaya satu bahasa. `tsx` untuk menjalankan TS saat dev.
+- **Package manager:** npm dengan workspaces.
+- **Database:** SQLite lewat `better-sqlite3` (sinkron, satu proses).
 - **Realtime:** WebSocket.
 - **Frontend:** Vite + Three.js.
-- **Validasi:** zod (atau setara).
-- **Tes:** Vitest (atau setara).
+- **Validasi:** zod (skema event dan output LLM; tipe TS diturunkan dari skema).
+- **Tes:** Vitest.
+- **Lint dan format:** ESLint + Prettier. Aturan lint melarang `Date.now` dan `Math.random` di `core`.
 - **LLM:** Ollama lokal di balik interface `LLMClient`.
 
-Struktur repo (usulan):
+Struktur repo:
 
 ```
-cafe-agents/
+Event-Driven-Generative-Agent/
   CLAUDE.md             # aturan kerja ringkas + pointer ke brief
   PROJECT_BRIEF.md      # dokumen ini
   packages/
     core/               # domain murni: event, agent, aturan, sim clock (tanpa I/O)
-    server/             # Node: SQLite, WebSocket, API kasir mock, LLM adapter
+    server/             # Node: SQLite, WebSocket, API kasir mock, generator dunia, LLM adapter
     web/                # Vite + Three.js: scene 3D dan panel
   docs/
+    PLAN.md
+    concept.md          # konsep satu halaman
     events.md
     schema.md
     decisions/          # catatan keputusan singkat
-  eval/
+    reference/          # prototipe visual
+  data/                 # file SQLite lokal (tidak di-commit)
+  eval/                 # dibuat di Tahap 6
     llm-situations.json
 ```
 
@@ -285,17 +309,17 @@ cafe-agents/
 |---|---|---|
 | 0 | Persiapan: struktur repo, konsep satu halaman, daftar event final, skema database | Dokumen events dan schema disetujui pemilik, skeleton repo berjalan |
 | 1 | Data dan kasir mock (menu, resep, stok), tanpa 3D, hanya log di terminal | Pesanan masuk, stok berkurang, `stock_low` muncul |
-| 2 | Mesin kejadian: tabel event, jam virtual, replay | Satu hari simulasi bisa diputar ulang dengan hasil sama (ada tes) |
+| 2 | Mesin kejadian: tabel event, jam virtual, replay, generator dunia | Satu hari simulasi bisa diputar ulang dengan hasil sama (ada tes) |
 | 3 | Karakter berbasis aturan (kasir, koki, admin stok) | Mereka bekerja lewat status dan antrean tugas, terlihat di log |
-| 4 | Tampilan 3D yang hanya membaca event | Animasi cocok dengan log, panel dan simulator berfungsi |
+| 4 | Tampilan 3D yang hanya membaca event | Animasi cocok dengan log, panel dan kontrol waktu berfungsi |
 | 5 | Pelayan dengan memori dan inisiatif, pakai `FakeLLM` | Meja disiapkan tepat waktu, sapaan menyebut pesanan biasa, refleksi tercatat |
 | 6 | Ganti ke LLM lokal di dua titik (inisiatif pelayan dan usulan belanja) | Output tervalidasi, bisa ditolak, fallback ke aturan terbukti lewat tes |
-| 7 | Laporan ke meja bos dan simulator lengkap | Bisa dimainkan orang lain tanpa penjelasan panjang |
+| 7 | Laporan ke meja bos dan konfigurasi skenario lengkap | Bisa dimainkan orang lain tanpa penjelasan panjang |
 | 8 | Pengujian dan pemolesan: tes skenario satu hari, dokumentasi, catatan bagian sulit | Siap diubah menjadi bahan kursus |
 
 **Aturan urutan:** jangan mulai dari 3D. Tahap 1 sampai 3 sudah membuktikan "otak" berjalan hanya lewat log. Tahap berikutnya hanya dimulai setelah pemilik bilang lanjut.
 
-**Definisi selesai versi 1:** satu perintah menjalankan semuanya di lokal, tombol simulator memicu event, tampilan 3D sesuai log, replay deterministik, pelayan bertindak atas inisiatif sendiri, LLM lokal terpasang di dua titik dengan fallback, tes lulus.
+**Definisi selesai versi 1:** satu perintah menjalankan semuanya di lokal, dunia berjalan otomatis lewat generator, kontrol waktu dan keputusan bos berfungsi, tampilan 3D sesuai log, replay deterministik, pelayan bertindak atas inisiatif sendiri, LLM lokal terpasang di dua titik dengan fallback, tes lulus.
 
 ## 15. Aturan kerja untuk Claude Code
 
@@ -325,14 +349,14 @@ cafe-agents/
 - Tahap 3D paling memakan waktu. Tahan godaan memolesnya sebelum logika terbukti.
 - Hasil simulasi adalah bahan diskusi, bukan ramalan. Jangan dijanjikan sebaliknya di kursus.
 
-## 18. Pertanyaan terbuka (tanyakan ke pemilik di awal)
+## 18. Pertanyaan terbuka: sudah dijawab pemilik (2026-11-24)
 
-1. Package manager dan tool pendukung: pnpm, npm, atau bun?
-2. Monorepo dengan workspaces, atau satu proyek dengan folder terpisah?
-3. Bahasa teks yang tampil di UI: Indonesia seluruhnya, atau campur?
-4. Seberapa lengkap panel simulator di v1 (hanya tombol, atau juga slider seperti kecepatan waktu)?
-5. Apakah perlu mode "tanpa 3D" (hanya log dan panel) untuk debugging dan demo kursus?
-6. Gaya visual: primitif polos, atau beri sedikit warna dan label seperti prototipe awal?
+1. **Package manager:** npm.
+2. **Struktur:** monorepo dengan npm workspaces (`packages/core`, `packages/server`, `packages/web`).
+3. **Bahasa UI:** Indonesia, bisa diganti lewat config (kamus per bahasa, tanpa library). Nama event, enum, dan ID tetap Inggris.
+4. **Simulator v1:** tanpa tombol pemicu kejadian. Hanya kontrol waktu (pause, kecepatan, majukan waktu) dan keputusan bos (Setujui/Tolak). Skenario diatur lewat konfigurasi.
+5. **Mode "tanpa 3D":** ada (hanya log dan panel), untuk debugging dan demo.
+6. **Gaya visual:** 3D primitif dengan warna per peran dan label seperti prototipe, dibuat lewat `createAvatar(role)` supaya bisa di-upgrade ke model `.glb` nanti tanpa mengubah kode lain.
 
 ## 19. Glosarium singkat
 
