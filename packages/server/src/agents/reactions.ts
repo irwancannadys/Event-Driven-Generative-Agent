@@ -8,6 +8,7 @@ import {
   onComplaintReportDecided,
   triageAndAnswer,
 } from './complaint-flow';
+import { decideForecast } from './forecast-flow';
 import { finishCooking, handOrderToCook, onOrderCreated, resumeHeldOrders } from './order-flow';
 import {
   decideRestock,
@@ -82,6 +83,8 @@ function onTaskFinished(
       return;
     case 'checking_stock':
       return decideRestock(ctx, emit);
+    case 'forecasting':
+      return decideForecast(ctx, emit);
     case 'submitting_report':
       if (ref?.type === 'report') submitReport(ctx, emit, task.agent_id, Number(ref.id));
       return;

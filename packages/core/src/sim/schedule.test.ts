@@ -115,6 +115,26 @@ describe('dueItems for one day', () => {
   });
 });
 
+describe('the look ahead of the stock admin', () => {
+  it('comes twice a day, at 10:00 and at 15:00, on every day', () => {
+    const forecasts = dueItems(0, 3 * SECONDS_PER_DAY, scenario).filter(
+      (item) => item.kind === 'stock_forecast',
+    );
+    expect(
+      forecasts.map(
+        (item) => `${Math.floor(item.time / SECONDS_PER_DAY)} ${formatClock(item.time)}`,
+      ),
+    ).toEqual(['0 10:00', '0 15:00', '1 10:00', '1 15:00', '2 10:00', '2 15:00']);
+  });
+
+  it('does not depend on how busy the cafe is', () => {
+    const quiet = dueItems(0, SECONDS_PER_DAY, makeScenario(42, { crowdPct: 0 })).filter(
+      (item) => item.kind === 'stock_forecast',
+    );
+    expect(quiet).toHaveLength(2);
+  });
+});
+
 describe('dueItems window rules', () => {
   it('excludes the start of the window and includes its end', () => {
     expect(dueItems(OPEN_TIME_SEC, OPEN_TIME_SEC, scenario)).toEqual([]);
@@ -269,6 +289,7 @@ describe('priorityOf', () => {
       { kind: 'task_end', time: 0, agent_id: 'cook', task_id: 1 },
       { kind: 'customer_arrival', time: 0, customer_id: 1 },
       { kind: 'order_arrival', time: 0, customer_id: 1, items: [] },
+      { kind: 'stock_forecast', time: 0 },
       { kind: 'complaint_check', time: 0 },
       { kind: 'day_closed', time: 0, day: 0 },
     ];

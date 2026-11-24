@@ -2,6 +2,7 @@ import { complaintCause, type DueItem, type Scenario } from '@cafe/core';
 import { DomainError, nextId, transact, type Context } from '../usecases/context';
 import { createOrder } from '../usecases/orders';
 import { finishTask } from '../agents/engine';
+import { scheduleForecast } from '../agents/forecast-flow';
 
 /** Does what a due item says. Runs with `ctx.clock.now()` equal to the time of the item. */
 export function handleDueItem(ctx: Context, item: DueItem, scenario: Scenario): void {
@@ -48,6 +49,11 @@ export function handleDueItem(ctx: Context, item: DueItem, scenario: Scenario): 
     case 'order_arrival':
       // The generator uses the same door as POST /orders (decision 020).
       createOrder(ctx, { items: item.items, customer_id: item.customer_id });
+      return;
+
+    case 'stock_forecast':
+      // The stock admin looks ahead, when she has the time and there is something to order.
+      transact(ctx, (emit) => scheduleForecast(ctx, emit));
       return;
 
     case 'complaint_check':

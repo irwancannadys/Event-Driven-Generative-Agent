@@ -35,7 +35,7 @@ export function scheduleStockCheck(ctx: Context, emit: Emit): void {
 }
 
 /** Ingredients that already have a proposal waiting, an approved one not yet ordered, or an order on its way. */
-function coveredIngredients(ctx: Context): Set<string> {
+export function coveredIngredients(ctx: Context): Set<string> {
   const covered = new Set<string>();
   const addItems = (items: unknown) => {
     for (const item of (items ?? []) as StockLine[]) covered.add(item.ingredient_id);

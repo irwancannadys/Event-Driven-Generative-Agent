@@ -13,6 +13,7 @@ export const TASK_LABELS = [
   'recording_order',
   'cooking',
   'checking_stock',
+  'forecasting',
   'submitting_report',
   'placing_order',
   'noting_complaint',
@@ -25,6 +26,7 @@ export type TaskLabel = (typeof TASK_LABELS)[number];
 export const TASK_DURATION_SEC = {
   recording_order: 45,
   checking_stock: 90,
+  forecasting: 120,
   submitting_report: 60,
   placing_order: 60,
   noting_complaint: 60,

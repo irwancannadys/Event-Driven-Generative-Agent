@@ -8,6 +8,7 @@ import {
   SECONDS_PER_DAY,
   SECONDS_PER_HOUR,
   dayOf,
+  timeOfDay,
   type SimTime,
 } from '../time';
 import { pickWeighted, rand, randInt } from './rng';
@@ -36,6 +37,7 @@ export type StaticDueItem =
     }
   | { kind: 'customer_arrival'; time: SimTime; customer_id: number }
   | { kind: 'order_arrival'; time: SimTime; customer_id: number; items: OrderItem[] }
+  | { kind: 'stock_forecast'; time: SimTime }
   | { kind: 'complaint_check'; time: SimTime };
 
 /**
@@ -56,13 +58,17 @@ const PRIORITY: Record<DueItem['kind'], number> = {
   task_end: 3,
   customer_arrival: 4,
   order_arrival: 5,
-  complaint_check: 6,
-  day_closed: 7,
+  stock_forecast: 6,
+  complaint_check: 7,
+  day_closed: 8,
 };
 
 export function priorityOf(item: DueItem): number {
   return PRIORITY[item.kind];
 }
+
+/** The hours of the day at which the stock admin looks ahead: before the lunch rush and in the afternoon. */
+export const STOCK_FORECAST_HOURS = [10, 15] as const;
 
 /** All items due in the window (after, upTo], ordered by time and then by priority. */
 export function dueItems(after: SimTime, upTo: SimTime, scenario: Scenario): StaticDueItem[] {
@@ -103,6 +109,12 @@ function collectDay(
         expected_at: base + regular.usual_time_sec,
       });
     }
+  }
+
+  // The stock admin looks ahead twice a day (decision 034), when the hours of the rush still lie before her.
+  for (const hour of STOCK_FORECAST_HOURS) {
+    const time = base + timeOfDay(hour);
+    if (inWindow(time, after, upTo)) out.push({ kind: 'stock_forecast', time });
   }
 
   // Complaint checks beat once per slot while the cafe is open (after opening, up to and including closing).
