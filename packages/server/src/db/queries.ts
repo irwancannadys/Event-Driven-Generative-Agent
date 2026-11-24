@@ -255,3 +255,35 @@ export function readOrderCounts(db: Db): Record<OrderRow['status'], number> {
   for (const row of rows) counts[row.status] = row.n;
   return counts;
 }
+
+export interface RecentOrderRow {
+  id: number;
+  status: OrderRow['status'];
+  source: 'walk_in' | 'regular';
+  created_at_sim: number;
+  done_at_sim: number | null;
+}
+
+/**
+ * The orders that are not done, and those done at `doneSince` or later, oldest first. At most `limit`,
+ * the newest ones, so that a world with a huge backlog cannot make the snapshot huge.
+ */
+export function readRecentOrders(db: Db, doneSince: number, limit: number): RecentOrderRow[] {
+  const rows = db
+    .prepare(
+      `SELECT id, status, source, created_at_sim, done_at_sim FROM orders
+       WHERE status <> 'done' OR done_at_sim >= ?
+       ORDER BY id DESC LIMIT ?`,
+    )
+    .all(doneSince, limit) as RecentOrderRow[];
+  return rows.reverse();
+}
+
+/** Complaints that have not been answered yet. */
+export function readOpenComplaints(db: Db): { complaint_id: number; order_id: number }[] {
+  return db
+    .prepare(
+      "SELECT id AS complaint_id, order_id FROM complaints WHERE status <> 'replied' ORDER BY id",
+    )
+    .all() as { complaint_id: number; order_id: number }[];
+}

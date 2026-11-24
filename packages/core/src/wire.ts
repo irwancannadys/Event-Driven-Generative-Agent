@@ -69,6 +69,22 @@ export interface ReportView {
   decided_at_sim: SimTime | null;
 }
 
+/** An order as far as the picture needs it: a customer is drawn for each one (decision 029). */
+export interface OrderView {
+  id: number;
+  status: OrderStatus;
+  source: 'walk_in' | 'regular';
+  created_at_sim: SimTime;
+  /** When it was cooked, `null` while it is not done. */
+  done_at_sim: SimTime | null;
+}
+
+/** A complaint that has not been answered yet, and the order it is about. */
+export interface ComplaintView {
+  complaint_id: number;
+  order_id: number;
+}
+
 /** The state of the world at one moment, sent once when a page connects. */
 export interface Snapshot {
   time: TimeView;
@@ -78,6 +94,12 @@ export interface Snapshot {
   stock: StockLevel[];
   /** How many orders there are in each status. */
   orders: Record<OrderStatus, number>;
+  /**
+   * The orders that are not done, and the ones that were done in the last twenty virtual minutes
+   * (a customer is still on the way out). Oldest first, at most 200 of the newest.
+   */
+  recent_orders: OrderView[];
+  open_complaints: ComplaintView[];
   /** Reports that are not decided yet (`drafted` and `submitted`). */
   reports: ReportView[];
   /** The newest events, oldest first, so the log on the page is filled from the start. */
