@@ -7,6 +7,7 @@
   "dependencies": {
     "@cafe/core": "*",
     "better-sqlite3": "^13.2.0",
+    "ws": "^8.23.0",
     "zod": "^4.6.7"
   },
   "scripts": {
@@ -20,6 +21,7 @@
     "demo:stage3": "tsx src/demo/stage3-cli.ts"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^9.6.0"
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/ws": "^8.18.2"
   }
 }

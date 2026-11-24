@@ -1,4 +1,4 @@
-import { dayOf, formatClock } from '@cafe/core';
+import { WS_PATH, dayOf, formatClock } from '@cafe/core';
 import type { Config } from './config';
 import { openDatabase } from './db/database';
 import { loadMigrations, runMigrations } from './db/migrate';
@@ -9,7 +9,9 @@ import { formatEvent } from './log/terminal-log';
 import { saveClockState } from './sim/clock-state';
 import { Pacer } from './sim/pacer';
 import { bootSimulation, type Simulation } from './sim/simulation';
-import { createTimeControl } from './sim/time-control';
+import { createTimeControl, type TimeControl } from './sim/time-control';
+import { buildSnapshot } from './ws/snapshot';
+import { attachWebSocket } from './ws/socket';
 
 export interface DevServerOptions {
   config: Config;
@@ -57,10 +59,35 @@ export async function startDevServer(options: DevServerOptions): Promise<DevServ
 
   const simulation = bootSimulation({ db, bus, scenario: config.scenario });
   const pacer = new Pacer(simulation.clock, { speed: config.speed, tickMs: options.tickMs });
-  const api = await startApiServer(simulation.ctx, {
-    port: config.port,
-    time: createTimeControl(simulation, pacer),
+  // Pages hear about a change of speed or pause right away, not at the next 250 ms tick.
+  const baseTime = createTimeControl(simulation, pacer);
+  let notifyClock = (): void => undefined;
+  const time: TimeControl = {
+    state: () => baseTime.state(),
+    setSpeed(speed) {
+      baseTime.setSpeed(speed);
+      notifyClock();
+    },
+    pause() {
+      baseTime.pause();
+      notifyClock();
+    },
+    resume() {
+      baseTime.resume();
+      notifyClock();
+    },
+    skip(seconds) {
+      baseTime.skip(seconds);
+      notifyClock();
+    },
+  };
+  const api = await startApiServer(simulation.ctx, { port: config.port, time });
+  const sockets = attachWebSocket(api.server, {
+    bus,
+    snapshot: () => buildSnapshot(simulation.ctx, time.state()),
+    clock: () => time.state(),
   });
+  notifyClock = sockets.broadcastClock;
 
   const now = simulation.clock.now();
   const where = `jam ${formatClock(now)}, hari ${dayOf(now)}`;
@@ -68,6 +95,9 @@ export async function startDevServer(options: DevServerOptions): Promise<DevServ
   log(`Database : ${config.databasePath}`);
   log(
     `API      : ${api.url}  (GET /time /menu /stock /orders /agents /reports, POST /orders /time /reports/:id/decision)`,
+  );
+  log(
+    `Realtime : ${api.url.replace(/^http/, 'ws')}${WS_PATH}  (halaman web: snapshot, event, jam)`,
   );
   log(`Kecepatan: ${pacer.speed}x (1 detik asli = ${pacer.speed} detik virtual)`);
   log(
@@ -99,6 +129,7 @@ export async function startDevServer(options: DevServerOptions): Promise<DevServ
       stopped = true;
       pacer.stop();
       clearInterval(saver);
+      await sockets.close();
       await api.close();
       saveClock();
       db.close();

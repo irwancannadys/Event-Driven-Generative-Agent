@@ -1,17 +1,8 @@
-import { dayOf, formatClock, type SimTime } from '@cafe/core';
+import { dayOf, formatClock, type TimeView } from '@cafe/core';
 import type { Pacer } from './pacer';
 import type { Simulation } from './simulation';
 
-export interface TimeView {
-  /** Virtual seconds since day 0 at 00:00. */
-  sim_time: SimTime;
-  /** Wall-clock label such as `08:30`. */
-  clock: string;
-  day: number;
-  /** Virtual seconds per real second. */
-  speed: number;
-  paused: boolean;
-}
+export type { TimeView };
 
 /** What the boss can do with time (the API of stage 2, the control panel of stage 4). */
 export interface TimeControl {

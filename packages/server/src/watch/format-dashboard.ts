@@ -6,17 +6,17 @@ import {
   STATION_NAME_ID,
   formatClock,
   taskName,
+  type StockLevel,
+  type TimeView,
 } from '@cafe/core';
 import type { AgentOverviewRow, OrderListRow, ReportRow } from '../db/queries';
-import type { StockView } from '../http/api';
-import type { TimeView } from '../sim/time-control';
 
 /** Everything the board shows, as the API hands it out. */
 export interface DashboardView {
   apiUrl: string;
   time: TimeView;
   agents: AgentOverviewRow[];
-  stock: StockView[];
+  stock: StockLevel[];
   /** The orders that are still open, plus the last few that are done. */
   orders: Record<OrderListRow['status'], OrderListRow[]>;
   /** The reports on the boss desk, waiting for his decision. */
@@ -66,7 +66,7 @@ function orderSection(view: DashboardView): string[] {
   return lines;
 }
 
-function stockLine(row: StockView): string {
+function stockLine(row: StockLevel): string {
   const flag = row.out ? '  [HABIS]' : row.low ? '  [RENDAH]' : '';
   const amount = `${row.qty} / ${row.capacity_qty} ${row.unit}`;
   return `  ${row.name.padEnd(10)} ${amount.padEnd(18)}${flag}`.trimEnd();

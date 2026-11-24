@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import type { StockLevel } from '@cafe/core';
 import type { AgentOverviewRow, OrderListRow, ReportRow } from '../db/queries';
-import type { StockView } from '../http/api';
 import { formatDashboard, type DashboardView } from './format-dashboard';
 
 const agents: AgentOverviewRow[] = [
@@ -9,7 +9,14 @@ const agents: AgentOverviewRow[] = [
     role: 'cashier',
     station: 'cashier',
     state: 'working',
-    task: { id: 7, kind: 'work', label: 'recording_order', station: null, ends_at_sim: 45_045 },
+    task: {
+      id: 7,
+      kind: 'work',
+      label: 'recording_order',
+      station: null,
+      started_at_sim: 45_000,
+      ends_at_sim: 45_045,
+    },
     queued: 2,
   },
   { id: 'cook', role: 'cook', station: 'kitchen', state: 'idle', task: null, queued: 0 },
@@ -18,7 +25,14 @@ const agents: AgentOverviewRow[] = [
     role: 'stock_admin',
     station: 'stock_shelf',
     state: 'walking',
-    task: { id: 9, kind: 'goto', label: null, station: 'boss_desk', ends_at_sim: 45_300 },
+    task: {
+      id: 9,
+      kind: 'goto',
+      label: null,
+      station: 'boss_desk',
+      started_at_sim: 45_000,
+      ends_at_sim: 45_300,
+    },
     queued: 1,
   },
   { id: 'waiter', role: 'waiter', station: 'table_2', state: 'idle', task: null, queued: 0 },
@@ -38,7 +52,7 @@ const order = (
   ...extra,
 });
 
-const stock: StockView[] = [
+const stock: StockLevel[] = [
   {
     ingredient_id: 'susu',
     name: 'Susu',
@@ -168,7 +182,14 @@ describe('formatDashboard', () => {
         role: 'cook',
         station: 'kitchen',
         state: 'working',
-        task: { id: 1, kind: 'work', label: null, station: null, ends_at_sim: null },
+        task: {
+          id: 1,
+          kind: 'work',
+          label: null,
+          station: null,
+          started_at_sim: null,
+          ends_at_sim: null,
+        },
         queued: 0,
       },
     ];

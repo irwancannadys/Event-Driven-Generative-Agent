@@ -48,15 +48,8 @@ interface EventRow {
   payload_json: string;
 }
 
-/** Reads events back in log order. Each row is validated again against the event schema. */
-export function listEvents(db: Db, options: { afterId?: number } = {}): StoredEvent[] {
-  const rows = db
-    .prepare(
-      `SELECT id, type, sim_time, actor, origin, payload_json
-       FROM events WHERE id > ? ORDER BY id`,
-    )
-    .all(options.afterId ?? 0) as EventRow[];
-  return rows.map((row) => ({
+function toStored(row: EventRow): StoredEvent {
+  return {
     ...eventSchema.parse({
       type: row.type,
       sim_time: row.sim_time,
@@ -65,5 +58,32 @@ export function listEvents(db: Db, options: { afterId?: number } = {}): StoredEv
       payload: JSON.parse(row.payload_json),
     }),
     id: row.id,
-  }));
+  };
+}
+
+/** Reads events back in log order. Each row is validated again against the event schema. */
+export function listEvents(db: Db, options: { afterId?: number } = {}): StoredEvent[] {
+  const rows = db
+    .prepare(
+      `SELECT id, type, sim_time, actor, origin, payload_json
+       FROM events WHERE id > ? ORDER BY id`,
+    )
+    .all(options.afterId ?? 0) as EventRow[];
+  return rows.map(toStored);
+}
+
+/** The newest `limit` events, oldest first. */
+export function listRecentEvents(db: Db, limit: number): StoredEvent[] {
+  const rows = db
+    .prepare(
+      `SELECT id, type, sim_time, actor, origin, payload_json
+       FROM events ORDER BY id DESC LIMIT ?`,
+    )
+    .all(limit) as EventRow[];
+  return rows.reverse().map(toStored);
+}
+
+/** Id of the newest event, 0 for an empty log. */
+export function lastEventId(db: Db): number {
+  return db.prepare('SELECT COALESCE(MAX(id), 0) FROM events').pluck().get() as number;
 }

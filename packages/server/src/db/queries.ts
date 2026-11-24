@@ -189,6 +189,7 @@ export interface AgentOverviewRow {
     kind: 'goto' | 'work';
     label: string | null;
     station: StationId | null;
+    started_at_sim: number | null;
     ends_at_sim: number | null;
   } | null;
   /** How many tasks wait behind the running one. */
@@ -199,7 +200,7 @@ export function readAgentOverview(db: Db): AgentOverviewRow[] {
   const rows = db
     .prepare(
       `SELECT a.id, a.role, a.station, a.state,
-              t.id AS task_id, t.kind AS task_kind, t.params_json, t.ends_at_sim,
+              t.id AS task_id, t.kind AS task_kind, t.params_json, t.started_at_sim, t.ends_at_sim,
               (SELECT COUNT(*) FROM agent_tasks q
                 WHERE q.agent_id = a.id AND q.status = 'queued') AS queued
        FROM agents a
@@ -213,6 +214,7 @@ export function readAgentOverview(db: Db): AgentOverviewRow[] {
     task_id: number | null;
     task_kind: 'goto' | 'work' | null;
     params_json: string | null;
+    started_at_sim: number | null;
     ends_at_sim: number | null;
     queued: number;
   }[];
@@ -234,10 +236,22 @@ export function readAgentOverview(db: Db): AgentOverviewRow[] {
               kind: row.task_kind,
               label: params.label ?? null,
               station: params.station ?? null,
+              started_at_sim: row.started_at_sim,
               ends_at_sim: row.ends_at_sim,
             },
       queued: row.queued,
     };
   });
   return overview.sort((a, b) => AGENT_IDS.indexOf(a.id) - AGENT_IDS.indexOf(b.id));
+}
+
+/** How many orders there are in each status (statuses without orders count 0). */
+export function readOrderCounts(db: Db): Record<OrderRow['status'], number> {
+  const counts = { placed: 0, held: 0, cooking: 0, done: 0 };
+  const rows = db.prepare('SELECT status, COUNT(*) AS n FROM orders GROUP BY status').all() as {
+    status: OrderRow['status'];
+    n: number;
+  }[];
+  for (const row of rows) counts[row.status] = row.n;
+  return counts;
 }

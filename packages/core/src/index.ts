@@ -11,3 +11,4 @@ export * from './sim';
 export * from './stations';
 export * from './text';
 export * from './time';
+export * from './wire';

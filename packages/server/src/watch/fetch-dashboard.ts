@@ -1,7 +1,5 @@
-import type { OrderListRow, ReportRow } from '../db/queries';
-import type { TimeView } from '../sim/time-control';
-import type { AgentOverviewRow } from '../db/queries';
-import type { StockView } from '../http/api';
+import type { StockLevel, TimeView } from '@cafe/core';
+import type { AgentOverviewRow, OrderListRow, ReportRow } from '../db/queries';
 import type { DashboardView } from './format-dashboard';
 
 /** How many of the finished orders the board shows. */
@@ -29,7 +27,7 @@ export async function fetchDashboard(
   const [time, agents, stock, placed, held, cooking, done, reports] = await Promise.all([
     get<TimeView>('/time'),
     get<AgentOverviewRow[]>('/agents'),
-    get<StockView[]>('/stock'),
+    get<StockLevel[]>('/stock'),
     orders('placed', OPEN_LIMIT),
     orders('held', OPEN_LIMIT),
     orders('cooking', OPEN_LIMIT),

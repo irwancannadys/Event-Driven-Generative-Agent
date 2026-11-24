@@ -108,9 +108,7 @@ function menuView(ctx: Context) {
   }));
 }
 
-export type StockView = ReturnType<typeof stockView>[number];
-
-function stockView(ctx: Context) {
+export function stockView(ctx: Context) {
   return readStock(ctx.db).map(({ low_flagged, out_flagged, ...row }) => ({
     ...row,
     low: low_flagged,
