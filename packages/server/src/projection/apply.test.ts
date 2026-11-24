@@ -1,0 +1,249 @@
+import { describe, expect, it } from 'vitest';
+import { INITIAL_STOCK, INITIAL_VISITS, type Event } from '@cafe/core';
+import { readStock } from '../db/queries';
+import { ev } from '../test-support/events';
+import {
+  appendInTransaction,
+  countRows,
+  createInitializedDb,
+  createTestDb,
+} from '../test-support/world';
+import { ProjectionNotImplementedError } from './apply';
+
+function worldInitialized(
+  overrides: Partial<Extract<Event, { type: 'world_initialized' }>['payload']> = {},
+): Event {
+  return {
+    type: 'world_initialized',
+    sim_time: 0,
+    actor: 'system',
+    origin: 'system',
+    payload: {
+      seed: 42,
+      initial_stock: INITIAL_STOCK,
+      initial_visits: INITIAL_VISITS,
+      ...overrides,
+    },
+  };
+}
+
+function orderStatus(db: ReturnType<typeof createTestDb>, id: number): unknown {
+  return db.prepare('SELECT status FROM orders WHERE id = ?').pluck().get(id);
+}
+
+describe('world_initialized', () => {
+  it('fills stock, regular state and the three tables', () => {
+    const db = createInitializedDb();
+    expect(Object.fromEntries(readStock(db).map((row) => [row.ingredient_id, row.qty]))).toEqual(
+      INITIAL_STOCK,
+    );
+    expect(readStock(db).every((row) => !row.low_flagged && !row.out_flagged)).toBe(true);
+    expect(
+      db.prepare('SELECT regular_id, visits, present FROM regular_state ORDER BY 1').all(),
+    ).toEqual([
+      { regular_id: 'bu_sari', visits: 2, present: 0 },
+      { regular_id: 'mas_joko', visits: 1, present: 0 },
+      { regular_id: 'pak_budi', visits: 3, present: 0 },
+    ]);
+    expect(db.prepare('SELECT id, state FROM cafe_tables ORDER BY id').all()).toEqual([
+      { id: 1, state: 'empty' },
+      { id: 2, state: 'empty' },
+      { id: 3, state: 'empty' },
+    ]);
+  });
+
+  it('clears the previous projections when a new world starts', () => {
+    const db = createInitializedDb();
+    appendInTransaction(
+      db,
+      ev.orderCreated(1),
+      ev.cookingStarted(1),
+      ev.stockDecreased(1, 'kopi', 18, 1182),
+    );
+    appendInTransaction(db, worldInitialized());
+    expect(countRows(db, 'orders')).toBe(0);
+    expect(countRows(db, 'order_items')).toBe(0);
+    expect(readStock(db).find((row) => row.ingredient_id === 'kopi')?.qty).toBe(1200);
+    expect(countRows(db, 'events')).toBe(5); // the log keeps everything
+  });
+
+  it('rejects an initial stock that misses an ingredient', () => {
+    const db = createTestDb();
+    const withoutKopi = Object.fromEntries(
+      Object.entries(INITIAL_STOCK).filter(([id]) => id !== 'kopi'),
+    );
+    expect(() => appendInTransaction(db, worldInitialized({ initial_stock: withoutKopi }))).toThrow(
+      /initial_stock is missing: kopi/,
+    );
+    expect(countRows(db, 'events')).toBe(0);
+  });
+
+  it('rejects an ingredient that does not exist', () => {
+    const db = createTestDb();
+    expect(() =>
+      appendInTransaction(db, worldInitialized({ initial_stock: { ...INITIAL_STOCK, ghost: 5 } })),
+    ).toThrow(/FOREIGN KEY/);
+  });
+});
+
+describe('order projection', () => {
+  it('creates the order and its lines', () => {
+    const db = createInitializedDb();
+    appendInTransaction(
+      db,
+      ev.orderCreated(
+        1,
+        [
+          { menu_item_id: 'kopi_susu', qty: 2 },
+          { menu_item_id: 'roti_bakar', qty: 1 },
+        ],
+        30000,
+      ),
+    );
+    expect(db.prepare('SELECT id, status, source, created_at_sim FROM orders').all()).toEqual([
+      { id: 1, status: 'placed', source: 'walk_in', created_at_sim: 30000 },
+    ]);
+    expect(
+      db.prepare('SELECT menu_item_id, qty FROM order_items ORDER BY menu_item_id').all(),
+    ).toEqual([
+      { menu_item_id: 'kopi_susu', qty: 2 },
+      { menu_item_id: 'roti_bakar', qty: 1 },
+    ]);
+  });
+
+  it('rejects the same menu item twice in one order', () => {
+    const db = createInitializedDb();
+    expect(() =>
+      appendInTransaction(
+        db,
+        ev.orderCreated(1, [
+          { menu_item_id: 'kopi_susu', qty: 1 },
+          { menu_item_id: 'kopi_susu', qty: 1 },
+        ]),
+      ),
+    ).toThrow(/UNIQUE|PRIMARY KEY/);
+    expect(countRows(db, 'orders')).toBe(0);
+  });
+
+  it('walks an order through placed, cooking, done and records when it finished', () => {
+    const db = createInitializedDb();
+    appendInTransaction(db, ev.orderCreated(1));
+    expect(orderStatus(db, 1)).toBe('placed');
+    appendInTransaction(db, ev.cookingStarted(1));
+    expect(orderStatus(db, 1)).toBe('cooking');
+    appendInTransaction(db, ev.cookingDone(1, 29000));
+    expect(orderStatus(db, 1)).toBe('done');
+    expect(db.prepare('SELECT done_at_sim FROM orders WHERE id = 1').pluck().get()).toBe(29000);
+  });
+
+  it('holds an order that was waiting to be cooked', () => {
+    const db = createInitializedDb();
+    appendInTransaction(db, ev.orderCreated(1), ev.orderHeld(1));
+    expect(orderStatus(db, 1)).toBe('held');
+  });
+
+  it('refuses moves that are not allowed from the current status', () => {
+    const db = createInitializedDb();
+    appendInTransaction(db, ev.orderCreated(1));
+    expect(() => appendInTransaction(db, ev.cookingDone(1))).toThrow(
+      /cannot go from "cooking" to "done"/,
+    );
+    appendInTransaction(db, ev.cookingStarted(1));
+    expect(() => appendInTransaction(db, ev.cookingStarted(1))).toThrow(/current status: cooking/);
+    expect(() => appendInTransaction(db, ev.orderHeld(1))).toThrow(
+      /cannot go from "placed" to "held"/,
+    );
+    expect(() => appendInTransaction(db, ev.cookingStarted(99))).toThrow(/not found/);
+  });
+});
+
+describe('stock projection', () => {
+  function cookingOrder() {
+    const db = createInitializedDb();
+    appendInTransaction(db, ev.orderCreated(1), ev.cookingStarted(1));
+    return db;
+  }
+
+  it('decreases the stock', () => {
+    const db = cookingOrder();
+    appendInTransaction(db, ev.stockDecreased(1, 'susu', 150, 2350));
+    expect(readStock(db).find((row) => row.ingredient_id === 'susu')?.qty).toBe(2350);
+  });
+
+  it('rejects a decrease that does not match the current stock', () => {
+    const db = cookingOrder();
+    expect(() => appendInTransaction(db, ev.stockDecreased(1, 'susu', 150, 2000))).toThrow(
+      /susu has 2500, minus 150 cannot be 2000/,
+    );
+    expect(readStock(db).find((row) => row.ingredient_id === 'susu')?.qty).toBe(2500);
+  });
+
+  it('rejects a decrease for an order that is not cooking, or an ingredient without stock', () => {
+    const db = createInitializedDb();
+    appendInTransaction(db, ev.orderCreated(1));
+    expect(() => appendInTransaction(db, ev.stockDecreased(1, 'susu', 150, 2350))).toThrow(
+      /order 1 is not cooking/,
+    );
+    appendInTransaction(db, ev.cookingStarted(1));
+    expect(() => appendInTransaction(db, ev.stockDecreased(1, 'ghost', 1, 0))).toThrow(
+      /no stock row for ingredient "ghost"/,
+    );
+  });
+
+  it('sets the low flag once, and a second stock_low for the same ingredient is an error', () => {
+    const db = createInitializedDb();
+    appendInTransaction(db, ev.orderCreated(1), ev.cookingStarted(1));
+    // 150 x 10 cups are not needed here: drive the stock down directly in one step.
+    appendInTransaction(db, ev.stockDecreased(1, 'teh', 300, 50), ev.stockLow('teh', 50, 100));
+    expect(readStock(db).find((row) => row.ingredient_id === 'teh')?.low_flagged).toBe(true);
+    expect(() => appendInTransaction(db, ev.stockLow('teh', 50, 100))).toThrow(
+      /signal was emitted twice/,
+    );
+  });
+
+  it('sets the out flag only when the stock is really zero', () => {
+    const db = createInitializedDb();
+    appendInTransaction(db, ev.orderCreated(1), ev.cookingStarted(1));
+    expect(() => appendInTransaction(db, ev.stockOut('teh'))).toThrow(
+      /teh has 350, the event says 0/,
+    );
+    appendInTransaction(db, ev.stockDecreased(1, 'teh', 350, 0), ev.stockOut('teh'));
+    expect(readStock(db).find((row) => row.ingredient_id === 'teh')?.out_flagged).toBe(true);
+  });
+
+  it('rejects a stock_low whose quantity disagrees with the stock', () => {
+    const db = createInitializedDb();
+    expect(() => appendInTransaction(db, ev.stockLow('teh', 40, 100))).toThrow(
+      /teh has 350, the event says 40/,
+    );
+  });
+});
+
+describe('events without a projection', () => {
+  it('records log-only events and changes nothing else', () => {
+    const db = createInitializedDb();
+    const before = countRows(db, 'stock');
+    appendInTransaction(db, {
+      type: 'day_opened',
+      sim_time: 28800,
+      actor: 'system',
+      origin: 'scheduler',
+      payload: { day: 0 },
+    });
+    expect(countRows(db, 'events')).toBe(2);
+    expect(countRows(db, 'stock')).toBe(before);
+  });
+
+  it('fails loudly for an event whose projection is not built yet', () => {
+    const db = createInitializedDb();
+    const restockArrived: Event = {
+      type: 'restock_arrived',
+      sim_time: 36000,
+      actor: 'world',
+      origin: 'generator',
+      payload: { restock_id: 1, items: [{ ingredient_id: 'susu', qty: 2000 }] },
+    };
+    expect(() => appendInTransaction(db, restockArrived)).toThrow(ProjectionNotImplementedError);
+    expect(countRows(db, 'events')).toBe(1); // only world_initialized: the failed one rolled back
+  });
+});
