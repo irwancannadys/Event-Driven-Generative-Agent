@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prototipe Kafe 3D v2 (referensi visual)</title>
+<!--
+  REFERENSI VISUAL SAJA. Bukan arsitektur yang harus ditiru.
+  State, jadwal, dan "LLM" semuanya palsu dan hidup di browser.
+  Baca docs/reference/README.md untuk apa yang boleh diambil dan apa yang jangan ditiru.
+-->
+<style>
+:root{--bg:#FFFFFF;--text-primary:#2C2C2A;--text-secondary:#5F5E5A;--text-muted:#888780;--bg-neutral:#F1EFE8;--border:rgba(0,0,0,0.12);--border-strong:rgba(0,0,0,0.3);--radius:8px;--bg-warning:#FAEEDA;--text-warning:#633806;--bg-accent:#E6F1FB;--text-accent:#0C447C;--bg-success:#EAF3DE;--text-success:#27500A}
+@media (prefers-color-scheme:dark){:root{--bg:#1F1F1E;--text-primary:#F1EFE8;--text-secondary:#B4B2A9;--text-muted:#888780;--bg-neutral:#2C2C2A;--border:rgba(255,255,255,0.15);--border-strong:rgba(255,255,255,0.35);--bg-warning:#412402;--text-warning:#FAC775;--bg-accent:#042C53;--text-accent:#B5D4F4;--bg-success:#173404;--text-success:#C0DD97}}
+body{font-family:system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text-primary);max-width:900px;margin:0 auto;padding:16px}
+button{font:inherit;padding:6px 12px;border:0.5px solid var(--border-strong);border-radius:var(--radius);background:transparent;color:var(--text-primary);cursor:pointer}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+#wrap{position:relative;width:100%;height:340px;border-radius:12px;overflow:hidden;background:#EFE8DA;touch-action:none;cursor:grab}
+#wrap canvas{display:block}
+.lb{position:absolute;transform:translate(-50%,-100%);background:#fff;border:0.5px solid #888780;border-radius:4px;padding:1px 7px;font-size:11px;color:#2C2C2A;white-space:nowrap;pointer-events:none}
+.st{position:absolute;transform:translate(-50%,-100%);font-size:11px;font-weight:500;color:#5F5E5A;white-space:nowrap;pointer-events:none}
+.cols{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px}
+.col{flex:1;min-width:230px}
+.lab{font-size:12px;color:var(--text-muted);margin:0 0 6px}
+.le{display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-top:0.5px solid var(--border);font-size:12px;line-height:1.5}
+.tg{font-size:11px;padding:1px 8px;border-radius:var(--radius);flex:none;white-space:nowrap}
+.tg-trg{background:var(--bg-warning);color:var(--text-warning)}
+.tg-rule{background:var(--bg-neutral);color:var(--text-secondary)}
+.tg-llm{background:var(--bg-accent);color:var(--text-accent)}
+.tg-ini{background:#EEEDFE;color:#3C3489}
+.tg-bos{background:var(--bg-success);color:var(--text-success)}
+.rep{border:0.5px solid var(--border-strong);border-radius:var(--radius);padding:10px 12px;margin:0 0 8px;font-size:13px}
+.ml{color:var(--text-secondary);line-height:1.6;font-size:12px}
+</style>
+</head>
+<body>
+<h2 class="sr-only">Prototipe kafe 3D: kasir, koki, admin stok, dan pelayan Rina yang punya memori dan inisiatif.</h2>
+<div id="wrap"></div>
+<div style="display:flex;align-items:center;gap:8px;margin:12px 0 0;flex-wrap:wrap">
+<button onclick="evOrder()">Pesanan masuk</button>
+<button onclick="evOut()">Stok habis</button>
+<button onclick="evComplain()">Pelanggan komplain</button>
+<button onclick="evRegular()">Langganan datang</button>
+<button onclick="evAdvance()">Majukan 30 menit</button>
+<span style="font-size:14px;font-weight:500;margin-left:auto" id="clk">08:00</span></div>
+<div class="cols">
+<div class="col"><div class="lab">Log kejadian (terbaru di atas)</div><div id="log"></div></div>
+<div class="col"><div class="lab">Ingatan Rina (pelayan)</div><div id="mem"></div></div>
+<div class="col"><div class="lab">Meja bos: laporan masuk</div><div id="reports"></div>
+<div class="lab" style="margin-top:12px">Stok bahan: <span id="stk"></span></div>
+<div style="height:8px;background:var(--bg-neutral);border-radius:4px;overflow:hidden"><div id="sbar" style="height:100%;width:100%;background:#1D9E75"></div></div>
+<p style="font-size:12px;color:var(--text-muted);margin:12px 0 0;line-height:1.5">Label LLM (simulasi) dan Inisiatif: teksnya contoh di prototipe ini. Di versi asli, teks itu dari model yang dikasih daftar ingatan Rina.</p></div></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+var wrap=document.getElementById('wrap'),W=wrap.clientWidth||680,H=340;
+var scene=new THREE.Scene(),cam=new THREE.PerspectiveCamera(40,W/H,0.1,100);
+var ren=new THREE.WebGLRenderer({antialias:true,alpha:true});
+ren.setSize(W,H);ren.setPixelRatio(Math.min(window.devicePixelRatio||1,2));wrap.appendChild(ren.domElement);
+scene.add(new THREE.AmbientLight(0xffffff,0.8));
+var sun=new THREE.DirectionalLight(0xffffff,0.6);sun.position.set(5,12,9);scene.add(sun);
+function mat(c){return new THREE.MeshLambertMaterial({color:c})}
+function box(w,h,d,x,y,z,c){var m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(c));m.position.set(x,y,z);scene.add(m);return m}
+var fl=new THREE.Mesh(new THREE.PlaneGeometry(18,11),mat(0xD9B98A));fl.rotation.x=-Math.PI/2;fl.position.set(0,0,0.5);scene.add(fl);
+box(18,5,0.15,0,2.5,-5,0xF1EBDD);
+box(3,1,1,-5,0.5,-3.6,0x8B6B4A);box(0.6,0.4,0.5,-5,1.2,-3.6,0x444441);
+box(3,1,1,5,0.5,-3.6,0xB4B2A9);box(1.2,0.12,0.8,5,1.06,-3.6,0x2C2C2A);
+var pot=new THREE.Mesh(new THREE.CylinderGeometry(0.32,0.32,0.35,16),mat(0x888780));pot.position.set(5.2,1.3,-3.6);scene.add(pot);
+box(3,0.9,1.2,-5.5,0.45,3,0x6B4F36);
+box(1,0.1,2.8,6.9,1,2.6,0x8B6B4A);box(1,0.1,2.8,6.9,2,2.6,0x8B6B4A);
+box(0.12,2.1,0.12,6.45,1.05,1.3,0x6B4F36);box(0.12,2.1,0.12,6.45,1.05,3.9,0x6B4F36);
+box(0.12,2.1,0.12,7.35,1.05,1.3,0x6B4F36);box(0.12,2.1,0.12,7.35,1.05,3.9,0x6B4F36);
+var tables=[];
+for(var ti=0;ti<3;ti++){var tx0=-2.4+ti*2.4;
+var tt=new THREE.Mesh(new THREE.CylinderGeometry(0.65,0.65,0.08,18),mat(0xBA7517));tt.position.set(tx0,0.78,-0.5);scene.add(tt);
+var tl=new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.08,0.75,10),mat(0x6B4F36));tl.position.set(tx0,0.38,-0.5);scene.add(tl);
+var set=new THREE.Group();set.position.set(tx0,0.84,-0.5);
+var pl=new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.22,0.03,14),mat(0xFFFFFF));set.add(pl);
+var cp=new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.08,0.16,10),mat(0x378ADD));cp.position.set(0.3,0.09,0.1);set.add(cp);
+set.visible=false;scene.add(set);tables.push({x:tx0,set:set});}
+function person(c){var g=new THREE.Group();
+var b=new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.34,0.9,14),mat(c));b.position.y=0.55;g.add(b);
+var h=new THREE.Mesh(new THREE.SphereGeometry(0.27,14,10),mat(0xF3D5B5));h.position.y=1.25;g.add(h);
+var n=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.1,0.12),mat(0x444441));n.position.set(0,1.27,0.27);g.add(n);
+scene.add(g);return g}
+var bos=person(0x2C2C2A);bos.position.set(-5.5,0,1.7);
+function mka(n,c,hx,hz,face,dx,dz){var g=person(c);g.position.set(hx,0,hz);g.rotation.y=face;
+var l=document.createElement('div');l.className='lb';wrap.appendChild(l);
+return {n:n,g:g,x:hx,z:hz,hx:hx,hz:hz,face:face,dx:dx,dz:dz,q:[],cur:null,st:'diam',ph:0,l:l}}
+var kasir=mka('Kasir',0xD85A30,-5.4,-2.2,-Math.PI/2,-6.0,4.4);
+var koki=mka('Koki',0x1D9E75,5,-2.2,Math.PI,-5.0,4.4);
+var admin=mka('Admin stok',0x7F77DD,5.6,2.6,Math.PI/2,-4.2,4.4);
+var pelayan=mka('Rina',0xEF9F27,0.6,2.4,Math.PI,-3.3,4.4);
+var cs=[];
+function mkc(name,c){var g=person(c);g.position.set(-9.5,0,0);g.rotation.y=Math.PI/2;
+var l=document.createElement('div');l.className='lb';wrap.appendChild(l);
+var a={n:name,g:g,x:-9.5,z:0,q:[],cur:null,st:'datang',ph:0,l:l};cs.push(a);return a}
+function rmc(a){scene.remove(a.g);if(a.l.parentNode)a.l.parentNode.removeChild(a.l);var i=cs.indexOf(a);if(i>=0)cs.splice(i,1)}
+var bl=document.createElement('div');bl.className='lb';bl.textContent='Bos (kamu)';wrap.appendChild(bl);
+var sts=[{t:'Kasir',x:-5,y:2.1,z:-3.6},{t:'Dapur',x:5,y:2.1,z:-3.6},{t:'Rak stok',x:6.9,y:2.7,z:2.6},{t:'Meja bos',x:-5.5,y:1.5,z:3.4},
+{t:'Meja 1',x:tables[0].x,y:1.4,z:-0.5},{t:'Meja 2',x:tables[1].x,y:1.4,z:-0.5},{t:'Meja 3',x:tables[2].x,y:1.4,z:-0.5}];
+sts.forEach(function(s){s.d=document.createElement('div');s.d.className='st';s.d.textContent=s.t;wrap.appendChild(s.d)});
+function G(x,z,f){return {k:'g',x:x,z:z,f:f}}
+function Wk(t,l){return {k:'w',t:t,l:l}}
+function Do(fn){return {k:'d',fn:fn}}
+function home(a){return G(a.hx,a.hz,a.face)}
+function toBos(a){return G(a.dx,a.dz,Math.PI)}
+function srv(t){return G(tables[t-1].x,0.8,Math.PI)}
+function step(a,dt){var walking=false;
+while(!a.cur&&a.q.length){var n=a.q.shift();if(n.k==='d'){n.fn()}else{a.cur=n}}
+var c=a.cur;
+if(!c){a.st='diam'}
+else if(c.k==='g'){a.st='jalan';var dx=c.x-a.x,dz=c.z-a.z,d=Math.sqrt(dx*dx+dz*dz);
+if(d<0.07){a.x=c.x;a.z=c.z;if(c.f!==undefined)a.g.rotation.y=c.f;a.cur=null}
+else{var s=Math.min(d,3*dt);a.x+=dx/d*s;a.z+=dz/d*s;a.g.rotation.y=Math.atan2(dx,dz);walking=true}}
+else{a.st=c.l;c.t-=dt;if(c.t<=0)a.cur=null}
+a.ph+=dt*(walking?10:2);
+a.g.position.set(a.x,walking?Math.abs(Math.sin(a.ph))*0.1:0,a.z)}
+var custs=[];
+function spawnCust(){var g=person(0x888780);g.position.set(-9.5,0,-2.2+custs.length*0.9);g.rotation.y=Math.PI/2;custs.push(g)}
+function dropCust(){var g=custs.shift();if(g)scene.remove(g)}
+var stock=10,lowFlag=false,held=0,reports=[],rid=0,vmin=480,logs=[],lastTidy=480;
+var regs=[
+{n:'Pak Budi',c:0x378ADD,usual:510,t:1,o:'kopi susu kurang gula',v:3,here:false,prep:false,done:false,ins:'',hl:false},
+{n:'Bu Sari',c:0xD4537E,usual:720,t:2,o:'nasi goreng tanpa pedas',v:2,here:false,prep:false,done:false,ins:'',hl:false},
+{n:'Mas Joko',c:0x639922,usual:1020,t:3,o:'es teh manis dan roti bakar',v:1,here:false,prep:false,done:false,ins:'',hl:false}];
+function fmt(m){var h=Math.floor(m/60),mm=m%60;return (h<10?'0':'')+h+':'+(mm<10?'0':'')+mm}
+function clk(){return fmt(vmin)}
+function log(src,txt){logs.unshift({t:clk(),s:src,x:txt});if(logs.length>8)logs.pop();
+var el=document.getElementById('log');el.innerHTML='';
+logs.forEach(function(e){var d=document.createElement('div');d.className='le';
+var tm=document.createElement('span');tm.style.cssText='color:var(--text-muted);flex:none';tm.textContent=e.t;
+var tg=document.createElement('span');tg.className='tg tg-'+e.s;tg.textContent={trg:'Trigger',rule:'Aturan',llm:'LLM (simulasi)',ini:'Inisiatif',bos:'Bos'}[e.s];
+var tx=document.createElement('span');tx.textContent=e.x;
+d.appendChild(tm);d.appendChild(tg);d.appendChild(tx);el.appendChild(d)})}
+function renderMem(){var el=document.getElementById('mem');el.innerHTML='';
+regs.forEach(function(r){var d=document.createElement('div');d.className='rep';if(r.hl)d.style.background='var(--bg-warning)';
+var h=document.createElement('div');h.style.fontWeight='500';h.textContent=r.n;d.appendChild(h);
+var lines=['Biasa datang sekitar '+fmt(r.usual)+', Meja '+r.t,'Pesanan biasa: '+r.o,'Jumlah kunjungan: '+r.v];
+if(r.ins)lines.push('Refleksi: '+r.ins);
+lines.forEach(function(t){var l=document.createElement('div');l.className='ml';l.textContent=t;d.appendChild(l)});
+el.appendChild(d)})}
+var rackG=new THREE.Group();scene.add(rackG);
+function updRack(){while(rackG.children.length)rackG.remove(rackG.children[0]);
+var n=Math.max(0,Math.min(10,stock));
+for(var i=0;i<n;i++){var m=new THREE.Mesh(new THREE.BoxGeometry(0.4,0.35,0.4),mat(0xBA7517));
+m.position.set(6.9,i<5?1.23:2.23,1.5+(i%5)*0.5);rackG.add(m)}
+document.getElementById('stk').textContent=Math.max(0,stock)+' / 10';
+var sb=document.getElementById('sbar');sb.style.width=(Math.max(0,stock)*10)+'%';sb.style.background=stock<=3?'#E24B4A':'#1D9E75'}
+var repG=new THREE.Group();scene.add(repG);
+function updRep(){while(repG.children.length)repG.remove(repG.children[0]);
+for(var i=0;i<Math.min(4,reports.length);i++){var m=new THREE.Mesh(new THREE.BoxGeometry(0.7,0.05,0.5),mat(0xFFFFFF));m.position.set(-5.5,0.95+i*0.06,3);repG.add(m)}}
+function renderReps(){var el=document.getElementById('reports');el.innerHTML='';
+if(!reports.length){el.innerHTML='<div style="font-size:13px;color:var(--text-muted)">Belum ada laporan.</div>'}
+reports.forEach(function(r){var d=document.createElement('div');d.className='rep';
+d.innerHTML='<div style="font-weight:500;margin-bottom:2px"></div><div style="color:var(--text-secondary);line-height:1.5;margin-bottom:8px"></div><button>Setujui</button> <button>Tolak</button>';
+d.children[0].textContent=r.title;d.children[1].textContent=r.body;
+d.children[2].onclick=function(){decide(r.id,true)};d.children[3].onclick=function(){decide(r.id,false)};
+el.appendChild(d)});updRep()}
+function addReport(type,title,body){reports.push({id:++rid,type:type,title:title,body:body});renderReps();log('rule','Laporan baru sampai di meja bos: '+title)}
+function decide(id,ok){var r=null,i;
+for(i=0;i<reports.length;i++){if(reports[i].id===id){r=reports[i];reports.splice(i,1);break}}
+if(!r)return;renderReps();
+if(!ok){log('bos','Bos menolak: '+r.title);if(r.type==='restock')lowFlag=false;return}
+if(r.type==='restock'){log('bos','Bos menyetujui usul belanja');
+admin.q.push(Wk(1.5,'update stok'),Do(function(){stock=10;lowFlag=false;updRack();log('rule','Stok diperbarui jadi 10');var h=held;held=0;for(var j=0;j<h;j++)cook()}))}
+else{log('bos','Bos menyetujui diskon 10%');
+kasir.q.push(Wk(1,'membalas pelanggan'),Do(function(){log('rule','Balasan terkirim ke pelanggan')}))}}
+function cook(){koki.q.push(Wk(2.2,'memasak'),Do(function(){
+if(stock<=0){held++;log('rule','Stok habis, pesanan ditahan ('+held+')');stockEv()}
+else{stock--;updRack();log('rule','Pesanan selesai, stok bahan '+stock);if(stock<=3)stockEv()}}))}
+function stockEv(){if(lowFlag)return;lowFlag=true;var tx={};
+admin.q.push(Wk(1.5,'cek stok'),Do(function(){
+tx.t=stock<=0?'Stok habis dan '+held+' pesanan tertahan. Usul: pesan 10 unit sekarang.':'Stok tinggal '+stock+'. Usul: pesan 10 unit sebelum jam ramai.';
+log('llm',tx.t)}),toBos(admin),Wk(1,'serahkan laporan'),Do(function(){addReport('restock','Usul belanja stok',tx.t)}),home(admin))}
+function ordr(){spawnCust();kasir.q.push(Wk(1.2,'mencatat'),Do(function(){dropCust();log('rule','Kasir kirim tugas ke dapur');cook()}))}
+function evOrder(){log('trg','Pesanan baru masuk dari kasir mock');ordr()}
+function evOut(){log('trg','Stok habis (diatur dari simulator)');stock=0;updRack();
+if(lowFlag)log('rule','Laporan stok sudah menunggu bos');else stockEv()}
+function evComplain(){log('trg','Pelanggan komplain: pesanan telat');var tx={};
+kasir.q.push(Wk(1.2,'mencatat komplain'),Do(function(){
+tx.t='Pesanan telat 15 menit. Draf balasan: minta maaf dan beri diskon 10% untuk pesanan berikutnya. Perlu keputusan bos.';
+log('llm','Komplain dikategorikan layanan lambat, draf balasan disusun')}),toBos(kasir),Wk(1,'serahkan laporan'),
+Do(function(){addReport('complain','Komplain pelanggan',tx.t)}),home(kasir))}
+function flash(r){r.hl=true;renderMem();setTimeout(function(){r.hl=false;renderMem()},2500)}
+function prepare(r){r.prep=true;
+pelayan.q.push(srv(r.t),Wk(1.8,'menyiapkan meja'),Do(function(){tables[r.t-1].set.visible=true;
+log('ini','Tanpa disuruh: '+r.n+' biasanya datang sekitar '+fmt(r.usual)+' dan suka Meja '+r.t+'. Meja aku siapkan lebih dulu.')}),home(pelayan))}
+function greet(r){var tb=tables[r.t-1];
+pelayan.q.push(srv(r.t),Wk(1,'menyapa'),Do(function(){r.v++;
+log('llm','Menyapa '+r.n+': "Selamat datang lagi! '+r.o+' seperti biasa?"');flash(r);
+if(!tb.set.visible){pelayan.q.unshift(Wk(1.2,'menyiapkan meja'),Do(function(){tb.set.visible=true;log('rule','Meja belum siap, disiapkan sekarang')}))}}),
+Wk(1.2,'mencatat'),Do(function(){log('rule','Pesanan '+r.n+' diteruskan ke dapur');cook()}),home(pelayan))}
+function leave(r){log('rule',r.n+' selesai dan pergi');r.here=false;r.prep=false;tables[r.t-1].set.visible=false;
+if(r.v>=4&&!r.ins){r.ins='pelanggan tetap, datang sekitar '+fmt(r.usual)+', biasanya pesan '+r.o;
+log('ini','Refleksi: '+r.n+' sudah '+r.v+' kali datang, aku catat sebagai pelanggan tetap.');flash(r)}
+renderMem()}
+function arrive(r,manual){if(r.here)return;r.here=true;r.done=true;
+log('trg',r.n+' datang'+(manual?' (dari simulator)':' sesuai kebiasaannya'));
+var c=mkc(r.n,r.c);
+c.q.push(G(tables[r.t-1].x,-1.6,0),Do(function(){greet(r)}),Wk(7,'makan'),Do(function(){leave(r)}),G(-9.5,-1.0),Do(function(){rmc(c)}))}
+function think(){
+regs.forEach(function(r){if(!r.here&&!r.done&&vmin>=r.usual&&vmin<r.usual+30)arrive(r,false)});
+if(pelayan.cur||pelayan.q.length)return;
+for(var i=0;i<regs.length;i++){var r=regs[i];
+if(!r.here&&!r.done&&!r.prep&&vmin>=r.usual-25&&vmin<r.usual){prepare(r);return}}
+if(cs.length===0&&custs.length===0&&vmin-lastTidy>=45){lastTidy=vmin;var t=1+Math.floor(Math.random()*3);
+pelayan.q.push(srv(t),Wk(1.5,'merapikan'),Do(function(){log('ini','Lagi sepi, Meja '+t+' aku rapikan tanpa disuruh')}),home(pelayan))}}
+function tickMin(){vmin++;
+if(vmin>=1440){vmin-=1440;regs.forEach(function(r){r.done=false;r.prep=false})}
+document.getElementById('clk').textContent=clk();think()}
+function evAdvance(){log('trg','Waktu dimajukan 30 menit');for(var i=0;i<30;i++)tickMin()}
+function evRegular(){var r=null,i;
+for(i=0;i<regs.length;i++){if(!regs[i].here&&!regs[i].done){r=regs[i];break}}
+if(!r){for(i=0;i<regs.length;i++){if(!regs[i].here){r=regs[i];break}}}
+if(r)arrive(r,true)}
+setInterval(tickMin,700);
+updRack();renderReps();renderMem();log('rule','Kafe buka jam 08:00. Tunggu atau tekan Majukan 30 menit.');
+var az=0.15,dr=false,lx=0;
+wrap.addEventListener('pointerdown',function(e){dr=true;lx=e.clientX;wrap.style.cursor='grabbing'});
+window.addEventListener('pointerup',function(){dr=false;wrap.style.cursor='grab'});
+window.addEventListener('pointermove',function(e){if(!dr)return;az-=(e.clientX-lx)*0.005;az=Math.max(-0.5,Math.min(0.5,az));lx=e.clientX});
+var last=performance.now(),v=new THREE.Vector3();
+function pos(el,x,y,z){v.set(x,y,z).project(cam);el.style.left=((v.x+1)/2*W)+'px';el.style.top=((1-v.y)/2*H)+'px'}
+var staff=[kasir,koki,admin,pelayan];
+function tick(now){
+var dt=Math.min((now-last)/1000,0.05);last=now;
+cam.position.set(13*Math.sin(az),8,13*Math.cos(az));cam.lookAt(0,0.6,0.5);
+staff.forEach(function(a){step(a,dt)});
+cs.slice().forEach(function(a){step(a,dt)});
+custs.forEach(function(g,i){var k=Math.min(1,5*dt);g.position.x+=(-7.2-g.position.x)*k;g.position.z+=(-2.2+i*0.9-g.position.z)*k});
+pot.rotation.z=koki.st==='memasak'?0.15*Math.sin(now/90):0;
+ren.render(scene,cam);
+staff.forEach(function(a){a.l.textContent=a.n+' - '+a.st;pos(a.l,a.x,1.9,a.z)});
+cs.forEach(function(a){a.l.textContent=a.n+' - '+a.st;pos(a.l,a.x,1.9,a.z)});
+pos(bl,-5.5,1.9,1.7);
+sts.forEach(function(s){pos(s.d,s.x,s.y,s.z)});
+requestAnimationFrame(tick)}
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>
