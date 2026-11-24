@@ -114,7 +114,7 @@ SQLite lewat `better-sqlite3`. Migrasi awal: `0001_init.sql` (Langkah 10). Dafta
 
 ## 7. Pertanyaan terbuka untuk Tahap 1
 
-- Proyeksi ditulis lewat **SQL langsung** per event, atau lewat **reducer murni di memori** (di `core`) yang hasilnya disalin ke tabel? Skema ini berlaku untuk keduanya. Diputuskan di Tahap 1 setelah ada kode yang bisa dibandingkan.
+- ~~Proyeksi lewat SQL langsung atau reducer murni di memori?~~ **Terjawab di Tahap 1:** SQL langsung lewat satu fungsi `applyEvent` di `server`, aturan murni di `core` (lihat [`decisions/019`](decisions/019-sql-projections-with-pure-rules.md)).
 - Snapshot untuk mempercepat replay belum dibutuhkan di v1 (satu hari simulasi jumlah event-nya kecil).
 
 ## 8. Perbedaan dari brief dan rencana (mohon dikonfirmasi saat review)

@@ -82,19 +82,28 @@ Hasil Tahap 0, bahan untuk materi:
 
 **Tujuan:** pesanan masuk, stok berkurang sesuai resep, dan event stok tipis muncul. Hanya log di terminal.
 
+**Pembagian tugas (keputusan 019):** aturan murni (apa yang harus terjadi) ada di `core`, sedangkan `server` membaca state, menulis event, dan menerapkan proyeksi lewat SQL. Proyeksi ditulis oleh satu fungsi `applyEvent`, dipakai juga saat replay.
+
 **Tugas:**
-- [ ] Lapisan data: repositori menu, bahan, stok, pesanan
-- [ ] Use case `createOrder`: validasi item ada, hitung kebutuhan bahan
-- [ ] Use case `completeCooking` (sementara dipicu manual): kurangi stok dalam satu transaksi
+- [ ] Aturan murni di `core`: kebutuhan bahan dari resep, durasi masak (jumlah `qty x cook_time_sec` semua item), rencana masak (semua bahan cukup atau tidak sama sekali), sinyal ambang stok
+- [ ] Event store dan proyeksi di `server`: `appendEvent` (validasi zod, wajib dalam transaksi) dan `applyEvent` (SQL). Event yang proyeksinya belum dibuat dilempar sebagai error
+- [ ] Use case `createOrder`: validasi item ada, gabungkan baris menu yang sama, alokasi ID, tulis `order_created`
+- [ ] Use case `startCooking` (dipicu skrip demo, karena karakter baru ada di Tahap 3): cek bahan, lalu `cooking_started` + `stock_decreased` per bahan dalam satu transaksi, atau `order_held` jika bahan kurang
+- [ ] Use case `completeCooking`: menandai pesanan selesai (`cooking_done`)
 - [ ] Deteksi `stock_low` dan `stock_out` yang **idempoten** (muncul sekali sampai stok diisi ulang)
 - [ ] Kebijakan stok kurang: pesanan **ditahan**, bukan hilang
 - [ ] **Event-first:** setiap perubahan state = append ke tabel `events` + terapkan proyeksi dalam satu transaksi (tidak ada refaktor di Tahap 2)
-- [ ] Kasir mock: API HTTP minimal (`POST /orders`, `GET /menu`, `GET /stock`), tanpa halaman web (nanti dipanggil generator dunia di Tahap 2). Skrip demo membuat pesanan lewat API
-- [ ] Log terminal yang rapi per kejadian
+- [ ] Jam sementara `ManualClock` untuk `sim_time` (diganti `SimClock` sungguhan di Tahap 2)
+- [ ] Rebuild proyeksi dari log (`rebuildProjections`) dan snapshot untuk membandingkan state live dengan hasil replay
+- [ ] Kasir mock: API HTTP minimal lewat `node:http` (`POST /orders`, `GET /menu`, `GET /stock`), bind ke `127.0.0.1`, tanpa halaman web (nanti dipanggil generator dunia di Tahap 2). Skrip demo membuat pesanan lewat API
+- [ ] Log terminal yang rapi per kejadian, dengan label sesuai `docs/events.md` bagian 6
+- [ ] Skrip demo `npm run demo:stage1`
 
-**Tes:** hitungan stok per resep, `stock_low` hanya sekali, pesanan ditahan saat stok habis, transaksi atomik.
+**Ditunda ke Tahap 3:** baris `agents` di proyeksi (posisi awal pelayan belum diputuskan), proyeksi `restock_*`, dan `order_resumed`.
 
-**Selesai jika:** menjalankan skrip demo menghasilkan urutan log yang benar: pesanan, masak, stok turun, `stock_low`.
+**Tes:** hitungan stok per resep, `stock_low` hanya sekali, pesanan ditahan saat stok habis, transaksi atomik (kegagalan di tengah tidak meninggalkan efek parsial), replay dari log menghasilkan state yang sama dengan state live.
+
+**Selesai jika:** menjalankan skrip demo menghasilkan urutan log yang benar: pesanan, masak, stok turun, `stock_low` (sekali), `stock_out`, `order_held`, dan "Replay check: OK".
 
 **Catatan pelajaran:** aturan vs LLM (belum ada LLM, semua aturan), idempotensi.
 

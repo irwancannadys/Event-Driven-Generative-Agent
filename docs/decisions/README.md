@@ -22,3 +22,4 @@ Satu file per keputusan, beberapa baris tiap file. Brief menang jika ada bentura
 | [016](016-3d-primitives-behind-create-avatar.md) | Visual 3D primitif lewat createAvatar |
 | [017](017-tooling-npm-workspaces-typescript.md) | Tooling: npm workspaces dan TypeScript |
 | [018](018-extra-readonly-pages.md) | Halaman tambahan read-only (Stok, Menu, Laporan) |
+| [019](019-sql-projections-with-pure-rules.md) | Proyeksi lewat SQL, aturan murni di core |
