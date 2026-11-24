@@ -321,3 +321,37 @@ export function readArrivalsInFlight(
     )
     .all(since) as { customer_id: number; arrived_at_sim: number }[];
 }
+
+export interface MemoryRow {
+  id: number;
+  agent_id: AgentId;
+  kind: 'observation' | 'reflection';
+  ingredient_id: string | null;
+  text: string;
+  sim_time: number;
+}
+
+/** The notes an agent keeps, oldest first (decision 034). */
+export function readMemories(db: Db, agentId: AgentId): MemoryRow[] {
+  return db
+    .prepare(
+      `SELECT id, agent_id, kind, ingredient_id, text, sim_time
+       FROM memories WHERE agent_id = ? ORDER BY id`,
+    )
+    .all(agentId) as MemoryRow[];
+}
+
+/** The ingredients that a policy proposal is waiting for the boss's answer about. */
+export function readOpenPolicyIngredients(db: Db): Set<string> {
+  const rows = db
+    .prepare(
+      "SELECT subject_json FROM reports WHERE type = 'policy' AND status IN ('drafted', 'submitted')",
+    )
+    .pluck()
+    .all() as string[];
+  return new Set(
+    rows.map(
+      (json) => (JSON.parse(json) as { change: { ingredient_id: string } }).change.ingredient_id,
+    ),
+  );
+}

@@ -16,6 +16,13 @@ export const REVIEW_MIN_OUT_SEC = 15 * 60;
 /** A proposal raises the minimum by this much (percent of the current minimum). */
 export const REVIEW_RAISE_PCT = 150;
 
+/** A note that says this was tried and must not be tried again (see `rejectedText` and `reflectionText`). */
+export const DO_NOT_REPEAT = 'Jangan diulang';
+
+export function blocksRepeat(note: string): boolean {
+  return note.includes(DO_NOT_REPEAT);
+}
+
 export interface PolicyIngredient {
   ingredient_id: string;
   name: string;

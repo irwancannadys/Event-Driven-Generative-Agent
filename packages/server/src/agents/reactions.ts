@@ -9,6 +9,7 @@ import {
   triageAndAnswer,
 } from './complaint-flow';
 import { decideForecast } from './forecast-flow';
+import { decideReview, onPolicyReportDecided, scheduleReview } from './review-flow';
 import { finishCooking, handOrderToCook, onOrderCreated, resumeHeldOrders } from './order-flow';
 import {
   decideRestock,
@@ -38,9 +39,14 @@ export function reactToEvent(ctx: Context, event: StoredEvent, emit: Emit): void
         onRestockReportDecided(ctx, emit, report, event.payload.decision);
       } else if (report?.type === 'complaint') {
         onComplaintReportDecided(ctx, emit, report);
+      } else if (report?.type === 'policy') {
+        onPolicyReportDecided(ctx, emit, report, event.payload.decision);
       }
       return;
     }
+
+    case 'day_closed':
+      return scheduleReview(ctx, emit, event.payload.day);
 
     case 'complaint_received':
       return onComplaintReceived(ctx, emit, event.payload.complaint_id);
@@ -85,6 +91,9 @@ function onTaskFinished(
       return decideRestock(ctx, emit);
     case 'forecasting':
       return decideForecast(ctx, emit);
+    case 'reviewing_day':
+      if (ref?.type === 'day') return decideReview(ctx, emit, Number(ref.id));
+      return;
     case 'submitting_report':
       if (ref?.type === 'report') submitReport(ctx, emit, task.agent_id, Number(ref.id));
       return;

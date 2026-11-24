@@ -264,7 +264,7 @@ const baseEventSchema = z.discriminatedUnion('type', [
       duration_sim_sec: z.number().int().nonnegative(),
       ref: z
         .object({
-          type: z.enum(['order', 'report', 'complaint', 'restock', 'table', 'regular']),
+          type: z.enum(['order', 'report', 'complaint', 'restock', 'table', 'regular', 'day']),
           id: z.union([z.number().int(), nonEmpty]),
         })
         .optional(),

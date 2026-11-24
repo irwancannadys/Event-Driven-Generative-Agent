@@ -3,7 +3,7 @@ import { walkDurationSec } from '../stations';
 import type { TaskLabel } from './home';
 
 export interface TaskRef {
-  type: 'order' | 'report' | 'complaint' | 'restock' | 'table' | 'regular';
+  type: 'order' | 'report' | 'complaint' | 'restock' | 'table' | 'regular' | 'day';
   id: number | string;
 }
 

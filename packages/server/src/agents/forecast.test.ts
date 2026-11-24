@@ -45,6 +45,11 @@ const goTo = (sim: ReturnType<typeof boot>['sim'], time: number) =>
   sim.clock.advance(time - sim.clock.now());
 const events = (db: ReturnType<typeof boot>['db'], ...types: string[]): StoredEvent[] =>
   listEvents(db).filter((event) => types.includes(event.type));
+/** The questions about what to order: the nightly review of the day also thinks, and is not what these tests are about. */
+const stockQuestions = (db: ReturnType<typeof boot>['db']) =>
+  events(db, 'agent_think_requested').filter(
+    (event) => (event.payload as { purpose: string }).purpose === 'stock_proposal',
+  );
 const forecasting = (db: ReturnType<typeof boot>['db']) =>
   events(db, 'agent_task_assigned').filter(
     (event) => (event.payload as { label?: string }).label === 'forecasting',
@@ -109,7 +114,7 @@ describe('when she does not look ahead', () => {
     const { db, sim, fake } = boot();
     goTo(sim, simTime(0, 16));
     expect(forecasting(db)).toEqual([]);
-    expect(events(db, 'agent_think_requested')).toEqual([]);
+    expect(stockQuestions(db)).toEqual([]);
     expect(fake?.calls).toEqual([]);
   });
 
@@ -121,7 +126,7 @@ describe('when she does not look ahead', () => {
     );
     goTo(sim, simTime(1, 10, 10));
     expect(forecasting(db)).toEqual([]);
-    expect(fake?.calls).toEqual([]);
+    expect(fake?.calls.filter((call) => call.request.purpose === 'stock_proposal')).toEqual([]);
   });
 
   it('does not look when she is busy with something else, and does not come back for it', () => {
@@ -135,7 +140,7 @@ describe('when she does not look ahead', () => {
     );
     goTo(sim, simTime(1, 10, 30));
     expect(forecasting(db)).toEqual([]);
-    expect(events(db, 'agent_think_requested')).toEqual([]);
+    expect(stockQuestions(db)).toEqual([]);
   });
 
   it('leaves out an ingredient that a proposal or an order already covers', () => {

@@ -116,7 +116,7 @@ export const TEXT_ID: TextSet = {
         ? ` Paling bermasalah: ${facts.worst
             .map(
               (item) =>
-                `${item.name} (${item.held}x menahan pesanan, habis ${item.stockout_minutes} menit)`,
+                `${item.name} (${item.held}x menahan pesanan${item.stockout_minutes > 0 ? `, habis ${item.stockout_minutes} menit` : ''})`,
             )
             .join('; ')}.`
         : ' Tidak ada bahan yang bermasalah.'
@@ -140,7 +140,13 @@ export const TEXT_ID: TextSet = {
   observationText: (facts) =>
     `Hari ${facts.day}: ${facts.orders} pesanan, ${facts.held} kali ditahan, ${facts.complaints} komplain.${
       facts.worst.length > 0
-        ? ` ${facts.worst.map((item) => `${item.name} habis ${item.stockout_minutes} menit`).join(', ')}.`
+        ? ` ${facts.worst
+            .map((item) =>
+              item.stockout_minutes > 0
+                ? `${item.name} habis ${item.stockout_minutes} menit`
+                : `${item.name} menahan ${item.held} pesanan`,
+            )
+            .join(', ')}.`
         : ''
     }`,
 

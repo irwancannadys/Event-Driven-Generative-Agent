@@ -211,7 +211,7 @@ agent_task_assigned: {
   station?: StationId;             // wajib untuk goto
   label?: string;                  // kunci i18n untuk work, mis. 'cooking'
   duration_sim_sec: number;
-  ref?: { type: 'order' | 'report' | 'complaint' | 'restock' | 'table' | 'regular'; id: number | string };
+  ref?: { type: 'order' | 'report' | 'complaint' | 'restock' | 'table' | 'regular' | 'day'; id: number | string };
 }
 agent_task_finished: { agent_id: AgentId; task_id: number }
 agent_state_changed: {

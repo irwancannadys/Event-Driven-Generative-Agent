@@ -20,6 +20,8 @@ export interface ValidationWorld {
   ingredients: ReadonlyMap<string, IngredientFacts>;
   /** Ingredients that already have a proposal waiting or an order on its way: a proposal for them is stale. */
   covered?: ReadonlySet<string>;
+  /** Ingredients that must not be proposed for a change of policy: one is pending, or a note says it did not help. */
+  blocked?: ReadonlySet<string>;
 }
 
 export type Validation<P extends Purpose> =
@@ -112,6 +114,12 @@ function checkAgainstWorld(
     if (change) {
       const facts = world.ingredients.get(change.ingredient_id);
       if (!facts) return fail('unknown_id', `unknown ingredient "${change.ingredient_id}"`);
+      if (world.blocked?.has(change.ingredient_id)) {
+        return fail(
+          'out_of_range',
+          `"${change.ingredient_id}" has a proposal waiting, or was tried before and did not help`,
+        );
+      }
       const bounds = policyBounds(facts.base_min_qty, facts.capacity_qty);
       if (change.min_qty < bounds.min || change.min_qty > bounds.max) {
         return fail(

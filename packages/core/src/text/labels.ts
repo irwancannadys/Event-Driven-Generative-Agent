@@ -34,6 +34,7 @@ export const TASK_NAME_ID: Record<TaskLabel, string> = {
   cooking: 'memasak',
   checking_stock: 'mengecek stok',
   forecasting: 'memperkirakan kebutuhan',
+  reviewing_day: 'menulis review hari ini',
   submitting_report: 'menyerahkan laporan',
   placing_order: 'memesan ke pemasok',
   noting_complaint: 'mencatat komplain',
