@@ -2,6 +2,12 @@ import type { StoredEvent } from '@cafe/core';
 import { readReport } from '../db/queries';
 import type { Context, Emit } from '../usecases/context';
 import { kick, readTask } from './engine';
+import {
+  answerAfterDecision,
+  onComplaintReceived,
+  onComplaintReportDecided,
+  triageAndAnswer,
+} from './complaint-flow';
 import { finishCooking, handOrderToCook, onOrderCreated, resumeHeldOrders } from './order-flow';
 import {
   decideRestock,
@@ -29,9 +35,14 @@ export function reactToEvent(ctx: Context, event: StoredEvent, emit: Emit): void
       const report = readReport(ctx.db, event.payload.report_id);
       if (report?.type === 'restock') {
         onRestockReportDecided(ctx, emit, report, event.payload.decision);
+      } else if (report?.type === 'complaint') {
+        onComplaintReportDecided(ctx, emit, report);
       }
       return;
     }
+
+    case 'complaint_received':
+      return onComplaintReceived(ctx, emit, event.payload.complaint_id);
 
     case 'restock_arrived':
       return resumeHeldOrders(ctx, emit);
@@ -79,6 +90,12 @@ function onTaskFinished(
       return;
     case 'waiting_retry':
       return scheduleStockCheck(ctx, emit);
+    case 'noting_complaint':
+      if (ref?.type === 'complaint') triageAndAnswer(ctx, emit, Number(ref.id));
+      return;
+    case 'replying_customer':
+      if (ref?.type === 'complaint') answerAfterDecision(ctx, emit, Number(ref.id));
+      return;
     default:
       return;
   }

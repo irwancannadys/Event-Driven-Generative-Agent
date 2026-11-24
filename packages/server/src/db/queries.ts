@@ -102,3 +102,24 @@ export function readReport(db: Db, reportId: number): ReportRow | undefined {
   const { subject_json, ...rest } = row;
   return { ...rest, subject: JSON.parse(subject_json) as Record<string, unknown> };
 }
+
+export interface ComplaintRow {
+  id: number;
+  order_id: number;
+  cause: 'slow_service' | 'wrong_order' | 'quality';
+  status: 'received' | 'triaged' | 'replied';
+  suggested_compensation: 'none' | 'discount_10' | 'free_item' | null;
+  report_id: number | null;
+  /** When the order of this complaint was placed. */
+  order_created_at_sim: number;
+}
+
+export function readComplaint(db: Db, complaintId: number): ComplaintRow | undefined {
+  return db
+    .prepare(
+      `SELECT c.id, c.order_id, c.cause, c.status, c.suggested_compensation, c.report_id,
+              o.created_at_sim AS order_created_at_sim
+       FROM complaints c JOIN orders o ON o.id = c.order_id WHERE c.id = ?`,
+    )
+    .get(complaintId) as ComplaintRow | undefined;
+}
