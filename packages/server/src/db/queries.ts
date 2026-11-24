@@ -1,4 +1,10 @@
-import type { OrderItem, RecipeLine } from '@cafe/core';
+import {
+  AGENT_IDS,
+  type AgentId,
+  type OrderItem,
+  type RecipeLine,
+  type StationId,
+} from '@cafe/core';
 import type { Db } from './database';
 
 // Read-only queries shared by the use cases and the HTTP API.
@@ -84,23 +90,44 @@ export function readWorldSeed(db: Db): number {
   return (JSON.parse(payload) as { seed: number }).seed;
 }
 
+export type ReportStatus = 'drafted' | 'submitted' | 'approved' | 'rejected';
+
 export interface ReportRow {
   id: number;
   type: 'restock' | 'complaint';
-  status: 'drafted' | 'submitted' | 'approved' | 'rejected';
+  status: ReportStatus;
   title: string;
   body: string;
   /** Parsed `subject_json`: the items of a restock report, or the complaint a report is about. */
   subject: Record<string, unknown>;
+  created_at_sim: number;
+  submitted_at_sim: number | null;
+  decided_at_sim: number | null;
+}
+
+const REPORT_COLUMNS = `id, type, status, title, body, subject_json, created_at_sim,
+  submitted_at_sim, decided_at_sim`;
+
+type RawReport = Omit<ReportRow, 'subject'> & { subject_json: string };
+
+function toReportRow({ subject_json, ...rest }: RawReport): ReportRow {
+  return { ...rest, subject: JSON.parse(subject_json) as Record<string, unknown> };
 }
 
 export function readReport(db: Db, reportId: number): ReportRow | undefined {
-  const row = db
-    .prepare('SELECT id, type, status, title, body, subject_json FROM reports WHERE id = ?')
-    .get(reportId) as (Omit<ReportRow, 'subject'> & { subject_json: string }) | undefined;
-  if (!row) return undefined;
-  const { subject_json, ...rest } = row;
-  return { ...rest, subject: JSON.parse(subject_json) as Record<string, unknown> };
+  const row = db.prepare(`SELECT ${REPORT_COLUMNS} FROM reports WHERE id = ?`).get(reportId) as
+    RawReport | undefined;
+  return row && toReportRow(row);
+}
+
+/** Reports in the order they were written, optionally only those with one status. */
+export function readReports(db: Db, status?: ReportStatus): ReportRow[] {
+  const rows = (
+    status === undefined
+      ? db.prepare(`SELECT ${REPORT_COLUMNS} FROM reports ORDER BY id`).all()
+      : db.prepare(`SELECT ${REPORT_COLUMNS} FROM reports WHERE status = ? ORDER BY id`).all(status)
+  ) as RawReport[];
+  return rows.map(toReportRow);
 }
 
 export interface ComplaintRow {
@@ -122,4 +149,95 @@ export function readComplaint(db: Db, complaintId: number): ComplaintRow | undef
        FROM complaints c JOIN orders o ON o.id = c.order_id WHERE c.id = ?`,
     )
     .get(complaintId) as ComplaintRow | undefined;
+}
+
+export interface OrderListRow {
+  id: number;
+  status: OrderRow['status'];
+  source: 'walk_in' | 'regular';
+  created_at_sim: number;
+  done_at_sim: number | null;
+  items: OrderItem[];
+}
+
+/** The newest `limit` orders (oldest first), optionally only those with one status. */
+export function readOrders(
+  db: Db,
+  options: { status?: OrderRow['status']; limit: number },
+): OrderListRow[] {
+  const where = options.status === undefined ? '' : 'WHERE status = ?';
+  const rows = db
+    .prepare(
+      `SELECT id, status, source, created_at_sim, done_at_sim FROM orders ${where}
+       ORDER BY id DESC LIMIT ?`,
+    )
+    .all(...(options.status === undefined ? [] : [options.status]), options.limit) as Omit<
+    OrderListRow,
+    'items'
+  >[];
+  return rows.reverse().map((row) => ({ ...row, items: readOrderItems(db, row.id) }));
+}
+
+export interface AgentOverviewRow {
+  id: AgentId;
+  role: string;
+  station: StationId;
+  state: 'idle' | 'walking' | 'working' | 'thinking';
+  /** The task that is running, if any. */
+  task: {
+    id: number;
+    kind: 'goto' | 'work';
+    label: string | null;
+    station: StationId | null;
+    ends_at_sim: number | null;
+  } | null;
+  /** How many tasks wait behind the running one. */
+  queued: number;
+}
+
+export function readAgentOverview(db: Db): AgentOverviewRow[] {
+  const rows = db
+    .prepare(
+      `SELECT a.id, a.role, a.station, a.state,
+              t.id AS task_id, t.kind AS task_kind, t.params_json, t.ends_at_sim,
+              (SELECT COUNT(*) FROM agent_tasks q
+                WHERE q.agent_id = a.id AND q.status = 'queued') AS queued
+       FROM agents a
+       LEFT JOIN agent_tasks t ON t.agent_id = a.id AND t.status = 'active'`,
+    )
+    .all() as {
+    id: AgentId;
+    role: string;
+    station: StationId;
+    state: AgentOverviewRow['state'];
+    task_id: number | null;
+    task_kind: 'goto' | 'work' | null;
+    params_json: string | null;
+    ends_at_sim: number | null;
+    queued: number;
+  }[];
+  const overview = rows.map((row): AgentOverviewRow => {
+    const params =
+      row.params_json === null
+        ? {}
+        : (JSON.parse(row.params_json) as { label?: string; station?: StationId });
+    return {
+      id: row.id,
+      role: row.role,
+      station: row.station,
+      state: row.state,
+      task:
+        row.task_id === null || row.task_kind === null
+          ? null
+          : {
+              id: row.task_id,
+              kind: row.task_kind,
+              label: params.label ?? null,
+              station: params.station ?? null,
+              ends_at_sim: row.ends_at_sim,
+            },
+      queued: row.queued,
+    };
+  });
+  return overview.sort((a, b) => AGENT_IDS.indexOf(a.id) - AGENT_IDS.indexOf(b.id));
 }

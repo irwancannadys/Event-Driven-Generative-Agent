@@ -66,7 +66,9 @@ export async function startDevServer(options: DevServerOptions): Promise<DevServ
   const where = `jam ${formatClock(now)}, hari ${dayOf(now)}`;
   log('=== Server kafe virtual ===');
   log(`Database : ${config.databasePath}`);
-  log(`API      : ${api.url}  (GET /time /menu /stock, POST /orders /time)`);
+  log(
+    `API      : ${api.url}  (GET /time /menu /stock /orders /agents /reports, POST /orders /time /reports/:id/decision)`,
+  );
   log(`Kecepatan: ${pacer.speed}x (1 detik asli = ${pacer.speed} detik virtual)`);
   log(
     simulation.recovered

@@ -166,9 +166,11 @@ describe('routing', () => {
     const wrongOnMenu = await fetch(`${url}/menu`, { method: 'DELETE' });
     expect(wrongOnMenu.status).toBe(405);
     expect(wrongOnMenu.headers.get('allow')).toBe('GET');
-    const wrongOnOrders = await fetch(`${url}/orders`);
+    const wrongOnOrders = await fetch(`${url}/orders`, { method: 'DELETE' });
     expect(wrongOnOrders.status).toBe(405);
-    expect(wrongOnOrders.headers.get('allow')).toBe('POST');
+    expect(wrongOnOrders.headers.get('allow')).toBe('GET, POST');
+    const wrongOnStock = await fetch(`${url}/stock`, { method: 'POST' });
+    expect(wrongOnStock.status).toBe(405);
   });
 
   it('listens on localhost only', async () => {
