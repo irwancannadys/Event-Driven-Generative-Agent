@@ -1,9 +1,10 @@
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { SECONDS_PER_DAY, formatClock, makeScenario, type StoredEvent } from '@cafe/core';
+import { SECONDS_PER_DAY, makeScenario } from '@cafe/core';
 import { openSeededMemoryDb } from '../db/memory';
 import { listEvents } from '../events/store';
+import { describeEvent } from '../test-support/describe-event';
 import { bootSimulation } from './simulation';
 
 // The golden day: the complete log of one virtual day for seed 42, kept in the repo as a file.
@@ -12,35 +13,11 @@ import { bootSimulation } from './simulation';
 
 const GOLDEN_FILE = fileURLToPath(new URL('./__golden__/day-seed-42.json', import.meta.url));
 
-function describeEvent(event: StoredEvent): string {
-  const payload = event.payload as Record<string, unknown>;
-  const detail = (() => {
-    switch (event.type) {
-      case 'world_initialized':
-        return `seed=${payload.seed}`;
-      case 'day_opened':
-      case 'day_closed':
-        return `day=${payload.day}`;
-      case 'regular_expected':
-        return `${payload.regular_id} table=${payload.table_id} expected_at=${formatClock(payload.expected_at as number)}`;
-      case 'order_created': {
-        const items = payload.items as { menu_item_id: string; qty: number }[];
-        return `#${payload.order_id} ${items.map((item) => `${item.menu_item_id}x${item.qty}`).join(',')}`;
-      }
-      case 'complaint_received':
-        return `#${payload.complaint_id} order=${payload.order_id} cause=${payload.cause}`;
-      default:
-        return JSON.stringify(payload);
-    }
-  })();
-  return `${formatClock(event.sim_time)} ${event.type} ${detail}`;
-}
-
 function playTheDay(): string[] {
   const db = openSeededMemoryDb();
   const simulation = bootSimulation({ db, agents: false, scenario: makeScenario(42) });
   simulation.clock.advance(SECONDS_PER_DAY - simulation.clock.now());
-  return listEvents(db).map(describeEvent);
+  return listEvents(db).map((event) => describeEvent(event));
 }
 
 describe('golden day (seed 42)', () => {

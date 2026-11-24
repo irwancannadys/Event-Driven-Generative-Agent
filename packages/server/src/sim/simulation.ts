@@ -38,7 +38,8 @@ export interface BootOptions {
   db: Db;
   bus?: EventBus;
   /** `scenario.seed` is only used to create a new world, later boots read the seed from the log. */
-  scenario: Scenario; /**
+  scenario: Scenario;
+  /**
    * Whether the characters work (decision 022). The real world always has them. Tests of the earlier
    * stages, which rely on "nobody cooks yet", switch them off. Default `true`.
    */
