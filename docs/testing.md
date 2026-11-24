@@ -1,6 +1,6 @@
 # Panduan uji manual
 
-Panduan ini buat lu yang mau mencoba sendiri hasil tiap tahap, langkah demi langkah. Dokumen ini ikut bertambah setiap tahap selesai.
+Panduan ini buat lu yang mau mencoba sendiri hasil tiap tahap, langkah demi langkah. Dokumen ini ikut bertambah setiap tahap selesai. Semua isinya sudah gua jalankan sendiri (termasuk Ctrl+C dan restart sungguhan) sebelum ditulis.
 
 Semua perintah dijalankan dari folder repo (`/Users/irwancannady/lesson`) di terminal.
 
@@ -17,7 +17,7 @@ npm install      # pasang dependency
 npm test
 ```
 
-**Yang diharapkan:** baris terakhir seperti `Tests  NNN passed (NNN)` dan tidak ada tulisan `failed`. Kalau ada yang merah, nama tesnya menunjukkan bagian mana yang rusak.
+**Yang diharapkan:** baris terakhir seperti `Tests  346 passed (346)` (angkanya naik tiap tahap) dan tidak ada tulisan `failed`. Kalau ada yang merah, nama tesnya menunjukkan bagian mana yang rusak.
 
 Pemeriksaan lain yang cepat: `npm run lint`, `npm run typecheck`, `npm run format:check`. Ketiganya tidak boleh mencetak error.
 
@@ -42,9 +42,13 @@ npm run demo:stage1
 npm run demo:stage2
 ```
 
-**Yang dicari:** log satu hari: `day_opened` jam 08:00, pesanan datang (paling ramai sekitar jam makan siang), tiga `regular_expected` (08:05, 11:35, 16:35), beberapa `complaint_received`, lalu `day_closed` jam 20:00. Tiga baris terakhir berisi `Replay check: OK` dan `Restart check: OK`.
+**Yang dicari:**
 
-**Artinya:** hari yang sama bisa dijalankan sekali jalan atau diputus di tengah lalu dipulihkan, hasilnya identik.
+- `day_opened` jam 08:00, pesanan datang (paling ramai sekitar jam makan siang), tiga `regular_expected` (08:05, 11:35, 16:35), beberapa `complaint_received`, lalu `day_closed` jam 20:00.
+- Di ringkasan: grafik batang "Pesanan per jam" (jam 12 dan 13 tertinggi), sekitar 75 pesanan dan 13 komplain untuk seed 42.
+- Dua baris terakhir: `Replay check: OK` dan `Restart check: OK`.
+
+**Artinya:** hari yang sama bisa dijalankan sekali jalan atau diputus di tengah (server dimatikan jam 12:07 lalu dinyalakan lagi), dan hasilnya identik.
 
 ## 4. Server hidup: `npm run dev`
 
@@ -56,7 +60,19 @@ npm run dev
 
 Biarkan terminal ini terbuka. Server memakai file `data/cafe.db` dan API di `http://127.0.0.1:3000`. Jam virtual berjalan **60 kali lebih cepat** dari jam asli (1 detik asli = 1 menit virtual).
 
-**Yang dicari:** pesan di awal bahwa dunia dibuat (atau dipulihkan), lalu log event mengalir.
+**Yang dicari** (setelah beberapa baris `> dev` dari npm):
+
+```
+=== Server kafe virtual ===
+Database : /Users/irwancannady/lesson/data/cafe.db
+API      : http://127.0.0.1:3000  (GET /time /menu /stock, POST /orders /time)
+Kecepatan: 60x (1 detik asli = 60 detik virtual)
+Dunia baru dibuat: jam 07:50, hari 0, seed 42
+Tekan Ctrl+C untuk berhenti. Jam virtual disimpan saat berhenti.
+07:50  [Aturan]     world_initialized      seed=42 ...
+```
+
+Sekitar 10 detik kemudian muncul `day_opened` (jam 08:00), lalu pesanan masuk berkala.
 
 ### 4.2 Pakai terminal kedua untuk `curl`
 
@@ -71,7 +87,7 @@ curl -s -X POST localhost:3000/orders \
   -d '{"items":[{"menu_item_id":"kopi_susu","qty":1}]}'
 ```
 
-Pesanan manual terakhir muncul juga di log server sebagai `order_created`.
+Pesanan manual terakhir muncul juga di log server sebagai `order_created`. Tambahkan `| python3 -m json.tool` di belakang `curl` kalau mau hasilnya rapi.
 
 ### 4.3 Kontrol waktu
 
@@ -87,34 +103,42 @@ curl -s -X POST localhost:3000/time -H 'content-type: application/json' -d '{"pa
 curl -s -X POST localhost:3000/time -H 'content-type: application/json' -d '{"advance_seconds":1800}'
 ```
 
-**Yang dicari:** saat dijeda, log berhenti. Saat dimajukan 30 menit, semua kejadian di rentang itu muncul berurutan, tidak ada yang terlewat.
+**Yang dicari:** saat dijeda, log berhenti dan `/time` tidak bergerak. Saat dimajukan 30 menit, baris `sim_time_advanced` muncul diikuti semua kejadian di rentang itu, berurutan, tidak ada yang terlewat. Nilai yang tidak masuk akal (mis. `{"speed":0}`) ditolak dengan HTTP 400.
 
 ### 4.4 Uji pemulihan (inti desain kita)
 
-1. Biarkan server jalan beberapa saat sampai ada beberapa event. Catat jam di `curl -s localhost:3000/time`.
-2. Matikan server dengan **Ctrl+C**.
+1. Biarkan server jalan sampai ada beberapa event. Catat jam dari `curl -s localhost:3000/time`.
+2. Matikan server dengan **Ctrl+C**. Harus muncul `mematikan server...` lalu `Jam virtual disimpan. Sampai jumpa.`
 3. Hitung event yang tersimpan:
    ```
    sqlite3 data/cafe.db "select count(*) from events"
    ```
 4. Nyalakan lagi: `npm run dev`.
 
-**Yang dicari:** pesan bahwa dunia dipulihkan dari log, jam lanjut dari titik terakhir (bukan balik ke 07:50), dan log lanjut **tanpa event dobel** (misalnya `day_opened` tidak muncul dua kali untuk hari yang sama).
+**Yang dicari:** pesan seperti
+
+```
+Dunia dipulihkan dari log: 20 event dibaca ulang, jam 10:00, hari 0, seed 42
+```
+
+Angka event harus sama dengan hasil `sqlite3` tadi, jam lanjut dari titik terakhir (bukan balik ke 07:50), dan log lanjut **tanpa event dobel** (`day_opened` tidak muncul dua kali untuk hari yang sama).
+
+Dua hal yang **sengaja tidak** dipulihkan: kecepatan kembali ke `SPEED` (atau 60), dan server selalu mulai tidak dijeda. Itu pengaturan menjalankan, bukan bagian dari dunia.
 
 ### 4.5 Uji determinisme (seed)
 
-"Kebetulan" di simulasi ini ditentukan oleh seed, jadi dua dunia dengan seed sama harus identik.
+"Kebetulan" di simulasi ini ditentukan oleh seed, jadi dua dunia dengan seed sama harus identik. Pakai kecepatan tinggi biar cepat kelihatan.
 
 ```
 rm -f data/cafe.db*
-SEED=42 npm run dev        # catat 5 sampai 10 baris log pertama, lalu Ctrl+C
+SEED=42 SPEED=3600 npm run dev     # catat 5 sampai 10 baris pertama setelah day_opened, lalu Ctrl+C
 rm -f data/cafe.db*
-SEED=42 npm run dev        # awal log harus sama persis
+SEED=42 SPEED=3600 npm run dev     # baris yang sama persis (jam dan isi pesanan)
 rm -f data/cafe.db*
-SEED=7 npm run dev         # awal log berbeda
+SEED=7  SPEED=3600 npm run dev     # pesanan berbeda
 ```
 
-Cek juga setelah `rm`: jam virtual dan pesanan pertama sama untuk seed yang sama.
+Satu hal yang juga bisa dicoba: nyalakan dunia dengan `SEED=42`, matikan, lalu nyalakan lagi dengan `SEED=999` **tanpa** menghapus `data/cafe.db`. Log tetap menyebut `seed 42`: dunia yang sudah ada memakai seed yang tersimpan di log-nya, bukan seed dari pengaturan.
 
 ### 4.6 Mulai dari nol
 
@@ -124,19 +148,34 @@ rm -f data/cafe.db*
 
 Lalu `npm run dev` membuat dunia baru dari awal.
 
+### 4.7 Pengaturan lain (opsional)
+
+Semua lewat variabel lingkungan atau file `.env` (salin dari `.env.example`):
+
+| Variabel | Arti | Default |
+|---|---|---|
+| `PORT` | port API | 3000 |
+| `SPEED` | detik virtual per detik asli (1 sampai 3600) | 60 |
+| `SEED` | seed dunia **baru** | 42 |
+| `CROWD_PCT` | keramaian, 100 = normal, 200 = dua kali lipat | 100 |
+| `COMPLAINT_CHANCE_PCT` | peluang pesanan yang menunggu 20 menit jadi komplain | 15 |
+
+Nilai yang salah (mis. `SPEED=abc`) membuat server menolak nyala dengan pesan yang menyebut nama variabelnya.
+
 ## 5. Yang wajar dilihat, dan yang belum ada
 
 - **Belum ada yang memasak.** Koki baru dibuat di Tahap 3. Pesanan yang masuk tetap berstatus `placed`, jadi stok tidak turun.
-- **Komplain muncul karena itu.** Pesanan yang menunggu lebih dari 20 menit virtual bisa dikomplain (peluang 15% per pesanan, hasil undiannya tetap). Itu wajar: memang tidak ada yang melayani.
+- **Komplain muncul karena itu.** Pesanan yang menunggu lebih dari 20 menit virtual bisa dikomplain (peluang 15% per pesanan, hasil undiannya tetap per pesanan). Itu wajar: memang tidak ada yang melayani.
 - Belum ada tampilan web (Tahap 4) dan belum ada LLM (Tahap 5 dan 6).
-- Malam hari (setelah `day_closed` sampai `day_opened` hari berikutnya) tidak ada event. Percepat dengan `{"speed":3600}` atau `{"advance_seconds":...}`.
+- Setelah `day_closed` (20:00) sampai `day_opened` hari berikutnya tidak ada event. Percepat dengan `{"speed":3600}` atau `{"advance_seconds":...}`.
 
 ## 6. Kalau ada yang aneh
 
 | Gejala | Kemungkinan penyebab dan cara cek |
 |---|---|
-| `EADDRINUSE` saat `npm run dev` | Port 3000 dipakai. Jalankan dengan `PORT=3100 npm run dev` |
+| `EADDRINUSE` saat `npm run dev` | Port 3000 dipakai. Jalankan dengan `PORT=3100 npm run dev` (dan ganti port di perintah `curl`) |
+| `SPEED must be between 1 and 3600` (atau variabel lain) | Nilai di `.env` atau di perintah salah. Pesannya menyebut variabel yang bermasalah |
 | Server tidak mau nyala dan menyebut database | File `data/cafe.db` rusak atau dikunci proses lain. Matikan semua `npm run dev`, lalu `rm -f data/cafe.db*` |
 | Log tidak bergerak | Mungkin sedang dijeda. Cek `curl -s localhost:3000/time` |
 | Log terlalu lambat | Naikkan kecepatan: `{"speed":600}` |
-| `sqlite3: command not found` | Ganti dengan `node -e` atau lewati langkah itu. Perintah ini opsional |
+| `sqlite3: command not found` | Langkah itu opsional. Lewati saja |

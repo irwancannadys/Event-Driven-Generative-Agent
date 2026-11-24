@@ -126,17 +126,17 @@ Hasil Tahap 1, bahan untuk materi:
 **Pembagian tugas (keputusan 020 dan 021):** bagian murni "kapan apa terjadi" ada di `core` (`VirtualClock`, jadwal, generator, RNG), sedangkan `server` menjalankan handler-nya. Pacing real-time (kecepatan, pause) ada di `server` dan bukan event.
 
 **Tugas:**
-- [ ] RNG tanpa state `rand(seed, key)` di `core` (lint sudah melarang `Math.random` dan `Date.now`)
-- [ ] `VirtualClock`: jam virtual (detik), `advance(seconds)` memproses semua jadwal yang terlewat secara berurutan, hasil sama berapa pun granularitas tick-nya
-- [ ] Jadwal dan generator dunia (seeded, murni): buka dan tutup kafe, `regular_expected`, pesanan dengan pola jam, komplain `slow_service` (pesanan menunggu lama plus undian per pesanan), undian perilaku pemasok (fungsi murni, dipakai Tahap 3)
-- [ ] Event bus dalam proses (persist-then-publish); terminal log berlangganan
-- [ ] Proyeksi `complaint_received`
-- [ ] Simulasi di `server`: `bootSimulation` (dunia baru, atau **pemulihan saat boot** lewat replay log), handler jadwal dan generator (generator memakai use case `createOrder`, pintu yang sama dengan `POST /orders`), `skipTime` (`sim_time_advanced`), penyimpanan jam di `sim_clock`
-- [ ] `Pacer`: kecepatan 1 sampai 3600, pause, resume; `tick` bisa dipanggil manual oleh tes
-- [ ] Kontrol waktu di API: `GET /time` dan `POST /time` (`speed`, `paused`, `advance_seconds`)
-- [ ] Konfigurasi (`PORT`, `SPEED`, `SEED`, `CROWD_PCT`, `COMPLAINT_CHANCE_PCT`) dan `npm run dev`
-- [ ] Golden test satu hari dan `npm run demo:stage2` (Replay check dan Restart check)
-- [ ] `docs/testing.md`: panduan uji manual
+- [x] RNG tanpa state `rand(seed, key)` di `core` (lint sudah melarang `Math.random` dan `Date.now`)
+- [x] `VirtualClock`: jam virtual (detik), `advance(seconds)` memproses semua jadwal yang terlewat secara berurutan, hasil sama berapa pun granularitas tick-nya
+- [x] Jadwal dan generator dunia (seeded, murni): buka dan tutup kafe, `regular_expected`, pesanan dengan pola jam, komplain `slow_service` (pesanan menunggu lama plus undian per pesanan), undian perilaku pemasok (fungsi murni, dipakai Tahap 3)
+- [x] Event bus dalam proses (persist-then-publish); terminal log berlangganan
+- [x] Proyeksi `complaint_received`
+- [x] Simulasi di `server`: `bootSimulation` (dunia baru, atau **pemulihan saat boot** lewat replay log), handler jadwal dan generator (generator memakai use case `createOrder`, pintu yang sama dengan `POST /orders`), `skipTime` (`sim_time_advanced`), penyimpanan jam di `sim_clock`
+- [x] `Pacer`: kecepatan 1 sampai 3600, pause, resume; `tick` bisa dipanggil manual oleh tes
+- [x] Kontrol waktu di API: `GET /time` dan `POST /time` (`speed`, `paused`, `advance_seconds`)
+- [x] Konfigurasi (`PORT`, `SPEED`, `SEED`, `CROWD_PCT`, `COMPLAINT_CHANCE_PCT`) dan `npm run dev`
+- [x] Golden test satu hari dan `npm run demo:stage2` (Replay check dan Restart check)
+- [x] `docs/testing.md`: panduan uji manual
 
 **Ditunda ke Tahap 3 dan seterusnya:** timer dinamis (akhir tugas agent), `agent_think_requested` dari scheduler, proyeksi `restock_*`, `regular_arrived` dan `regular_left`. Di Tahap 2 belum ada yang memasak, jadi pesanan dari generator menumpuk berstatus `placed` dan komplain muncul karena itu.
 
@@ -145,6 +145,17 @@ Hasil Tahap 1, bahan untuk materi:
 **Selesai jika:** tes golden dan replay lulus, restart di tengah hari terbukti identik, dan `npm run dev` nyala, merespons `curl`, dan pulih setelah dimatikan.
 
 **Catatan pelajaran:** kenapa event log jadi sumber kebenaran, nilai replay untuk debugging.
+
+Hasil Tahap 2, bahan untuk materi:
+
+- **Waktu sebagai fungsi murni:** "kapan apa terjadi" dihitung dari `(seed, waktu absolut)`, bukan dari state yang diingat. Akibatnya hasil sama berapa pun jam dipecah (`advance(1800)` = 30 kali `advance(60)`) dan aman dihitung ulang setelah restart.
+- **RNG tanpa state:** `rand(seed, key)` tidak punya posisi yang harus disimpan. Tiap undian butuh key yang stabil, dan nilai-nilai acuannya dikunci oleh tes supaya algoritma tidak berubah diam-diam.
+- **Replay dan pemulihan bukan fitur tambahan:** keduanya memakai jalur yang sama dengan jalur live (`applyEvent`). Karena itu "restart di tengah hari memberi log identik" bisa dibuktikan, dan dibuktikan di delapan titik berbeda (termasuk tepat saat kafe buka dan lintas pergantian hari), bukan satu kasus.
+- **Golden file:** log satu hari disimpan di repo. Perubahan aturan jadi diff yang bisa ditinjau, dan algoritma tidak bisa berubah tanpa ketahuan. Golden test terbukti gagal saat satu angka bobot menu diubah.
+- **Pacing bukan urusan dunia:** kecepatan dan pause tidak jadi event, dan dihitung dengan bilangan bulat (milidetik virtual) supaya kecepatan rendah tidak kena drift desimal.
+- **Seed hidup di log:** seed yang dipakai dunia diambil dari `world_initialized`, bukan dari `.env`. Mengubah `.env` di tengah jalan tidak bisa merusak dunia yang sudah ada.
+- **Uji proses nyata menangkap hal yang tidak ditangkap tes otomatis:** Ctrl+C sungguhan, port, dan urutan keluaran di terminal. Uji nyata menemukan baris `world_initialized` yang tampil sebelum banner, dan kolom log yang geser untuk nama event yang panjang.
+- **Batas yang disadari:** belum ada yang memasak, jadi pesanan menumpuk dan komplain muncul karena itu. Itu ditulis terang-terangan di panduan uji, bukan disembunyikan.
 
 ---
 
