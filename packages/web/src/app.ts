@@ -1,7 +1,9 @@
 import { changeTime, decideReport } from './net/api';
 import { connect, type ConnectionStatus } from './net/connection';
 import { socketUrl } from './net/url';
+import { t } from './i18n';
 import { createPanels } from './panels/render';
+import { createScene } from './scene';
 import { applyMessage, type WorldState } from './state/world';
 
 /** How often the panels are redrawn, which keeps the virtual clock ticking between server messages. */
@@ -16,6 +18,13 @@ export function startApp(root: HTMLElement): void {
     changeTime: (request) => changeTime(request),
   });
   const draw = (): void => panels.update({ state, status, nowMs: performance.now() });
+
+  try {
+    createScene(panels.sceneSlot, () => state);
+  } catch (error) {
+    console.error('3D scene could not be made:', error);
+    panels.sceneSlot.textContent = t('scene.unavailable');
+  }
 
   connect(socketUrl(window.location), {
     onMessage(message) {

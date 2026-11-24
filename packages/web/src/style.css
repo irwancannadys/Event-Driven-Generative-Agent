@@ -264,3 +264,36 @@ button.reject {
   gap: 8px;
   margin-top: 8px;
 }
+
+.scene-slot {
+  position: relative;
+  height: clamp(320px, 52vh, 520px);
+  margin-top: 8px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #efe8da;
+  color: #2c2c2a;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.scene-slot.dragging {
+  cursor: grabbing;
+}
+.scene-slot canvas {
+  display: block;
+}
+.scene-label {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  padding: 1px 6px;
+  border-radius: 6px;
+  font-size: 11px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.scene-label.station {
+  background: rgba(44, 44, 42, 0.62);
+  color: #fff;
+}

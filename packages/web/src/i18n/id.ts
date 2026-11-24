@@ -11,6 +11,8 @@ export const ID = {
   'clock.paused': 'JEDA',
   'waiting.world': 'Menunggu data dunia dari server...',
 
+  'scene.unavailable': 'Tampilan 3D tidak bisa dibuat di browser ini. Panel tetap jalan.',
+
   'panel.agents': 'Karakter',
   'panel.orders': 'Pesanan',
   'panel.log': 'Kejadian',

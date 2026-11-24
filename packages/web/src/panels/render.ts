@@ -33,6 +33,8 @@ export interface PanelInput {
 
 export interface Panels {
   update(input: PanelInput): void;
+  /** An empty place between the strip and the panels, for the 3D picture. */
+  sceneSlot: HTMLElement;
 }
 
 const NOTICE_MS = 5000;
@@ -82,7 +84,8 @@ export function createPanels(root: HTMLElement, actions: PanelActions): Panels {
     el('div', 'column', boss.root),
   );
 
-  root.replaceChildren(el('h1', '', t('app.title')), strip, notice, columns);
+  const sceneSlot = el('section', 'scene-slot');
+  root.replaceChildren(el('h1', '', t('app.title')), strip, notice, sceneSlot, columns);
 
   const drawControls = (paused: boolean, speed: number, enabled: boolean): void => {
     const button = (label: string, className: string, onClick: () => void): HTMLButtonElement => {
@@ -157,6 +160,7 @@ export function createPanels(root: HTMLElement, actions: PanelActions): Panels {
   };
 
   const panels: Panels = {
+    sceneSlot,
     update(input) {
       latest = input;
       const { state, status, nowMs } = input;
