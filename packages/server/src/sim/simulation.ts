@@ -10,6 +10,7 @@ import {
 import type { Db } from '../db/database';
 import type { EventBus } from '../events/bus';
 import { reactToEvent } from '../agents/reactions';
+import { readWorldSeed } from '../db/queries';
 import { rebuildProjections } from '../projection/rebuild';
 import { transact, type Context } from '../usecases/context';
 import { hasWorld, initializeWorld } from '../usecases/world';
@@ -62,7 +63,7 @@ export function bootSimulation(options: BootOptions): Simulation {
   let replayedEvents = 0;
   if (existing) {
     replayedEvents = rebuildProjections(db);
-    scenario = { ...options.scenario, seed: lastWorldSeed(db) };
+    scenario = { ...options.scenario, seed: readWorldSeed(db) };
     start = Math.max(readClockState(db).current_sim_sec, lastEventTime(db));
   }
 
@@ -88,6 +89,7 @@ export function bootSimulation(options: BootOptions): Simulation {
     clock,
     publish: bus?.publish,
     react: agents ? reactToEvent : undefined,
+    scenario,
   };
   holder.ctx = context;
 
@@ -119,16 +121,6 @@ export function bootSimulation(options: BootOptions): Simulation {
 function requireContext(ctx: Context | undefined): Context {
   if (!ctx) throw new Error('the simulation is not ready yet');
   return ctx;
-}
-
-function lastWorldSeed(db: Db): number {
-  const payload = db
-    .prepare(
-      "SELECT payload_json FROM events WHERE type = 'world_initialized' ORDER BY id DESC LIMIT 1",
-    )
-    .pluck()
-    .get() as string;
-  return (JSON.parse(payload) as { seed: number }).seed;
 }
 
 function lastEventTime(db: Db): SimTime {

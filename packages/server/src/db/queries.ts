@@ -71,3 +71,34 @@ export function readOrderItems(db: Db, orderId: number): OrderItem[] {
     .prepare('SELECT menu_item_id, qty FROM order_items WHERE order_id = ? ORDER BY menu_item_id')
     .all(orderId) as OrderItem[];
 }
+
+/** The seed of the world: the one in the last `world_initialized` of the log (decision 020). */
+export function readWorldSeed(db: Db): number {
+  const payload = db
+    .prepare(
+      "SELECT payload_json FROM events WHERE type = 'world_initialized' ORDER BY id DESC LIMIT 1",
+    )
+    .pluck()
+    .get() as string | undefined;
+  if (payload === undefined) throw new Error('the log has no world_initialized event');
+  return (JSON.parse(payload) as { seed: number }).seed;
+}
+
+export interface ReportRow {
+  id: number;
+  type: 'restock' | 'complaint';
+  status: 'drafted' | 'submitted' | 'approved' | 'rejected';
+  title: string;
+  body: string;
+  /** Parsed `subject_json`: the items of a restock report, or the complaint a report is about. */
+  subject: Record<string, unknown>;
+}
+
+export function readReport(db: Db, reportId: number): ReportRow | undefined {
+  const row = db
+    .prepare('SELECT id, type, status, title, body, subject_json FROM reports WHERE id = ?')
+    .get(reportId) as (Omit<ReportRow, 'subject'> & { subject_json: string }) | undefined;
+  if (!row) return undefined;
+  const { subject_json, ...rest } = row;
+  return { ...rest, subject: JSON.parse(subject_json) as Record<string, unknown> };
+}

@@ -1,4 +1,4 @@
-import type { Event, SimClock, StoredEvent } from '@cafe/core';
+import type { Event, Scenario, SimClock, StoredEvent } from '@cafe/core';
 import type { Db } from '../db/database';
 import { appendEvent } from '../events/store';
 
@@ -23,6 +23,8 @@ export interface Context {
   react?: (ctx: Context, event: StoredEvent, emit: Emit) => void;
   /** Safety net against reactions that keep triggering each other. Default 10000 per step. */
   maxReactions?: number;
+  /** The scenario of this world: the reactions need its seed for the supplier's behaviour. */
+  scenario?: Scenario;
 }
 
 /** A rule of the cafe was broken by the request (unknown menu item, wrong order status, ...). */
