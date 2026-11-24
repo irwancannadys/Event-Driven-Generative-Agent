@@ -3,3 +3,4 @@ export * from './rng';
 export * from './scenario';
 export * from './schedule';
 export * from './supplier';
+export * from './virtual-clock';
