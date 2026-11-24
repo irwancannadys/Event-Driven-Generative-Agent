@@ -236,14 +236,15 @@ describe('events without a projection', () => {
 
   it('fails loudly for an event whose projection is not built yet', () => {
     const db = createInitializedDb();
-    const restockArrived: Event = {
-      type: 'restock_arrived',
-      sim_time: 36000,
+    // Rina's events belong to stage 5.
+    const regularArrived: Event = {
+      type: 'regular_arrived',
+      sim_time: 30600,
       actor: 'world',
-      origin: 'generator',
-      payload: { restock_id: 1, items: [{ ingredient_id: 'susu', qty: 2000 }] },
+      origin: 'scheduler',
+      payload: { regular_id: 'pak_budi', table_id: 1 },
     };
-    expect(() => appendInTransaction(db, restockArrived)).toThrow(ProjectionNotImplementedError);
+    expect(() => appendInTransaction(db, regularArrived)).toThrow(ProjectionNotImplementedError);
     expect(countRows(db, 'events')).toBe(1); // only world_initialized: the failed one rolled back
   });
 });

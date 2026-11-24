@@ -1,4 +1,4 @@
-import type { EventType, StoredEvent } from '@cafe/core';
+import { AGENT_HOME_STATION, AGENT_IDS, type EventType, type StoredEvent } from '@cafe/core';
 import type { Db } from '../db/database';
 
 // Applies one event to the projection tables with plain SQL (decision 019). The same function runs
@@ -120,6 +120,218 @@ export function applyEvent(db: Db, event: StoredEvent): void {
       return;
     }
 
+    case 'order_resumed':
+      return moveOrder(db, event.payload.order_id, 'held', 'placed');
+
+    case 'agent_task_assigned': {
+      const { agent_id, task_id, kind, station, label, duration_sim_sec, ref } = event.payload;
+      const params = { ...(station && { station }), ...(label && { label }), ...(ref && { ref }) };
+      db.prepare(
+        `INSERT INTO agent_tasks (id, agent_id, kind, params_json, status, duration_sim_sec)
+         VALUES (?, ?, ?, ?, 'queued', ?)`,
+      ).run(task_id, agent_id, kind, JSON.stringify(params), duration_sim_sec);
+      return;
+    }
+
+    case 'agent_state_changed': {
+      const { agent_id, state, station, task_id, eta_sim_time } = event.payload;
+      const active = db
+        .prepare("SELECT COUNT(*) FROM agent_tasks WHERE agent_id = ? AND status = 'active'")
+        .pluck()
+        .get(agent_id) as number;
+      if ((state === 'walking' || state === 'working') && task_id === undefined) {
+        throw new Error(`agent_state_changed: ${agent_id} is ${state} without a task`);
+      }
+      if (state === 'idle' && active > 0) {
+        throw new Error(`agent_state_changed: ${agent_id} cannot be idle with an active task`);
+      }
+      if (task_id !== undefined) {
+        if (eta_sim_time === undefined) {
+          throw new Error(`agent_state_changed: task ${task_id} starts without an eta`);
+        }
+        if (active > 0) {
+          throw new Error(`agent_state_changed: ${agent_id} already has an active task`);
+        }
+        const started = db
+          .prepare(
+            `UPDATE agent_tasks SET status = 'active', started_at_sim = ?, ends_at_sim = ?
+             WHERE id = ? AND agent_id = ? AND status = 'queued'`,
+          )
+          .run(event.sim_time, eta_sim_time, task_id, agent_id);
+        if (started.changes !== 1) {
+          throw new Error(
+            `agent_state_changed: task ${task_id} of ${agent_id} is not waiting in the queue`,
+          );
+        }
+      }
+      const moved = db
+        .prepare('UPDATE agents SET state = ?, station = ? WHERE id = ?')
+        .run(state, station, agent_id);
+      if (moved.changes !== 1) throw new Error(`agent_state_changed: unknown agent "${agent_id}"`);
+      return;
+    }
+
+    case 'agent_task_finished': {
+      const { agent_id, task_id } = event.payload;
+      const done = db
+        .prepare(
+          `UPDATE agent_tasks SET status = 'done'
+           WHERE id = ? AND agent_id = ? AND status IN ('queued', 'active')`,
+        )
+        .run(task_id, agent_id);
+      if (done.changes !== 1) {
+        throw new Error(
+          `agent_task_finished: task ${task_id} of ${agent_id} is not queued or active`,
+        );
+      }
+      return;
+    }
+
+    case 'restock_proposed': {
+      const { report, items, urgency, rationale } = event.payload;
+      db.prepare(
+        `INSERT INTO reports (id, type, title, body, status, subject_json, created_at_sim)
+         VALUES (?, 'restock', ?, ?, 'drafted', ?, ?)`,
+      ).run(
+        report.report_id,
+        report.title,
+        report.body,
+        JSON.stringify({ items, urgency, rationale }),
+        event.sim_time,
+      );
+      return;
+    }
+
+    case 'report_submitted': {
+      const info = db
+        .prepare(
+          `UPDATE reports SET status = 'submitted', submitted_at_sim = ?
+           WHERE id = ? AND status = 'drafted'`,
+        )
+        .run(event.sim_time, event.payload.report_id);
+      if (info.changes !== 1)
+        throw reportError('report_submitted', db, event.payload.report_id, 'drafted');
+      return;
+    }
+
+    case 'report_decided': {
+      const info = db
+        .prepare(
+          `UPDATE reports SET status = ?, decided_at_sim = ?
+           WHERE id = ? AND status = 'submitted'`,
+        )
+        .run(event.payload.decision, event.sim_time, event.payload.report_id);
+      if (info.changes !== 1)
+        throw reportError('report_decided', db, event.payload.report_id, 'submitted');
+      return;
+    }
+
+    case 'restock_ordered': {
+      const { restock_id, report_id, items, supplier, eta_sim_time } = event.payload;
+      const status = db.prepare('SELECT status FROM reports WHERE id = ?').pluck().get(report_id);
+      if (status !== 'approved') {
+        throw new Error(
+          `restock_ordered: report ${report_id} is not approved (status: ${status ?? 'not found'})`,
+        );
+      }
+      db.prepare(
+        `INSERT INTO restock_orders (id, report_id, items_json, supplier, status, ordered_at_sim, eta_sim)
+         VALUES (?, ?, ?, ?, 'ordered', ?, ?)`,
+      ).run(restock_id, report_id, JSON.stringify(items), supplier, event.sim_time, eta_sim_time);
+      return;
+    }
+
+    case 'restock_failed': {
+      const { restock_id } = event.payload;
+      const supplier = db
+        .prepare('SELECT supplier FROM restock_orders WHERE id = ?')
+        .pluck()
+        .get(restock_id);
+      if (supplier !== 'out') {
+        throw new Error(
+          `restock_failed: restock ${restock_id} did not have a supplier that is out (supplier: ${supplier ?? 'not found'})`,
+        );
+      }
+      const info = db
+        .prepare("UPDATE restock_orders SET status = 'failed' WHERE id = ? AND status = 'ordered'")
+        .run(restock_id);
+      if (info.changes !== 1)
+        throw new Error(`restock_failed: restock ${restock_id} is not waiting for delivery`);
+      return;
+    }
+
+    case 'restock_arrived': {
+      const { restock_id, items } = event.payload;
+      const ordered = db
+        .prepare("SELECT items_json FROM restock_orders WHERE id = ? AND status = 'ordered'")
+        .pluck()
+        .get(restock_id) as string | undefined;
+      if (ordered === undefined)
+        throw new Error(`restock_arrived: restock ${restock_id} is not waiting for delivery`);
+      if (JSON.stringify(sortItems(JSON.parse(ordered))) !== JSON.stringify(sortItems(items))) {
+        throw new Error(
+          `restock_arrived: the delivery does not match the order of restock ${restock_id}`,
+        );
+      }
+      db.prepare(
+        "UPDATE restock_orders SET status = 'arrived', arrived_at_sim = ? WHERE id = ?",
+      ).run(event.sim_time, restock_id);
+      // Stock goes up. A flag is cleared again once the stock is back above its threshold.
+      const refill = db.prepare(
+        `UPDATE stock SET
+           qty = qty + @qty,
+           low_flagged = CASE WHEN qty + @qty > (SELECT min_qty FROM ingredients WHERE id = ingredient_id)
+                              THEN 0 ELSE low_flagged END,
+           out_flagged = CASE WHEN qty + @qty > 0 THEN 0 ELSE out_flagged END
+         WHERE ingredient_id = @ingredient_id`,
+      );
+      for (const item of items) {
+        if (refill.run({ qty: item.qty, ingredient_id: item.ingredient_id }).changes !== 1) {
+          throw new Error(`restock_arrived: no stock row for ingredient "${item.ingredient_id}"`);
+        }
+      }
+      return;
+    }
+
+    case 'complaint_triaged': {
+      const { complaint_id, category, severity, suggested_compensation, report } = event.payload;
+      if (report) {
+        db.prepare(
+          `INSERT INTO reports (id, type, title, body, status, subject_json, created_at_sim)
+           VALUES (?, 'complaint', ?, ?, 'drafted', ?, ?)`,
+        ).run(
+          report.report_id,
+          report.title,
+          report.body,
+          JSON.stringify({ complaint_id }),
+          event.sim_time,
+        );
+      }
+      const info = db
+        .prepare(
+          `UPDATE complaints SET status = 'triaged', category = ?, severity = ?,
+             suggested_compensation = ?, report_id = ?
+           WHERE id = ? AND status = 'received'`,
+        )
+        .run(category, severity, suggested_compensation, report?.report_id ?? null, complaint_id);
+      if (info.changes !== 1)
+        throw new Error(`complaint_triaged: complaint ${complaint_id} is not waiting for triage`);
+      return;
+    }
+
+    case 'complaint_replied': {
+      const { complaint_id, compensation } = event.payload;
+      const info = db
+        .prepare(
+          `UPDATE complaints SET status = 'replied', final_compensation = ?, replied_at_sim = ?
+           WHERE id = ? AND status = 'triaged'`,
+        )
+        .run(compensation, event.sim_time, complaint_id);
+      if (info.changes !== 1)
+        throw new Error(`complaint_replied: complaint ${complaint_id} is not triaged`);
+      return;
+    }
+
     default:
       if (LOG_ONLY.has(event.type)) return;
       throw new ProjectionNotImplementedError(event.type);
@@ -155,6 +367,10 @@ function initializeWorld(
   }
   const insertTable = db.prepare("INSERT INTO cafe_tables (id, state) VALUES (?, 'empty')");
   for (const id of TABLE_IDS) insertTable.run(id);
+  const insertAgent = db.prepare(
+    'INSERT INTO agents (id, role, station, state) VALUES (?, ?, ?, ?)',
+  );
+  for (const id of AGENT_IDS) insertAgent.run(id, id, AGENT_HOME_STATION[id], 'idle');
 }
 
 /** Moves an order between statuses, and refuses a move that is not allowed from the current status. */
@@ -196,4 +412,17 @@ function setFlag(db: Db, column: 'low_flagged' | 'out_flagged', ingredientId: st
 function assertSameKeys(label: string, given: string[], expected: string[]): void {
   const missing = expected.filter((key) => !given.includes(key));
   if (missing.length > 0) throw new Error(`${label} is missing: ${missing.join(', ')}`);
+}
+
+function sortItems<T extends { ingredient_id: string; qty: number }>(items: readonly T[]) {
+  return items
+    .map(({ ingredient_id, qty }) => ({ ingredient_id, qty }))
+    .sort((a, b) => (a.ingredient_id < b.ingredient_id ? -1 : 1));
+}
+
+function reportError(eventType: string, db: Db, reportId: number, expected: string): Error {
+  const status = db.prepare('SELECT status FROM reports WHERE id = ?').pluck().get(reportId);
+  return new Error(
+    `${eventType}: report ${reportId} is not ${expected} (status: ${status ?? 'not found'})`,
+  );
 }
