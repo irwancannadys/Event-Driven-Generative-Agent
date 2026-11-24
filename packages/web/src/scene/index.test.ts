@@ -3,7 +3,7 @@ import { PerspectiveCamera } from 'three';
 import { agent, snapshot } from '../state/test-fixtures';
 import { applySnapshot, type WorldState } from '../state/world';
 import { FakeNode, installFakeDom } from '../panels/fake-dom';
-import { AZIMUTH_LIMIT, CAMERA_FOV, CAMERA_TARGET, cameraPosition } from './camera';
+import { AZIMUTH_LIMIT, CAMERA_TARGET, cameraPosition, fovForAspect } from './camera';
 import { createScene } from './index';
 import { projectToScreen } from './projection';
 import { FURNITURE, STATION_SPOTS, standingPoint } from './registry';
@@ -171,8 +171,9 @@ describe('when the browser takes WebGL away', () => {
 });
 
 describe('framing', () => {
-  // The room must fit the picture at the sizes the page gives it (aspect ratio 2 to 3), also with the
-  // camera swung to either side: every place a character stands, and every piece of furniture.
+  // The room must fit the picture at the sizes the page gives it (aspect ratio 1.5 to 3, a video-sized
+  // picture is 1.78), also with the camera swung to either side: every place a character stands, the
+  // furniture, the door where customers come in, the queue and the pick-up spot at the kitchen.
   const points = [
     ...Object.values(STATION_SPOTS).map((spot) => ({ x: spot.x, y: 1.9, z: spot.z })), // heads
     ...Object.values(STATION_SPOTS).map((spot) => ({ x: spot.x, y: 0, z: spot.z })), // feet
@@ -180,14 +181,18 @@ describe('framing', () => {
     standingPoint('boss_desk', 'waiter'),
     { x: FURNITURE.shelf.x, y: 2.7, z: FURNITURE.shelf.z },
     { x: FURNITURE.cashierDesk.x - 1.5, y: 0.5, z: FURNITURE.cashierDesk.z },
-    { x: -9, y: 0, z: 0.5 },
+    { x: -8.8, y: 0, z: 0.6 }, // the door
+    { x: -8.8, y: 2.4, z: 0.6 },
+    { x: -7.2, y: 2.4, z: -2.2 }, // the queue at the cashier
+    { x: 3.4, y: 2.4, z: -2.2 }, // the pick-up spot at the kitchen
+    { x: 3.4, y: 0, z: -2.2 },
   ].map((point) => ({ x: point.x, y: 'y' in point ? point.y : 0, z: point.z }));
 
-  it.each([2, 2.6, 3])(
+  it.each([1.5, 1.78, 2, 2.6, 3])(
     'keeps everybody and everything inside the picture at aspect %s',
     (aspect) => {
       for (const azimuth of [-AZIMUTH_LIMIT, 0, 0.15, AZIMUTH_LIMIT]) {
-        const camera = new PerspectiveCamera(CAMERA_FOV, aspect, 0.1, 100);
+        const camera = new PerspectiveCamera(fovForAspect(aspect), aspect, 0.1, 100);
         const at = cameraPosition(azimuth);
         camera.position.set(at.x, at.y, at.z);
         camera.lookAt(CAMERA_TARGET.x, CAMERA_TARGET.y, CAMERA_TARGET.z);

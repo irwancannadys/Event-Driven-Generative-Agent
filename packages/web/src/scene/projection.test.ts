@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { PerspectiveCamera } from 'three';
-import { CAMERA_FOV, CAMERA_TARGET, cameraPosition } from './camera';
+import { BASE_FOV, CAMERA_TARGET, cameraPosition } from './camera';
 import { projectToScreen } from './projection';
 
 function camera(azimuth = 0): PerspectiveCamera {
-  const view = new PerspectiveCamera(CAMERA_FOV, 2, 0.1, 100);
+  const view = new PerspectiveCamera(BASE_FOV, 2, 0.1, 100);
   const at = cameraPosition(azimuth);
   view.position.set(at.x, at.y, at.z);
   view.lookAt(CAMERA_TARGET.x, CAMERA_TARGET.y, CAMERA_TARGET.z);

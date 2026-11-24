@@ -3,7 +3,14 @@ import { AGENT_IDS, AGENT_NAME_ID, STATION_NAME_ID, type AgentId } from '@cafe/c
 import { t } from '../i18n';
 import { agentActivity } from '../state/agent-text';
 import { virtualNow, type WorldState } from '../state/world';
-import { AZIMUTH_START, CAMERA_FOV, CAMERA_TARGET, cameraPosition, dragAzimuth } from './camera';
+import {
+  AZIMUTH_START,
+  BASE_FOV,
+  CAMERA_TARGET,
+  cameraPosition,
+  dragAzimuth,
+  fovForAspect,
+} from './camera';
 import { createAvatar, type Avatar } from './avatar';
 import { LabelLayer } from './labels';
 import { agentPose, potTilt } from './pose';
@@ -70,7 +77,7 @@ export function createScene(
   const shelf = new ShelfView(room.shelfBoxes);
   const papers = new PapersView(room.reportPapers);
 
-  const camera = new PerspectiveCamera(CAMERA_FOV, 1, 0.1, 100);
+  const camera = new PerspectiveCamera(BASE_FOV, 1, 0.1, 100);
   let azimuth = AZIMUTH_START;
   const aim = (): void => {
     const position = cameraPosition(azimuth);
@@ -90,6 +97,7 @@ export function createScene(
     height = Math.max(1, container.clientHeight);
     renderer.setSize(width, height);
     camera.aspect = width / height;
+    camera.fov = fovForAspect(camera.aspect);
     camera.updateProjectionMatrix();
   };
   resize();

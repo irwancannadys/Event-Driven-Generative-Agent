@@ -91,20 +91,22 @@ export function createPanels(
   const stock = section('panel.stock', 'stock');
   const boss = section('panel.boss', 'boss');
   const log = section('panel.log', 'log');
-  const columns = el(
-    'main',
-    'columns',
-    el('div', 'column', agents.root, orders.root, stock.root),
-    el('div', 'column', log.root),
-    el('div', 'column', boss.root),
-  );
-
   const sceneSlot = el('section', 'scene-slot');
   const banner = el('div', 'scene-banner', t('status.closed'));
   banner.style.display = 'none';
   sceneSlot.append(banner);
   if (view.mode === 'panel') sceneSlot.style.display = 'none';
-  root.replaceChildren(el('h1', '', t('app.title')), strip, notice, sceneSlot, columns);
+  // Like a video page: the picture big on the left with the characters, orders and stock under it, and a
+  // column on the right with the boss desk on top and the log below.
+  const topbar = el('header', 'topbar', el('h1', '', t('app.title')), strip);
+  const main = el(
+    'div',
+    'main',
+    sceneSlot,
+    el('div', 'info', agents.root, orders.root, stock.root),
+  );
+  const side = el('aside', 'side', boss.root, log.root);
+  root.replaceChildren(topbar, notice, el('main', 'watch', main, side));
 
   const drawControls = (paused: boolean, speed: number, enabled: boolean): void => {
     const button = (label: string, className: string, onClick: () => void): HTMLButtonElement => {
