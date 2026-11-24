@@ -209,25 +209,35 @@ Hasil Tahap 3, bahan untuk materi:
 **Tujuan:** apa yang terjadi di log tampil sebagai animasi. Tampilan tidak membuat keputusan.
 
 **Tugas:**
-- [ ] WebSocket server: kirim snapshot state saat klien terhubung, lalu aliran event
-- [ ] Klien `web`: penyimpan state yang menerapkan event; resync dari snapshot saat reconnect
-- [ ] Scene Three.js dari primitif, mengikuti tata letak di `docs/reference/` (boleh disesuaikan)
-- [ ] Registri stasiun: ID stasiun ke koordinat 3D (hanya di frontend)
-- [ ] Entitas agent: status ke animasi (jalan: interpolasi antar stasiun sesuai ETA; kerja: label dan gerak kecil; diam)
-- [ ] Label karakter dan stasiun (proyeksi 3D ke layar)
-- [ ] `createAvatar(role)` mengembalikan objek 3D plus `play(status)`. Kode lain hanya memanggil itu, jadi primitif bisa diganti model `.glb` tanpa mengubah yang lain. Posisi dan arah hadap stasiun jadi data di registry
-- [ ] Aturan loncat waktu (`sim_time_advanced`): animasi di-fast-forward atau di-snap ke posisi akhir
+- [x] WebSocket server: kirim snapshot state saat klien terhubung, lalu aliran event
+- [x] Klien `web`: penyimpan state yang menerapkan event; resync dari snapshot saat reconnect
+- [x] Scene Three.js dari primitif, mengikuti tata letak di `docs/reference/` (boleh disesuaikan)
+- [x] Registri stasiun: ID stasiun ke koordinat 3D (hanya di frontend)
+- [x] Entitas agent: status ke animasi (jalan: interpolasi antar stasiun sesuai ETA; kerja: label dan gerak kecil; diam)
+- [x] Label karakter dan stasiun (proyeksi 3D ke layar)
+- [x] `createAvatar(role)` mengembalikan objek 3D plus `play(status)`. Kode lain hanya memanggil itu, jadi primitif bisa diganti model `.glb` tanpa mengubah yang lain. Posisi dan arah hadap stasiun jadi data di registry
+- [x] Aturan loncat waktu (`sim_time_advanced`): animasi di-fast-forward atau di-snap ke posisi akhir
 - [ ] Kamus i18n (`id` default, bisa diganti lewat config, tanpa library). Nama event, enum, dan ID tetap Inggris
-- [ ] Rak stok yang menampilkan jumlah kotak sesuai stok nyata
-- [ ] Panel: log kejadian (label Trigger/Aturan/LLM/Inisiatif/Bos), laporan meja bos (Setujui/Tolak ke API), bar stok, panel kontrol waktu (pause, kecepatan, majukan waktu)
-- [ ] Kamera yang bisa digeser terbatas
-- [ ] Mode "tanpa 3D" (hanya panel) untuk debugging
+- [x] Rak stok yang menampilkan jumlah kotak sesuai stok nyata
+- [x] Panel: log kejadian (label Trigger/Aturan/LLM/Inisiatif/Bos), laporan meja bos (Setujui/Tolak ke API), bar stok, panel kontrol waktu (pause, kecepatan, majukan waktu)
+- [x] Kamera yang bisa digeser terbatas
+- [x] Mode "tanpa 3D" (hanya panel) untuk debugging
 
 **Tes:** tes tampilan ringan untuk penerapan event ke state klien (tanpa render); uji manual: satu hari terskrip sama dengan log; refresh halaman memulihkan keadaan.
 
 **Selesai jika:** animasi cocok dengan log, refresh tidak merusak dunia, kontrol waktu berfungsi.
 
 **Catatan pelajaran:** memisahkan logika dan tampilan, kenapa animasi dari event.
+
+Hasil Tahap 4, bahan untuk materi:
+
+- **Adegan adalah fungsi dari (state, waktu)**: posisi karakter dihitung tiap frame, tidak ada antrean animasi. Loncat waktu, jeda, ganti kecepatan, dan refresh benar tanpa kode khusus, dan tes bisa memeriksa jalan di awal, tengah, akhir, dan setelah loncat tanpa browser.
+- **Snapshot lalu aliran, tanpa celah**: server satu utas, jadi snapshot dan pendaftaran klien terjadi di putaran yang sama. `last_event_id` membuat klien membuang event yang sudah ada. Tes silang membuktikan state halaman sama dengan snapshot server di 1238 titik sehari penuh, dan sengaja merusak satu aturan membuktikan tes itu benar-benar gagal.
+- **Memisahkan logika dari tampilan**: view model panel, state, posisi, dan pencari jalur murni dan dites di Node. DOM dan Three.js lapisan tipis, dan DOM palsu kecil menguji sambungannya tanpa jsdom.
+- **Uji pemilik menemukan yang tidak ditemukan tes**: pelanggan tidak ada (celah rencana, bukan bug), "interaksi" tidak terlihat karena tugas kasir kurang dari 1 detik asli di 60x, dan tampilan balok tidak menarik. Mata untuk cek visual (Chrome sementara) membuat poles tampilan jadi cepat.
+- **Denah mengikuti domain**: kasir ke ruang bos tadinya 2,5 kali lebih panjang dari tabel jarak (karakter akan ngebut). Denah disusun ulang (ruang bos di sebelah kasir) sampai rasionya 0,78 sampai 0,92, dan pencari jalur membuat mereka mengitari meja dan lewat pintu.
+- **Tes menemukan masalah framing** di kamera awal (titik serah kepotong di sudut putar), jadi kamera dicari dengan menghitung terhadap titik-titik penting, bukan ditebak.
+- **Batas yang disadari**: karakter bergaya game (bukan foto), hanya bahasa Indonesia (struktur kamus ada, pemilih bahasa belum), empat dari tujuh meja belum bagian dari domain, dan tampilan 3D sendiri hanya dinilai lewat screenshot dan mata pemilik.
 
 ---
 

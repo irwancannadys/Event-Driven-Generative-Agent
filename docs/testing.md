@@ -96,6 +96,7 @@ Biarkan terminal ini terbuka. Server memakai file `data/cafe.db` dan API di `htt
 === Server kafe virtual ===
 Database : /Users/irwancannady/lesson/data/cafe.db
 API      : http://127.0.0.1:3000  (GET /time /menu /stock /orders /agents /reports, POST /orders /time /reports/:id/decision)
+Realtime : ws://127.0.0.1:3000/ws  (halaman web: snapshot, event, jam)
 Kecepatan: 60x (1 detik asli = 60 detik virtual)
 Dunia baru dibuat: jam 07:50, hari 0, seed 42
 Tekan Ctrl+C untuk berhenti. Jam virtual disimpan saat berhenti.
@@ -340,7 +341,7 @@ Gua uji keempatnya di server sungguhan (45 menit disetujui, 45 menit ditolak, 65
 - **Komplain ringan dijawab kasir sendiri.** Di pengaturan bawaan komplain muncul di menit ke-20 menunggu, dan kasir (kurang dari 40 menit) langsung membalas dengan permintaan maaf tanpa menyusahkan bos. Mau lihat komplain yang sampai ke meja bos? Lihat bagian 6.9.
 - Teks laporan dan balasan komplain masih **template** (bukan LLM). LLM baru di Tahap 5 dan 6.
 - Rina (pelayan) ada di papan di Meja 2 tapi belum melakukan apa pun (Tahap 5). Status `berpikir` juga belum dipakai (Tahap 6).
-- Belum ada tampilan 3D (Tahap 4).
+- Tampilan 3D ada sejak Tahap 4 (lihat bagian 9).
 - Setelah `day_closed` (20:00) sampai `day_opened` hari berikutnya tidak ada pesanan baru, tapi karakter menyelesaikan sisa tugasnya. Percepat dengan `{"speed":3600}` atau `{"advance_seconds":...}`.
 
 ## 8. Kalau ada yang aneh
@@ -358,3 +359,42 @@ Gua uji keempatnya di server sungguhan (45 menit disetujui, 45 menit ditolak, 65
 | `409` saat menyetujui laporan | Laporan belum sampai di meja bos (admin masih jalan) atau sudah diputuskan. Lihat yang siap: `curl -s 'localhost:3000/reports?status=submitted'` |
 | Pesanan `ditahan` tidak lanjut | Laporan belanjanya belum diklik, atau pemasok `late` atau `out`. Cek `curl -s localhost:3000/reports` dan baris `restock_ordered ... supplier=` di log |
 | Banyak pesanan `placed` dan `received` yang tidak bergerak dari hari lama | Itu sisa dunia Tahap 2. `rm -f data/cafe.db*` lalu nyalakan lagi |
+
+## 9. Tahap 4: halaman web dengan kafe 3D
+
+Sejak Tahap 4 lu **tidak perlu `curl`** lagi: semuanya bisa dilihat dan diklik di browser.
+
+### 9.1 Nyalakan (dua tab)
+
+```
+rm -f data/cafe.db*     # dunia baru (wajib kalau masih ada dunia lama dari Tahap 2)
+npm run dev             # tab 1: server, biarkan jalan
+npm run web             # tab 2: halaman, biarkan jalan
+```
+
+Buka alamat yang dicetak tab 2 (biasanya `http://localhost:5173`; kalau port itu terpakai Vite pindah ke 5174, dan seterusnya). Restart server (tab 1) setiap kali kode server berubah, karena protokolnya ikut berubah.
+
+### 9.2 Yang dicari
+
+- **Pojok atas:** titik hijau "Tersambung", jam virtual yang berjalan, tombol Jeda, kecepatan (1x sampai 3600x), dan majukan waktu. Klik **600x** supaya cepat.
+- **Gambar besar di kiri:** kafe potong di atas alas. Dapur (kanan belakang) dan ruang bos (kiri belakang) dipisah sekat kaca dengan pintu. Pintu masuk kaca di depan, tujuh meja, kasir di tengah belakang dengan etalase dan papan menu, rak stok di belakang, bangku, lukisan, tanaman, lampu gantung.
+- **Karyawan** berbaju hijau dan bercelana putih (koki bertopi putih), bos berjas gelap di ruangnya. Label di atas kepala menyebut nama dan sedang apa.
+- **Pelanggan** masuk lewat pintu depan, berdiri di kasir, duduk atau berdiri menunggu, mengambil pesanan di **jendela dapur** (piringnya muncul di sana), lalu pulang. Gelembung `!` merah = komplain, "Menunggu bahan" = pesanan ditahan, "Siap!" hijau = masakan selesai. Lebih dari 14 orang jadi tulisan "+N antre".
+- **Admin stok** jalan ke rak, ke ruang bos lewat pintunya, menaruh **kertas laporan** di meja bos, lalu pulang. Kotak di **rak stok** berkurang sesuai stok (merah-oranye = hampir habis).
+- **Kolom kanan:** Kejadian (log, bisa digulir) dan Stok. **Di bawah gambar:** Karakter, Pesanan, dan **Meja Bos** dengan tombol **Setujui/Tolak** (ganti `curl`).
+- **Geser** gambar dengan mouse untuk memutar kamera sedikit.
+
+### 9.3 Uji ketahanan
+
+1. **Refresh** halaman: dunia sama, log terisi sejak awal.
+2. **Jeda** lalu **Lanjut**: semua karakter dan pelanggan berhenti dan jalan lagi.
+3. **+1 jam**: semua langsung loncat ke posisi yang benar, tanpa karakter menembus dinding.
+4. **Ctrl+C di tab 1**: banner merah "Terputus" di atas gambar dan jam berhenti. Nyalakan lagi: halaman menyambung sendiri dan dunia lanjut.
+5. Tambahkan `?view=panel` di alamat: hanya panel (tanpa 3D). `?view=3d` kembali ke gambar.
+
+### 9.4 Yang wajar
+
+- Karakter bergaya game, bukan foto. Warna dan terang-gelap bisa disetel: kirim screenshot.
+- Empat dari tujuh meja hanya tempat duduk tambahan; domain baru punya tiga meja (untuk Rina di Tahap 5).
+- Kalau lu melihat pelanggan "melompat", cek dulu apakah waktu baru dimajukan: itu wajar.
+

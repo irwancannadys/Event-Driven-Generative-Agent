@@ -6,7 +6,7 @@ Event-driven jadi tulang punggung (event log, antrean, replay). Generative agent
 
 ## Status
 
-**Tahap 0 sampai 3 selesai.** Dunia kafe berjalan sendiri (jam virtual, pesanan dari generator), dan sekarang ada **tiga karakter berbasis aturan**: kasir mencatat pesanan, koki memasak dan mengurangi stok, admin stok mengecek rak lalu membawa laporan usulan belanja ke meja bos. **Lu jadi bosnya**: setujui atau tolak laporan lewat API, lalu pemasok tiruan mengirim (tepat waktu, telat, atau kosong), stok terisi, dan pesanan yang tertahan lanjut dimasak. Semuanya tercatat sebagai event, bisa di-replay, dan dunia pulih setelah server dimatikan. Hasilnya berupa log di terminal, API lokal, dan papan pantau `npm run watch`. Belum ada tampilan 3D (Tahap 4) dan belum ada LLM (Tahap 5 dan 6): keputusan karakter masih aturan. Tahap berikutnya dimulai setelah pemilik bilang lanjut.
+**Tahap 0 sampai 4 selesai.** Dunia kafe berjalan sendiri (jam virtual, pesanan dari generator), tiga karakter berbasis aturan bekerja (kasir, koki, admin stok), dan lu jadi bosnya: setujui atau tolak laporan. Sekarang semuanya terlihat di **halaman web**: kafe 3D berbentuk diorama dengan dapur dan ruang bos yang terpisah, karyawan berseragam, pelanggan yang masuk, menunggu, mengambil pesanan, dan pulang, plus panel log, stok, dan meja bos dengan tombol Setujui/Tolak dan kontrol waktu. Halaman hanya membaca aliran event dari server (WebSocket), jadi refresh tidak merusak dunia. Semua tercatat sebagai event, bisa di-replay, dan dunia pulih setelah server dimatikan. Belum ada LLM dan Rina belum melakukan apa pun (Tahap 5 dan 6). Tahap berikutnya dimulai setelah pemilik bilang lanjut.
 
 ## Quickstart
 
@@ -23,7 +23,8 @@ npm run demo:stage1   # demo Tahap 1: pesanan, stok turun, stock_low, replay che
 npm run demo:stage2   # demo Tahap 2: satu hari penuh dalam hitungan detik
 npm run demo:stage3   # demo Tahap 3: satu hari dengan karakter dan bos otomatis
 npm run dev           # server hidup: jam virtual jalan, karakter bekerja, API di http://127.0.0.1:3000
-npm run watch         # (tab lain) papan pantau: siapa di mana, pesanan, stok, laporan menunggu
+npm run web           # (tab lain) halaman web dengan kafe 3D, buka http://localhost:5173
+npm run watch         # (tab lain) papan pantau di terminal: siapa di mana, pesanan, stok, laporan
 ```
 
 Panduan mencoba sendiri langkah demi langkah (termasuk uji pemulihan setelah Ctrl+C): [`docs/testing.md`](docs/testing.md).

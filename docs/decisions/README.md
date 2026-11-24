@@ -32,3 +32,6 @@ Satu file per keputusan, beberapa baris tiap file. Brief menang jika ada bentura
 | [026](026-websocket-snapshot-events-clock.md) | WebSocket: snapshot, events, dan clock |
 | [027](027-scene-is-a-function-of-state-and-time.md) | Adegan adalah fungsi dari (state, waktu virtual) |
 | [028](028-web-stack-proxy-and-no-framework.md) | Stack web: Vite, Three.js, proxy, DOM tanpa framework |
+| [029](029-customers-drawn-from-orders.md) | Pelanggan digambar dari event pesanan |
+| [030](030-cutaway-cafe-and-visual-direction.md) | Kafe potongan (diorama), arah visual, dan penyimpangan dari brief |
+| [031](031-video-page-layout-adaptive-camera-and-routes.md) | Layout halaman ala video, kamera adaptif, dan jalur jalan |

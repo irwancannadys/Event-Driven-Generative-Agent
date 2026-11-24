@@ -33,6 +33,7 @@ Daftar lengkapnya ada di brief bagian 4. Yang paling sering tergoda dilanggar:
 - **Satu langkah = satu transaksi** (keputusan 022): kejadian yang jatuh tempo atau klik bos ditulis bersama semua reaksi berantai karakter, commit sekali, baru dipublikasikan. Karakter bereaksi pada **event** (`agents/reactions.ts`), bukan lewat callback. Akhir tugas agent dan kedatangan pemasok dibaca dari proyeksi (keputusan 023), jangan disimpan di memori.
 - **Waktu virtual dalam detik (integer).** Di `packages/core` dilarang `Date.now()`, `Math.random()`, dan `new Date()` tanpa argumen (dijaga lint).
 - **"Kapan apa terjadi" adalah fungsi murni dari (seed, waktu absolut)** (`dueItems`, `rand(seed, key)` di `core`, keputusan 020). Jam (`VirtualClock`) memproses item berurutan, jadi hasilnya sama berapa pun granularitas `advance` dan setelah restart. Seed dunia dibaca dari `world_initialized` di log, bukan dari `.env`. Kecepatan dan pause (`Pacer`) bukan event (keputusan 021).
+- **Adegan adalah fungsi dari (state, waktu virtual)** (keputusan 027): posisi karakter dan pelanggan dihitung tiap frame, tanpa antrean animasi. Koordinat 3D hanya ada di `packages/web/src/scene/registry.ts`; domain hanya tahu ID stasiun. Server dan halaman bertukar snapshot, event, dan jam lewat WebSocket (keputusan 026), dan `tools/client-state.test.ts` menjaga state halaman sama dengan snapshot server.
 - **`packages/core` tanpa I/O:** tidak ada fs, jaringan, atau `process`.
 - **Keputusan LLM dicatat sebagai event** (`agent_decided`). Replay membaca log dan tidak memanggil model. LLM selalu lewat `LLMClient`, outputnya divalidasi, dan ada fallback ke aturan.
 - **Tanpa trigger manual.** Dunia berjalan lewat generator dunia. Masukan manusia hanya Setujui/Tolak di meja bos dan kontrol waktu.
@@ -42,7 +43,7 @@ Daftar lengkapnya ada di brief bagian 4. Yang paling sering tergoda dilanggar:
 
 - `packages/core`: domain murni (event, aturan masak dan ambang stok, usulan belanja dan triase komplain, rencana tugas agent, teks template dan kamus kata Indonesia, label log, RNG tanpa state, jadwal dan generator dunia, `VirtualClock` dengan item dinamis).
 - `packages/server`: Node, SQLite, migrasi, seed, event store dan proyeksi (`applyEvent`), use case (pesanan, memasak, keputusan bos), simulasi (`bootSimulation`: jam virtual, generator, pemulihan saat boot), mesin agent dan reaksi karakter (`agents/`: kasir, koki, admin stok), `Pacer`, API (kasir mock, kontrol waktu, bos: `/agents` `/orders` `/reports`, `node:http`), event bus, log terminal, papan pantau (`watch/`), `npm run dev`. WebSocket menyusul.
-- `packages/web`: stub sampai Tahap 4.
+- `packages/web`: Vite + Three.js + TypeScript, DOM tanpa framework. `net/` (WebSocket), `state/` (state klien murni), `panels/` (view model dan DOM), `scene/` (registry denah, pencari jalur, ruangan, avatar, pelanggan, cahaya), `i18n/`. Logika dites di Node; DOM dites dengan DOM palsu kecil.
 - `tools/`: tes untuk tooling (aturan lint, tes drift `docs/events.md` terhadap kode).
 - `docs/`: plan, konsep, katalog event, skema, keputusan, referensi.
 - `data/`: file SQLite lokal (tidak di-commit).
@@ -62,6 +63,7 @@ npm run demo:stage1   # demo Tahap 1 di database memori (pesanan lewat API, log,
 npm run demo:stage2   # demo Tahap 2: satu hari penuh, replay check dan restart check
 npm run demo:stage3   # demo Tahap 3: satu hari dengan karakter dan bos otomatis, replay check dan restart check
 npm run dev           # server hidup: dunia, karakter, jam virtual, API di :3000 (lihat docs/testing.md)
+npm run web           # halaman web (Vite, http://localhost:5173), jalankan bersama npm run dev
 npm run watch         # papan pantau live (karakter, pesanan, stok, laporan di meja bos); `-- --once` cetak sekali
 ```
 

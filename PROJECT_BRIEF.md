@@ -248,6 +248,7 @@ Setiap event minimal punya: id, tipe, waktu virtual, pelaku, dan payload.
 ## 11. Tampilan 3D
 
 - Three.js di browser (Vite). **Bentuk primitif saja** (kotak, silinder, kapsul), tanpa model 3D rumit di awal. Fokus pada agent, bukan modeling.
+  - Catatan 2026-11-24: atas permintaan pemilik, tampilan boleh lebih kaya dari primitif sederhana (kafe potong dengan material, cahaya, karakter berbadan lengkap). Lihat `docs/decisions/030-cutaway-cafe-and-visual-direction.md`.
 - Karakter punya tiga status yang terlihat: **diam, berjalan, bekerja** (dengan label aktivitas).
 - Label di atas karakter dan stasiun (diproyeksikan dari posisi 3D).
 - Kamera dari atas-depan, bisa digeser terbatas.

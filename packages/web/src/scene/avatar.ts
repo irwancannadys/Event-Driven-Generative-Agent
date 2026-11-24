@@ -33,7 +33,7 @@ export const AVATAR_COLORS: Record<StaffRole, number> = {
 
 /** The shirts of the customers: the one of a customer is picked from its order number. */
 export const CUSTOMER_COLORS = [
-  0x378add, 0xd4537e, 0xe8c24a, 0x8a6bbd, 0x2a9d8f, 0xe76f51, 0x6c757d, 0xb08968,
+  0x378add, 0xd4537e, 0xe8c24a, 0x8a6bbd, 0x2b3a67, 0xe76f51, 0x6c757d, 0xb08968,
 ];
 const CUSTOMER_TROUSERS = [0x3b5b8c, 0x2d2d33, 0x6b5a45, 0x4b5563];
 const HAIR_COLORS = [0x2a1d14, 0x5a3b22, 0xb5782f, 0x111111, 0x8c8c8c, 0x7a3b1d];
