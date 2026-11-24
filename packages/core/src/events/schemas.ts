@@ -12,6 +12,7 @@ import {
 import {
   ComplaintTriageSchema,
   FallbackReasonSchema,
+  PolicyReviewSchema,
   PurposeSchema,
   StockProposalSchema,
   TextDecisionSchema,
@@ -72,6 +73,11 @@ const AgentDecidedPayloadSchema = z.discriminatedUnion('purpose', [
   }),
   z.object({ purpose: z.literal('greeting'), decision: TextDecisionSchema, ...agentDecidedBase }),
   z.object({ purpose: z.literal('reflection'), decision: TextDecisionSchema, ...agentDecidedBase }),
+  z.object({
+    purpose: z.literal('policy_review'),
+    decision: PolicyReviewSchema,
+    ...agentDecidedBase,
+  }),
 ]);
 
 const baseEventSchema = z.discriminatedUnion('type', [

@@ -4,6 +4,8 @@ export * from './clock';
 export * from './events';
 export * from './ids';
 export * from './llm/contracts';
+export * from './llm/fake-llm';
+export * from './llm/validate';
 export * from './rules';
 export * from './schema-parts';
 export * from './seed-data';

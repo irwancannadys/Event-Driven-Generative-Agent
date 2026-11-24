@@ -349,6 +349,25 @@ describe('event validation', () => {
     );
   });
 
+  it('accepts the nightly review of the stock admin as a decision, and checks its numbers', () => {
+    const review = (decision: unknown) =>
+      variant('agent_decided', {
+        actor: 'stock_admin',
+        payload: { agent_id: 'stock_admin', purpose: 'policy_review', decision },
+      });
+    const good = {
+      summary: 'Susu habis 40 menit dan 9 pesanan tertahan.',
+      change: { ingredient_id: 'susu', min_qty: 2000 },
+      rationale: 'Naikkan batas supaya belanja lebih awal.',
+    };
+    expect(eventSchema.safeParse(review(good)).success).toBe(true);
+    expectRejected(
+      review({ ...good, change: { ingredient_id: 'susu', min_qty: 1.5 } }),
+      'payload.decision.change.min_qty',
+    );
+    expectRejected(review({ ...good, summary: '' }), 'payload.decision.summary');
+  });
+
   it('rejects texts that are too long', () => {
     expectRejected(
       variant('regular_greeted', { payload: { text: 'a'.repeat(201) } }),

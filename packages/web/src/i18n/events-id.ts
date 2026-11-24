@@ -40,6 +40,7 @@ const PURPOSE = {
   waiter_initiative: 'inisiatif pelayan',
   greeting: 'sapaan',
   reflection: 'refleksi',
+  policy_review: 'review kebijakan',
 };
 
 /** `5000` seconds -> `1 jam 23 menit`. */

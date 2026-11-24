@@ -14,6 +14,7 @@ export const PURPOSES = [
   'complaint_triage',
   'greeting',
   'reflection',
+  'policy_review',
 ] as const;
 export const PurposeSchema = z.enum(PURPOSES);
 export type Purpose = z.infer<typeof PurposeSchema>;
@@ -57,6 +58,22 @@ export const ComplaintTriageSchema = z.object({
   needs_boss_decision: z.boolean(),
 });
 
+/**
+ * The nightly review of the stock admin (decision 034): a short summary of the day and at most one change
+ * of the policy, the minimum stock of one ingredient. Whether the ingredient exists and the number is
+ * within what a boss may be asked to approve is checked where the decision is applied (`validateDecision`).
+ */
+export const PolicyReviewSchema = z.object({
+  summary: z.string().min(1).max(300),
+  change: z
+    .object({
+      ingredient_id: z.string().min(1),
+      min_qty: z.number().int().nonnegative(),
+    })
+    .optional(),
+  rationale: z.string().min(1).max(200),
+});
+
 /** Used for both `greeting` and `reflection`. */
 export const TextDecisionSchema = z.object({
   text: z.string().min(1).max(200),
@@ -68,6 +85,7 @@ export const DECISION_SCHEMAS = {
   complaint_triage: ComplaintTriageSchema,
   greeting: TextDecisionSchema,
   reflection: TextDecisionSchema,
+  policy_review: PolicyReviewSchema,
 } as const satisfies Record<Purpose, z.ZodType>;
 
 export type DecisionOf<P extends Purpose> = z.infer<(typeof DECISION_SCHEMAS)[P]>;
@@ -88,6 +106,11 @@ export interface LLMRequest {
   purpose: Purpose;
   /** A few lines of context built from the database (memory lives in tables, not in the prompt). */
   context: string;
+  /**
+   * The same situation as data, for a client that answers from a script (`FakeLLM`) and has no use for
+   * the text. A real model reads `context` and ignores this.
+   */
+  facts?: Record<string, unknown>;
   /** Validation error from the previous attempt, sent on a retry. */
   feedback?: string;
 }
@@ -102,4 +125,16 @@ export interface LLMResponse {
 /** One implementation talks to Ollama, another (FakeLLM) answers from a scenario table. */
 export interface LLMClient {
   complete(request: LLMRequest): Promise<LLMResponse>;
+}
+
+/**
+ * A client that answers at once, so that a decision can be written in the same step as the question
+ * (decision 010: `FakeLLM` is instant, the asynchronous way belongs to stage 6).
+ */
+export interface InstantLLM extends LLMClient {
+  completeNow(request: LLMRequest): LLMResponse;
+}
+
+export function isInstant(client: LLMClient): client is InstantLLM {
+  return typeof (client as Partial<InstantLLM>).completeNow === 'function';
 }

@@ -3,6 +3,7 @@ import {
   ComplaintTriageSchema,
   DECISION_SCHEMAS,
   PURPOSES,
+  PolicyReviewSchema,
   StockProposalSchema,
   TextDecisionSchema,
   WaiterInitiativeSchema,
@@ -121,5 +122,43 @@ describe('greeting and reflection text', () => {
 describe('DECISION_SCHEMAS', () => {
   it('has a schema for every purpose', () => {
     expect(Object.keys(DECISION_SCHEMAS).sort()).toEqual([...PURPOSES].sort());
+  });
+});
+
+describe('policy_review', () => {
+  const valid = {
+    summary: 'Susu habis 40 menit dan 9 pesanan tertahan.',
+    change: { ingredient_id: 'susu', min_qty: 2000 },
+    rationale: 'Naikkan batas supaya belanja lebih awal.',
+  };
+
+  it('accepts a review with one change, and a review without a change', () => {
+    expect(PolicyReviewSchema.safeParse(valid).success).toBe(true);
+    const noChange = { summary: valid.summary, rationale: valid.rationale };
+    expect(PolicyReviewSchema.safeParse(noChange).success).toBe(true);
+  });
+
+  it('rejects a summary or a rationale that is empty or too long, and a minimum that is not a whole number', () => {
+    expect(PolicyReviewSchema.safeParse({ ...valid, summary: '' }).success).toBe(false);
+    expect(PolicyReviewSchema.safeParse({ ...valid, summary: 'a'.repeat(301) }).success).toBe(
+      false,
+    );
+    expect(PolicyReviewSchema.safeParse({ ...valid, summary: 'a'.repeat(300) }).success).toBe(true);
+    expect(PolicyReviewSchema.safeParse({ ...valid, rationale: 'a'.repeat(201) }).success).toBe(
+      false,
+    );
+    expect(
+      PolicyReviewSchema.safeParse({ ...valid, change: { ingredient_id: 'susu', min_qty: 1.5 } })
+        .success,
+    ).toBe(false);
+    expect(
+      PolicyReviewSchema.safeParse({ ...valid, change: { ingredient_id: 'susu', min_qty: -1 } })
+        .success,
+    ).toBe(false);
+  });
+
+  it('has a schema of its own among the purposes', () => {
+    expect(PURPOSES).toContain('policy_review');
+    expect(DECISION_SCHEMAS.policy_review).toBe(PolicyReviewSchema);
   });
 });
