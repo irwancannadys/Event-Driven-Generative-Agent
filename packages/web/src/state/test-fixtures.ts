@@ -49,6 +49,8 @@ export function snapshot(overrides: Partial<Snapshot> = {}): Snapshot {
     arrivals_in_flight: [],
     complaints: [],
     reports: [],
+    memories: [],
+    latest_review: null,
     events: [],
     ...overrides,
   };
@@ -59,8 +61,17 @@ export function event(
   type: string,
   payload: Record<string, unknown>,
   sim_time = 30_100,
+  overrides: { actor?: string; origin?: string } = {},
 ): StoredEvent {
-  return { id: nextId++, type, sim_time, actor: 'system', origin: 'rule', payload } as StoredEvent;
+  return {
+    id: nextId++,
+    type,
+    sim_time,
+    actor: 'system',
+    origin: 'rule',
+    ...overrides,
+    payload,
+  } as StoredEvent;
 }
 export const start = (): WorldState => applySnapshot(snapshot(), 1000);
 export const apply = (state: WorldState, ...events: StoredEvent[]) =>

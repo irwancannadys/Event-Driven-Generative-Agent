@@ -5,6 +5,8 @@ import {
   SECONDS_PER_DAY,
   dayOf,
   formatClock,
+  DEFAULT_FAKE_SCRIPT,
+  FakeLLM,
   makeScenario,
   type Scenario,
   type TimeView,
@@ -33,7 +35,7 @@ function comparable(state: WorldState, now: number) {
     stock: Object.fromEntries(
       Object.entries(state.stock).map(([id, row]) => [
         id,
-        { qty: row.qty, low: row.low, out: row.out },
+        { qty: row.qty, min_qty: row.min_qty, low: row.low, out: row.out },
       ]),
     ),
     orders: state.orders,
@@ -49,16 +51,28 @@ function comparable(state: WorldState, now: number) {
       (complaint) =>
         complaint.repliedAt === null || complaint.repliedAt >= now - RECENT_COMPLAINT_WINDOW_SEC,
     ),
+    memories: state.memories,
+    review: state.review,
     newestEvents: state.log.slice(-50).map((event) => event.id),
   };
 }
 
 /** Follows a whole day with two pages and compares them with the server at every cut, and counts what it saw. */
-function followDay(scenario: Scenario, bossDecides: AutoBossOptions['decide']) {
+function followDay(
+  scenario: Scenario,
+  bossDecides: AutoBossOptions['decide'],
+  options: { days?: number; llm?: boolean } = {},
+) {
   {
+    const days = options.days ?? 1;
     const db = openSeededMemoryDb();
     const bus = new EventBus();
-    const sim = bootSimulation({ db, bus, scenario });
+    const sim = bootSimulation({
+      db,
+      bus,
+      scenario,
+      ...(options.llm && { llm: new FakeLLM(DEFAULT_FAKE_SCRIPT) }),
+    });
     const boss = new AutoBoss(sim, { decide: bossDecides });
 
     const time = (): TimeView => ({
@@ -91,9 +105,13 @@ function followDay(scenario: Scenario, bossDecides: AutoBossOptions['decide']) {
       answered: 0,
       walkingIn: 0,
       recorded: 0,
+      reviewed: 0,
+      noted: 0,
+      reflected: 0,
+      policyChanged: 0,
     };
     const STEP = 47; // a prime number of seconds: the cuts fall everywhere, also in the middle of walks
-    for (let cut = sim.clock.now() + STEP; cut <= SECONDS_PER_DAY; cut += STEP) {
+    for (let cut = sim.clock.now() + STEP; cut <= days * SECONDS_PER_DAY; cut += STEP) {
       boss.advanceTo(cut);
       const truth = snapshot();
       const now = sim.clock.now();
@@ -118,6 +136,12 @@ function followDay(scenario: Scenario, bossDecides: AutoBossOptions['decide']) {
       if (customers.some((customer) => customer.complaint === 'open')) seen.upset += 1;
       if (Object.keys(truth.arrivals).length > 0) seen.walkingIn += 1;
       if (customers.some((customer) => customer.recordedAt !== null)) seen.recorded += 1;
+      if (truth.review !== null) seen.reviewed += 1;
+      if (truth.memories.length > 0) seen.noted += 1;
+      if (truth.memories.some((note) => note.kind === 'reflection')) seen.reflected += 1;
+      if (Object.values(truth.stock).some((row) => row.min_qty !== row.base_min_qty)) {
+        seen.policyChanged += 1;
+      }
       const complaints = Object.values(truth.complaints);
       if (complaints.some((complaint) => complaint.status === 'triaged')) seen.waitingForBoss += 1;
       if (complaints.some((complaint) => complaint.status === 'replied')) seen.answered += 1;
@@ -144,6 +168,17 @@ describe('the page state equals the server snapshot', () => {
     expect(seen.answered).toBeGreaterThan(3);
     expect(seen.walkingIn).toBeGreaterThan(200); // customers on their way from the door to the counter
     expect(seen.recorded).toBeGreaterThan(800);
+    expect(seen.reviewed).toBeGreaterThan(50); // the review after closing: the notes and the change of policy
+    expect(seen.noted).toBeGreaterThan(50);
+    expect(seen.policyChanged).toBeGreaterThan(10);
+  });
+
+  it('also over two days with a model that helps the stock admin: the review, the notes and what came of a change', () => {
+    const seen = followDay(makeScenario(42), () => 'approved', { days: 2, llm: true });
+    expect(seen.cuts).toBeGreaterThan(3000);
+    expect(seen.reviewed).toBeGreaterThan(1500);
+    expect(seen.policyChanged).toBeGreaterThan(1500);
+    expect(seen.reflected).toBeGreaterThan(250); // the night of day 1 judges the change of day 0
   });
 
   it('also on a day of long waits, when complaints go to the boss and wait there for his decision', () => {

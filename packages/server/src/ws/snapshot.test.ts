@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   RECENT_COMPLAINT_WINDOW_SEC,
+  SNAPSHOT_MEMORY_COUNT,
   WALK_IN_SEC,
   makeScenario,
+  simTime,
   walkDurationSec,
   type TimeView,
 } from '@cafe/core';
@@ -273,5 +275,48 @@ describe('the orders and complaints in a snapshot', () => {
     expect(buildSnapshot(sim.ctx, at(sim)).complaints).toHaveLength(1);
     runTo(sim, 720 + RECENT_COMPLAINT_WINDOW_SEC + 10); // long ago: gone
     expect(buildSnapshot(sim.ctx, at(sim)).complaints).toEqual([]);
+  });
+});
+
+describe('the notes and the review of the stock admin in a snapshot (decision 034)', () => {
+  it('has none in a new world, and the newest ones once she has reviewed a day', () => {
+    const db = createTestDb();
+    const sim = bootSimulation({
+      db,
+      bus: new EventBus(),
+      scenario: makeScenario(42, { crowdPct: 0, complaintChancePct: 0 }),
+    });
+    const at = (): TimeView => ({ ...TIME, sim_time: sim.clock.now() });
+    expect(buildSnapshot(sim.ctx, at())).toMatchObject({ memories: [], latest_review: null });
+    sim.clock.advance(simTime(0, 20) + 180 - sim.clock.now() + 5);
+    const snapshot = buildSnapshot(sim.ctx, at());
+    expect(snapshot.latest_review).toMatchObject({
+      day: 0,
+      origin: 'rule',
+      created_at_sim: simTime(0, 20) + 180,
+      metrics: { orders: 0, held: 0 },
+    });
+    expect(snapshot.latest_review?.summary).toContain('Hari 0: 0 pesanan');
+    expect(snapshot.memories).toEqual([
+      expect.objectContaining({
+        kind: 'observation',
+        ingredient_id: null,
+        created_at_sim: simTime(0, 20) + 180,
+      }),
+    ]);
+  });
+
+  it('carries at most the newest notes, oldest first', () => {
+    const { ctx, db } = createTestWorld();
+    for (let index = 1; index <= SNAPSHOT_MEMORY_COUNT + 4; index += 1) {
+      appendInTransaction(
+        db,
+        ev.memoryCreated(`catatan ${index}`, 'observation', undefined, index),
+      );
+    }
+    const { memories } = buildSnapshot(ctx, TIME);
+    expect(memories).toHaveLength(SNAPSHOT_MEMORY_COUNT);
+    expect(memories[0]?.text).toBe('catatan 5');
+    expect(memories.at(-1)?.text).toBe(`catatan ${SNAPSHOT_MEMORY_COUNT + 4}`);
   });
 });

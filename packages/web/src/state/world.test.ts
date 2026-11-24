@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { SNAPSHOT_MEMORY_COUNT } from '@cafe/core';
 import type { ServerMessage, StoredEvent } from '@cafe/core';
 import { RECENT_DONE_WINDOW_SEC } from '@cafe/core';
 import {
@@ -11,7 +12,7 @@ import {
   virtualNow,
 } from './world';
 
-import { TIME, agent, apply, event, snapshot, start } from './test-fixtures';
+import { TIME, agent, apply, event, snapshot, start, stockRow } from './test-fixtures';
 
 describe('applySnapshot', () => {
   it('turns the snapshot into state: agents, stock, order counts, reports and the log', () => {
@@ -652,5 +653,111 @@ describe('a report of the kind policy (decision 034)', () => {
         submittedAt: null,
       },
     ]);
+  });
+});
+
+describe('the stock admin: notes, review and the minimum stock (decision 034)', () => {
+  const note = (text: string, time = 70_000, kind: 'observation' | 'reflection' = 'observation') =>
+    event('memory_created', { agent_id: 'stock_admin', kind, ingredient_id: 'susu', text }, time);
+
+  it('comes from the snapshot: the notes, the review of last night, and the minimum in force', () => {
+    const review = {
+      day: 0,
+      summary: 'Hari 0: 75 pesanan.',
+      origin: 'llm' as const,
+      created_at_sim: 72_180,
+      metrics: {
+        orders: 75,
+        done: 75,
+        held: 3,
+        complaints: 4,
+        held_by_ingredient: { susu: 3 },
+        stockout_sec: {},
+      },
+    };
+    const state = applySnapshot(
+      snapshot({
+        memories: [
+          {
+            kind: 'observation',
+            ingredient_id: null,
+            text: 'Hari 0 tenang.',
+            created_at_sim: 72_180,
+          },
+        ],
+        latest_review: review,
+        stock: [{ ...stockRow('susu', 800, 2000), base_min_qty: 1000 }],
+      }),
+      0,
+    );
+    expect(state.memories).toHaveLength(1);
+    expect(state.review).toEqual(review);
+    expect(state.stock.susu).toMatchObject({ min_qty: 2000, base_min_qty: 1000 });
+  });
+
+  it('adds a note when the admin writes one, with the ingredient or none, oldest first', () => {
+    let state = applySnapshot(snapshot(), 0);
+    state = apply(
+      state,
+      note('satu', 100),
+      event('memory_created', { agent_id: 'stock_admin', kind: 'reflection', text: 'dua' }, 200),
+    );
+    expect(state.memories).toEqual([
+      { kind: 'observation', ingredient_id: 'susu', text: 'satu', created_at_sim: 100 },
+      { kind: 'reflection', ingredient_id: null, text: 'dua', created_at_sim: 200 },
+    ]);
+  });
+
+  it('keeps only the newest notes, as many as a snapshot carries', () => {
+    let state = applySnapshot(snapshot(), 0);
+    for (let index = 1; index <= SNAPSHOT_MEMORY_COUNT + 5; index += 1)
+      state = apply(state, note(`catatan ${index}`, index));
+    expect(state.memories).toHaveLength(SNAPSHOT_MEMORY_COUNT);
+    expect(state.memories[0]?.text).toBe('catatan 6');
+    expect(state.memories.at(-1)?.text).toBe(`catatan ${SNAPSHOT_MEMORY_COUNT + 5}`);
+  });
+
+  it('keeps the review of the last night, and who wrote it', () => {
+    const created = event(
+      'daily_review_created',
+      {
+        day: 1,
+        summary: 'Hari 1 lebih baik.',
+        metrics: {
+          orders: 89,
+          done: 89,
+          held: 1,
+          complaints: 2,
+          held_by_ingredient: {},
+          stockout_sec: {},
+        },
+      },
+      150_000,
+      { origin: 'fallback' },
+    );
+    const state = apply(applySnapshot(snapshot(), 0), created);
+    expect(state.review).toMatchObject({
+      day: 1,
+      summary: 'Hari 1 lebih baik.',
+      origin: 'fallback',
+      created_at_sim: 150_000,
+    });
+  });
+
+  it('changes the minimum stock in force when the boss approves a change, and leaves the others and the starting value alone', () => {
+    const state = apply(
+      applySnapshot(
+        snapshot({
+          stock: [
+            { ...stockRow('susu', 2500, 1000), base_min_qty: 1000 },
+            stockRow('nasi', 100, 100),
+          ],
+        }),
+        0,
+      ),
+      event('policy_changed', { ingredient_id: 'susu', from: 1000, to: 1500, report_id: 3 }),
+    );
+    expect(state.stock.susu).toMatchObject({ min_qty: 1500, base_min_qty: 1000 });
+    expect(state.stock.nasi?.min_qty).toBe(100);
   });
 });

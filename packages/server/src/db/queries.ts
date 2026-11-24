@@ -2,7 +2,9 @@ import {
   AGENT_IDS,
   type AgentId,
   type ComplaintView,
+  type MemoryView,
   type OrderItem,
+  type ReviewView,
   type RecipeLine,
   type StationId,
 } from '@cafe/core';
@@ -354,4 +356,28 @@ export function readOpenPolicyIngredients(db: Db): Set<string> {
       (json) => (JSON.parse(json) as { change: { ingredient_id: string } }).change.ingredient_id,
     ),
   );
+}
+
+/** The newest notes of the stock admin for a page that connects, oldest first. */
+export function readMemoryViews(db: Db, limit: number): MemoryView[] {
+  const rows = db
+    .prepare(
+      `SELECT kind, ingredient_id, text, sim_time AS created_at_sim
+       FROM memories WHERE agent_id = 'stock_admin' ORDER BY id DESC LIMIT ?`,
+    )
+    .all(limit) as MemoryView[];
+  return rows.reverse();
+}
+
+/** The review of the stock admin from last night, read from the log where it is written. */
+export function readLatestReview(db: Db): ReviewView | null {
+  const row = db
+    .prepare(
+      `SELECT payload_json, origin, sim_time FROM events
+       WHERE type = 'daily_review_created' ORDER BY id DESC LIMIT 1`,
+    )
+    .get() as { payload_json: string; origin: ReviewView['origin']; sim_time: number } | undefined;
+  if (!row) return null;
+  const payload = JSON.parse(row.payload_json) as Omit<ReviewView, 'origin' | 'created_at_sim'>;
+  return { ...payload, origin: row.origin, created_at_sim: row.sim_time };
 }

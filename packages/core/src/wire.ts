@@ -118,6 +118,35 @@ export interface ComplaintView {
   compensation: Compensation | null;
 }
 
+/** A note of the stock admin (decision 034). The page keeps the newest `SNAPSHOT_MEMORY_COUNT`. */
+export interface MemoryView {
+  kind: 'observation' | 'reflection';
+  /** The ingredient the note is about, `null` when it is about the day. */
+  ingredient_id: string | null;
+  text: string;
+  created_at_sim: SimTime;
+}
+
+/** How many of the newest notes a page keeps. */
+export const SNAPSHOT_MEMORY_COUNT = 30;
+
+/** The review the stock admin wrote last night, for the card about her. */
+export interface ReviewView {
+  day: number;
+  summary: string;
+  /** Who decided what to say: the model, the rules after the model failed, or the rules alone. */
+  origin: 'rule' | 'llm' | 'fallback';
+  created_at_sim: SimTime;
+  metrics: {
+    orders: number;
+    done: number;
+    held: number;
+    complaints: number;
+    held_by_ingredient: Record<string, number>;
+    stockout_sec: Record<string, number>;
+  };
+}
+
 /** The state of the world at one moment, sent once when a page connects. */
 export interface Snapshot {
   time: TimeView;
@@ -141,6 +170,10 @@ export interface Snapshot {
   complaints: ComplaintView[];
   /** Reports that are not decided yet (`drafted` and `submitted`). */
   reports: ReportView[];
+  /** The newest notes of the stock admin, oldest first. */
+  memories: MemoryView[];
+  /** The newest review of the stock admin, `null` before the first night. */
+  latest_review: ReviewView | null;
   /** The newest events, oldest first, so the log on the page is filled from the start. */
   events: StoredEvent[];
 }

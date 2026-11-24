@@ -1,7 +1,9 @@
-import { RECENT_DONE_WINDOW_SEC } from '@cafe/core';
+import { RECENT_DONE_WINDOW_SEC, SNAPSHOT_MEMORY_COUNT } from '@cafe/core';
 import type {
   AgentId,
   AgentState as AgentStatus,
+  MemoryView,
+  ReviewView,
   ComplaintCause,
   ComplaintStatus,
   Compensation,
@@ -99,6 +101,10 @@ export interface WorldState {
   arrivals: Record<number, number>;
   /** The complaints that are not answered yet and the ones answered a short while ago, by complaint id. */
   complaints: Record<number, ComplaintState>;
+  /** The newest notes of the stock admin, oldest first (decision 034). */
+  memories: MemoryView[];
+  /** What she wrote about the last day, `null` before the first night. */
+  review: ReviewView | null;
   /** The newest events, oldest first (the event log panel). */
   log: StoredEvent[];
 }
@@ -173,6 +179,8 @@ export function applySnapshot(snapshot: Snapshot, atMs: number): WorldState {
         },
       ]),
     ),
+    memories: snapshot.memories.slice(-SNAPSHOT_MEMORY_COUNT),
+    review: snapshot.latest_review,
     log: snapshot.events.slice(-LOG_LIMIT),
   };
 }
@@ -345,6 +353,37 @@ function react(state: WorldState, event: StoredEvent): WorldState {
         (customer) => ({ ...customer, complaint: 'none' }),
       );
     }
+
+    case 'policy_changed':
+      // The minimum stock in force changes; whether the stock is low is told by the stock events (as on the server).
+      return changeStock(state, event.payload.ingredient_id, (row) => ({
+        ...row,
+        min_qty: event.payload.to,
+      }));
+    case 'memory_created':
+      return {
+        ...state,
+        memories: [
+          ...state.memories,
+          {
+            kind: event.payload.kind,
+            ingredient_id: event.payload.ingredient_id ?? null,
+            text: event.payload.text,
+            created_at_sim: event.sim_time,
+          },
+        ].slice(-SNAPSHOT_MEMORY_COUNT),
+      };
+    case 'daily_review_created':
+      return {
+        ...state,
+        review: {
+          day: event.payload.day,
+          summary: event.payload.summary,
+          origin: event.origin as ReviewView['origin'],
+          created_at_sim: event.sim_time,
+          metrics: event.payload.metrics,
+        },
+      };
 
     case 'stock_decreased':
       return changeStock(state, event.payload.ingredient_id, (row) => ({

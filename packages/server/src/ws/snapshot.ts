@@ -2,6 +2,7 @@ import {
   AGENT_HOME_STATION,
   RECENT_COMPLAINT_WINDOW_SEC,
   RECENT_DONE_WINDOW_SEC,
+  SNAPSHOT_MEMORY_COUNT,
   WALK_IN_SEC,
   type AgentId,
   type AgentView,
@@ -14,6 +15,8 @@ import {
   readAgentOverview,
   readArrivalsInFlight,
   readComplaintViews,
+  readLatestReview,
+  readMemoryViews,
   readOrderCounts,
   readRecentOrders,
   readReports,
@@ -70,6 +73,8 @@ export function buildSnapshot(ctx: Context, time: TimeView): Snapshot {
     reports: [...readReports(db, 'drafted'), ...readReports(db, 'submitted')].sort(
       (a, b) => a.id - b.id,
     ),
+    memories: readMemoryViews(db, SNAPSHOT_MEMORY_COUNT),
+    latest_review: readLatestReview(db),
     events: listRecentEvents(db, SNAPSHOT_EVENT_COUNT),
   };
 }
