@@ -55,7 +55,11 @@ describe('dev server', () => {
     expect(time).toMatchObject({ clock: '07:50', day: 0, speed: 1, paused: false });
     expect(lines.join('\n')).toMatch(/Dunia baru dibuat: jam 07:50, hari 0, seed 42/);
     expect(lines.join('\n')).toMatch(/Kecepatan: 1x/);
-    expect(lines.some((line) => line.includes('world_initialized'))).toBe(true);
+    const worldLine = lines.findIndex((line) => line.includes('world_initialized'));
+    const bannerLine = lines.findIndex((line) => line.includes('=== Server kafe virtual ==='));
+    expect(worldLine).toBeGreaterThan(-1);
+    expect(bannerLine).toBeGreaterThan(-1);
+    expect(worldLine).toBeGreaterThan(bannerLine); // the banner comes first, then the first event
     expect((await fetch(`${server.url}/menu`)).status).toBe(200);
   });
 

@@ -41,11 +41,17 @@ export async function startDevServer(options: DevServerOptions): Promise<DevServ
   runMigrations(db, loadMigrations());
   seedReferenceData(db);
 
+  // Events written while the world boots (a new world writes world_initialized) are held back until
+  // the banner is printed, so the log reads in a natural order.
+  const heldBack: string[] = [];
+  let banner = false;
   const bus = new EventBus();
   bus.subscribe((events) => {
     for (const event of events) {
       const line = formatEvent(event);
-      if (line !== null) log(line);
+      if (line === null) continue;
+      if (banner) log(line);
+      else heldBack.push(line);
     }
   });
 
@@ -68,6 +74,8 @@ export async function startDevServer(options: DevServerOptions): Promise<DevServ
       : `Dunia baru dibuat: ${where}, seed ${simulation.scenario.seed}`,
   );
   log('Tekan Ctrl+C untuk berhenti. Jam virtual disimpan saat berhenti.');
+  banner = true;
+  for (const line of heldBack.splice(0)) log(line);
 
   const saveClock = (): void => {
     saveClockState(db, {
