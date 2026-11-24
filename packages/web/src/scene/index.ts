@@ -7,6 +7,7 @@ import { AZIMUTH_START, CAMERA_FOV, CAMERA_TARGET, cameraPosition, dragAzimuth }
 import { createAvatar, type Avatar } from './avatar';
 import { LabelLayer } from './labels';
 import { agentPose, potTilt } from './pose';
+import { PapersView, ShelfView } from './shelf';
 import { projectToScreen } from './projection';
 import { BOSS_SPOT, FURNITURE } from './registry';
 import { buildRoom } from './room';
@@ -65,6 +66,9 @@ export function createScene(
   boss.object.position.set(BOSS_SPOT.x, 0, BOSS_SPOT.z);
   boss.object.rotation.y = BOSS_SPOT.facing;
   scene.add(boss.object);
+
+  const shelf = new ShelfView(room.shelfBoxes);
+  const papers = new PapersView(room.reportPapers);
 
   const camera = new PerspectiveCamera(CAMERA_FOV, 1, 0.1, 100);
   let azimuth = AZIMUTH_START;
@@ -137,6 +141,8 @@ export function createScene(
         const at = projectToScreen(camera, { x: pose.x, y: 1.9, z: pose.z }, width, height);
         labels.place(`agent:${id}`, at.x, at.y, at.visible);
       }
+      shelf.update(Object.values(state.stock));
+      papers.update(state.reports.filter((report) => report.status === 'submitted').length);
       const cook = state.agents.cook;
       room.pot.rotation.z = potTilt(cook?.state === 'working' && cook.label === 'cooking', seconds);
     }
