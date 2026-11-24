@@ -8,7 +8,12 @@ describe('makeScenario', () => {
       crowdPct: 100,
       complaintChancePct: 15,
       complaintWaitSec: 1200,
+      stockForecast: true,
     });
+  });
+
+  it('can switch the look ahead of the stock admin off', () => {
+    expect(makeScenario(1, { stockForecast: false }).stockForecast).toBe(false);
   });
 
   it('accepts overrides', () => {

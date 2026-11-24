@@ -22,6 +22,7 @@
     "demo:stage2": "npm run demo:stage2 -w @cafe/server",
     "watch": "npm run watch -w @cafe/server --",
     "demo:stage3": "npm run demo:stage3 -w @cafe/server",
+    "demo:stage5": "npm run demo:stage5 -w @cafe/server --",
     "web": "npm run dev -w @cafe/web --"
   },
   "devDependencies": {

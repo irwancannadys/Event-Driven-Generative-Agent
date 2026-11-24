@@ -112,7 +112,7 @@ function collectDay(
   }
 
   // The stock admin looks ahead twice a day (decision 034), when the hours of the rush still lie before her.
-  for (const hour of STOCK_FORECAST_HOURS) {
+  for (const hour of scenario.stockForecast ? STOCK_FORECAST_HOURS : []) {
     const time = base + timeOfDay(hour);
     if (inWindow(time, after, upTo)) out.push({ kind: 'stock_forecast', time });
   }

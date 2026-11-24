@@ -10,7 +10,13 @@ describe('parseConfig', () => {
       databasePath: '/repo/data/cafe.db',
       port: 3000,
       speed: 60,
-      scenario: { seed: 42, crowdPct: 150, complaintChancePct: 15, complaintWaitSec: 1200 },
+      scenario: {
+        seed: 42,
+        crowdPct: 150,
+        complaintChancePct: 15,
+        complaintWaitSec: 1200,
+        stockForecast: true,
+      },
       llmProvider: 'fake',
     });
   });
@@ -21,6 +27,14 @@ describe('parseConfig', () => {
     expect(parseConfig({ LLM_PROVIDER: '' }, root).llmProvider).toBe('fake');
     expect(() => parseConfig({ LLM_PROVIDER: 'ollama' }, root)).toThrow(
       /LLM_PROVIDER must be fake or off/,
+    );
+  });
+
+  it('lets the stock admin look ahead unless it is switched off, and refuses a value it does not know', () => {
+    expect(parseConfig({ STOCK_FORECAST: 'off' }, root).scenario.stockForecast).toBe(false);
+    expect(parseConfig({ STOCK_FORECAST: ' ON ' }, root).scenario.stockForecast).toBe(true);
+    expect(() => parseConfig({ STOCK_FORECAST: 'maybe' }, root)).toThrow(
+      /STOCK_FORECAST must be on or off/,
     );
   });
 

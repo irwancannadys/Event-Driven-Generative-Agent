@@ -10,6 +10,8 @@ export interface Scenario {
   complaintChancePct: number;
   /** How long an order may wait, in virtual seconds, before its customer may complain. */
   complaintWaitSec: number;
+  /** Whether the stock admin looks ahead at 10:00 and 15:00 (decision 034). Off: she only reacts to a low stock. */
+  stockForecast: boolean;
 }
 
 export const DEFAULT_CROWD_PCT = 100;
@@ -31,6 +33,7 @@ export function makeScenario(
     crowdPct: overrides.crowdPct ?? DEFAULT_CROWD_PCT,
     complaintChancePct: overrides.complaintChancePct ?? DEFAULT_COMPLAINT_CHANCE_PCT,
     complaintWaitSec: overrides.complaintWaitSec ?? DEFAULT_COMPLAINT_WAIT_SEC,
+    stockForecast: overrides.stockForecast ?? true,
   };
   assertInteger('seed', scenario.seed, Number.MIN_SAFE_INTEGER, Number.MAX_SAFE_INTEGER);
   assertInteger('crowdPct', scenario.crowdPct, 0, 1000);

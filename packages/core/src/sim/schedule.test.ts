@@ -127,6 +127,11 @@ describe('the look ahead of the stock admin', () => {
     ).toEqual(['0 10:00', '0 15:00', '1 10:00', '1 15:00', '2 10:00', '2 15:00']);
   });
 
+  it('is left out when the scenario switches it off', () => {
+    const off = dueItems(0, SECONDS_PER_DAY, makeScenario(42, { stockForecast: false }));
+    expect(off.filter((item) => item.kind === 'stock_forecast')).toEqual([]);
+  });
+
   it('does not depend on how busy the cafe is', () => {
     const quiet = dueItems(0, SECONDS_PER_DAY, makeScenario(42, { crowdPct: 0 })).filter(
       (item) => item.kind === 'stock_forecast',

@@ -45,6 +45,10 @@ export function parseConfig(env: Env, repoRoot: string): Config {
   if (provider !== '' && provider !== 'fake' && provider !== 'off') {
     throw new Error(`LLM_PROVIDER must be fake or off, got "${env.LLM_PROVIDER}"`);
   }
+  const forecast = (env.STOCK_FORECAST ?? '').trim().toLowerCase();
+  if (forecast !== '' && forecast !== 'on' && forecast !== 'off') {
+    throw new Error(`STOCK_FORECAST must be on or off, got "${env.STOCK_FORECAST}"`);
+  }
   return {
     llmProvider: provider === 'off' ? 'off' : 'fake',
     repoRoot,
@@ -65,6 +69,7 @@ export function parseConfig(env: Env, repoRoot: string): Config {
             1,
             1440,
           ) * SECONDS_PER_MINUTE,
+        stockForecast: forecast !== 'off',
       },
     ),
   };
