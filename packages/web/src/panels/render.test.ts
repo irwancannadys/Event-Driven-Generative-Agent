@@ -283,7 +283,7 @@ describe('the complaints panel', () => {
       (node) => node.tag === 'section' && node.className.startsWith('panel complaints'),
     )[0];
 
-  it('has a card of its own next to the orders, which says so when nobody complained', () => {
+  it('has a card of its own, which says so when nobody complained', () => {
     const { root, panels } = setup();
     panels.update({ state: world(), status: 'open', nowMs: 1000 });
     expect(complaintsPanel(root)?.textContent).toContain('Komplain');
@@ -407,7 +407,7 @@ describe('the cards of the page', () => {
     const columns = under.children.filter((child): child is FakeNode => typeof child !== 'string');
     expect(columns.map((column) => names(column))).toEqual([
       ['orders', 'agents'],
-      ['complaints', 'admin'],
+      ['admin', 'complaints'],
     ]);
     expect(names(beside)).toEqual(['boss', 'stock', 'log']);
   });

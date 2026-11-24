@@ -223,7 +223,7 @@ export function createPanels(
       'div',
       'info',
       el('div', 'info-col', orders.root, agents.root),
-      el('div', 'info-col', complaints.root, admin.root),
+      el('div', 'info-col', admin.root, complaints.root),
     ),
   );
   const side = el('aside', 'side', boss.root, stock.root, log.root);
