@@ -1,0 +1,8 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // Sengaja tanpa tipe Node: core tidak boleh menyentuh fs, jaringan, atau process.
+    "types": []
+  },
+  "include": ["src"]
+}

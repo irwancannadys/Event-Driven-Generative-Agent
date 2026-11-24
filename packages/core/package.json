@@ -1,0 +1,13 @@
+{
+  "name": "@cafe/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Domain murni: event, agent, aturan, sim clock. Tanpa I/O.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "@cafe/server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Server Node: SQLite, migrasi, seed. WebSocket dan API menyusul di tahap berikutnya.",
+  "dependencies": {
+    "@cafe/core": "*"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}

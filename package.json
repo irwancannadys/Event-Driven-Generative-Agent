@@ -1,0 +1,18 @@
+{
+  "name": "event-driven-generative-agent",
+  "private": true,
+  "type": "module",
+  "description": "Kafe virtual: event-driven + generative agent",
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.1"
+  }
+}
