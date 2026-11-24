@@ -21,6 +21,7 @@ import {
   ComplaintCauseSchema,
   CompensationSchema,
   EntityIdSchema,
+  OrderItemSchema,
   PositiveQtySchema,
   QtySchema,
   ReportDraftSchema,
@@ -44,8 +45,6 @@ function defineEvent<T extends string, P extends z.ZodType>(type: T, payload: P)
     payload,
   });
 }
-
-const OrderItemSchema = z.object({ menu_item_id: nonEmpty, qty: z.number().int().positive() });
 
 const agentDecidedBase = {
   agent_id: AgentIdSchema,

@@ -18,6 +18,13 @@ export const StockLineSchema = z.object({
 });
 export type StockLine = z.infer<typeof StockLineSchema>;
 
+/** One line of an order: a menu item and how many portions. */
+export const OrderItemSchema = z.object({
+  menu_item_id: z.string().min(1),
+  qty: z.number().int().positive(),
+});
+export type OrderItem = z.infer<typeof OrderItemSchema>;
+
 export const UrgencySchema = z.enum(['low', 'normal', 'high']);
 export const CompensationSchema = z.enum(['none', 'discount_10', 'free_item']);
 export type Compensation = z.infer<typeof CompensationSchema>;

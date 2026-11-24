@@ -3,6 +3,7 @@ export * from './clock';
 export * from './events';
 export * from './ids';
 export * from './llm/contracts';
+export * from './rules';
 export * from './schema-parts';
 export * from './seed-data';
 export * from './stations';
