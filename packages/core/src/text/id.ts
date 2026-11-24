@@ -14,10 +14,49 @@ export interface RestockLine {
   out: boolean;
 }
 
+/** One line of a proposal that comes from a forecast: `expected` is the demand foreseen until the delivery. */
+export interface ForecastLine extends RestockLine {
+  expected: number;
+}
+
+/** What the stock admin says about a day, for her summary and her notes. */
+export interface ReviewFacts {
+  day: number;
+  orders: number;
+  done: number;
+  held: number;
+  complaints: number;
+  /** The ingredients that gave the most trouble, worst first. */
+  worst: { name: string; unit: string; held: number; stockout_minutes: number }[];
+}
+
+export interface PolicyChangeText {
+  name: string;
+  unit: string;
+  from: number;
+  to: number;
+}
+
+export interface OutcomeText extends PolicyChangeText {
+  verdict: 'helped' | 'no_help' | 'unclear';
+  held_before: number;
+  held_after: number;
+  stockout_minutes_before: number;
+  stockout_minutes_after: number;
+}
+
 export interface TextSet {
   restockTitle(lines: readonly RestockLine[]): string;
   restockBody(lines: readonly RestockLine[], urgency: 'low' | 'normal' | 'high'): string;
   restockRationale(lines: readonly RestockLine[]): string;
+  forecastRationale(lines: readonly ForecastLine[]): string;
+  reviewSummary(facts: ReviewFacts): string;
+  reviewRationale(change: PolicyChangeText | null, held: number): string;
+  policyTitle(change: PolicyChangeText): string;
+  policyBody(change: PolicyChangeText, rationale: string): string;
+  observationText(facts: ReviewFacts): string;
+  reflectionText(outcome: OutcomeText): string;
+  rejectedText(change: PolicyChangeText): string;
   complaintTitle(cause: string, orderId: number): string;
   complaintBody(
     orderId: number,
@@ -65,6 +104,61 @@ export const TEXT_ID: TextSet = {
     ].join('\n'),
 
   restockRationale: (lines) => `${lines.map(describe).join('; ')}. Usul: isi sampai penuh.`,
+
+  forecastRationale: (lines) =>
+    `Perkiraan pemakaian sebelum pengiriman berikutnya: ${lines
+      .map((line) => `${line.name} ${line.expected} ${line.unit} (stok ${line.qty})`)
+      .join('; ')}. Usul: pesan sebelum habis.`,
+
+  reviewSummary: (facts) =>
+    `Hari ${facts.day}: ${facts.orders} pesanan, ${facts.done} selesai, ${facts.held} kali ditahan, ${facts.complaints} komplain.${
+      facts.worst.length > 0
+        ? ` Paling bermasalah: ${facts.worst
+            .map(
+              (item) =>
+                `${item.name} (${item.held}x menahan pesanan, habis ${item.stockout_minutes} menit)`,
+            )
+            .join('; ')}.`
+        : ' Tidak ada bahan yang bermasalah.'
+    }`,
+
+  reviewRationale: (change, held) =>
+    change
+      ? `Stok ${change.name} sering tipis (${held} pesanan tertahan): naikkan batas minimum supaya belanja lebih awal.`
+      : 'Tidak ada yang perlu diubah.',
+
+  policyTitle: (change) =>
+    `Usul kebijakan: batas minimum ${change.name} ${change.from} jadi ${change.to} ${change.unit}`,
+
+  policyBody: (change, rationale) =>
+    [
+      `Batas minimum ${change.name}: ${change.from} ${change.unit} jadi ${change.to} ${change.unit}.`,
+      rationale,
+      'Setujui untuk mengubah batas, Tolak untuk membiarkannya.',
+    ].join('\n'),
+
+  observationText: (facts) =>
+    `Hari ${facts.day}: ${facts.orders} pesanan, ${facts.held} kali ditahan, ${facts.complaints} komplain.${
+      facts.worst.length > 0
+        ? ` ${facts.worst.map((item) => `${item.name} habis ${item.stockout_minutes} menit`).join(', ')}.`
+        : ''
+    }`,
+
+  reflectionText: (outcome) => {
+    const change = `Batas ${outcome.name} dinaikkan dari ${outcome.from} ke ${outcome.to} ${outcome.unit}`;
+    const numbers = `pesanan tertahan ${outcome.held_before} jadi ${outcome.held_after}, habis ${outcome.stockout_minutes_before} jadi ${outcome.stockout_minutes_after} menit`;
+    switch (outcome.verdict) {
+      case 'helped':
+        return `${change}: membantu (${numbers}).`;
+      case 'no_help':
+        return `${change}: tidak membantu (${numbers}). Jangan diulang.`;
+      default:
+        return `${change}: belum bisa dinilai (${numbers}).`;
+    }
+  },
+
+  rejectedText: (change) =>
+    `Bos menolak usul menaikkan batas ${change.name} dari ${change.from} ke ${change.to} ${change.unit}. Jangan diulang.`,
 
   complaintTitle: (cause, orderId) => `Komplain: ${CAUSE[cause] ?? cause} (pesanan #${orderId})`,
 
