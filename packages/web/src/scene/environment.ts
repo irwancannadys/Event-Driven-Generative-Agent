@@ -3,7 +3,7 @@ import {
   Color,
   DirectionalLight,
   HemisphereLight,
-  PCFSoftShadowMap,
+  PCFShadowMap,
   PMREMGenerator,
   type Scene,
   type WebGLRenderer,
@@ -17,7 +17,7 @@ export function lightTheScene(renderer: WebGLRenderer, scene: Scene): void {
   renderer.toneMapping = ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.15;
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = PCFSoftShadowMap;
+  renderer.shadowMap.type = PCFShadowMap; // PCFSoftShadowMap is gone from this three; its warning says PCFShadowMap takes its place
   scene.background = new Color(0x15110e);
 
   scene.add(new HemisphereLight(0xfff0dc, 0x6f5640, 1.5));
