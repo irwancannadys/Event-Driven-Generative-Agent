@@ -55,17 +55,11 @@ interface Card {
   aside: HTMLElement;
 }
 
-/** A card: a tile with the picture of its subject, the title, a corner, and the body. */
+/** A card: the title, a corner, and the body. */
 function section(title: TextKey, className: string): Card {
   const body = el('div', 'panel-body');
   const aside = el('div', 'panel-aside');
-  const head = el(
-    'header',
-    'panel-head',
-    el('span', `tile tile-${className}`),
-    el('h2', '', t(title)),
-    aside,
-  );
+  const head = el('header', 'panel-head', el('h2', '', t(title)), aside);
   return { root: el('section', `panel ${className}`, head, body), body, aside };
 }
 
@@ -153,13 +147,7 @@ export function createPanels(
     const mark = el('span', 'fold-mark');
     const toggle = el('button', 'panel-toggle', t(title), mark);
     toggle.type = 'button';
-    const head = el(
-      'header',
-      'panel-head',
-      el('span', `tile tile-${className}`),
-      el('h2', '', toggle),
-      aside,
-    );
+    const head = el('header', 'panel-head', el('h2', '', toggle), aside);
     const root = el('section', `panel ${className}`, head, body);
     const show = (): void => {
       const open = !folded.has(id);
