@@ -28,3 +28,4 @@ Satu file per keputusan, beberapa baris tiap file. Brief menang jika ada bentura
 | [022](022-agents-task-queue-and-atomic-steps.md) | Agent, antrean tugas, dan langkah atomik dengan reaksi |
 | [023](023-dynamic-due-items.md) | Timer dinamis di VirtualClock |
 | [024](024-rule-based-restock-and-complaints.md) | Usulan belanja dan triase komplain berbasis aturan |
+| [025](025-boss-api-watch-and-auto-boss.md) | Kontrol bos lewat API, papan pantau, dan bos otomatis untuk tes |

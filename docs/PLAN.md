@@ -166,21 +166,21 @@ Hasil Tahap 2, bahan untuk materi:
 **Pembagian tugas (keputusan 022 sampai 024):** `core` memegang aturan murni (rencana tugas, usulan belanja, triase komplain, teks template). `server` memegang mesin agent: satu langkah (item jatuh tempo atau klik bos) ditulis dalam **satu transaksi bersama semua reaksi berantainya**. Akhir tugas agent dan kedatangan pemasok adalah **item dinamis** yang dibaca dari proyeksi.
 
 **Tugas:**
-- [ ] Aturan murni di `core`: stasiun asal tiap agent, durasi tugas, perencana tugas (`goto` hanya bila perlu, `finalStation`)
-- [ ] Keputusan aturan di `core`: usulan belanja "isi sampai penuh", triase komplain, teks template Indonesia
-- [ ] `VirtualClock` dengan item dinamis (akhir tugas agent dan kedatangan pemasok dibaca dari proyeksi, item yang sudah lewat waktunya jatuh tempo sekarang)
-- [ ] Langkah atomik: `transact` bersarang dan antrean reaksi yang dikuras sebelum commit
-- [ ] Proyeksi untuk event Tahap 3 (agents, antrean tugas, laporan, pesanan belanja, komplain, pesanan dilanjutkan)
-- [ ] Mesin agent: peran, stasiun, status (`idle`, `walking`, `working`), antrean tugas; jenis tugas `goto` dan `work` (tanpa `do`); durasi jalan dari tabel jarak; hook sebelum mulai untuk memasak
-- [ ] Reaksi pesanan: kasir mencatat, koki memasak (stok dikurangi saat tugas memasak dimulai), `cooking_done`
-- [ ] Reaksi belanja: admin mengecek, usulan "isi sampai penuh", laporan sampai di meja bos (`report_submitted`), keputusan bos (`report_decided` lewat API), pemesanan per bahan, pemasok tiruan (tepat waktu, telat, kosong; diundi seeded dari bobot `suppliers_mock`), `restock_arrived`, pesanan tertahan dilanjutkan FIFO (`order_resumed`)
-- [ ] Penolakan bos: admin menunggu 1 jam virtual, lalu mengecek lagi dan mengusulkan ulang bila masih tipis
-- [ ] Alur komplain berbasis aturan (balasan template), lapor ke bos bila butuh kompensasi
-- [ ] Perilaku laporan yang tidak diklik: menunggu (v1). `AutoBoss` hanya dipakai di tes dan demo
-- [ ] Event `agent_state_changed` dengan ETA untuk tampilan
-- [ ] API: `GET /agents`, `GET /orders`, `GET /reports`, `POST /reports/:id/decision`
-- [ ] Tampilan CLI `npm run watch` yang mencetak status agent dan laporan yang menunggu
-- [ ] Golden test satu hari dengan `AutoBoss`, `npm run demo:stage3`, panduan uji Tahap 3 di `docs/testing.md`
+- [x] Aturan murni di `core`: stasiun asal tiap agent, durasi tugas, perencana tugas (`goto` hanya bila perlu, `finalStation`)
+- [x] Keputusan aturan di `core`: usulan belanja "isi sampai penuh", triase komplain, teks template Indonesia
+- [x] `VirtualClock` dengan item dinamis (akhir tugas agent dan kedatangan pemasok dibaca dari proyeksi, item yang sudah lewat waktunya jatuh tempo sekarang)
+- [x] Langkah atomik: `transact` bersarang dan antrean reaksi yang dikuras sebelum commit
+- [x] Proyeksi untuk event Tahap 3 (agents, antrean tugas, laporan, pesanan belanja, komplain, pesanan dilanjutkan)
+- [x] Mesin agent: peran, stasiun, status (`idle`, `walking`, `working`), antrean tugas; jenis tugas `goto` dan `work` (tanpa `do`); durasi jalan dari tabel jarak; hook sebelum mulai untuk memasak
+- [x] Reaksi pesanan: kasir mencatat, koki memasak (stok dikurangi saat tugas memasak dimulai), `cooking_done`
+- [x] Reaksi belanja: admin mengecek, usulan "isi sampai penuh", laporan sampai di meja bos (`report_submitted`), keputusan bos (`report_decided` lewat API), pemesanan per bahan, pemasok tiruan (tepat waktu, telat, kosong; diundi seeded dari bobot `suppliers_mock`), `restock_arrived`, pesanan tertahan dilanjutkan FIFO (`order_resumed`)
+- [x] Penolakan bos: admin menunggu 1 jam virtual, lalu mengecek lagi dan mengusulkan ulang bila masih tipis
+- [x] Alur komplain berbasis aturan (balasan template), lapor ke bos bila butuh kompensasi
+- [x] Perilaku laporan yang tidak diklik: menunggu (v1). `AutoBoss` hanya dipakai di tes dan demo
+- [x] Event `agent_state_changed` dengan ETA untuk tampilan
+- [x] API: `GET /agents`, `GET /orders`, `GET /reports`, `POST /reports/:id/decision`
+- [x] Tampilan CLI `npm run watch` yang mencetak status agent dan laporan yang menunggu
+- [x] Golden test satu hari dengan `AutoBoss`, `npm run demo:stage3`, panduan uji Tahap 3 di `docs/testing.md`
 
 **Ditunda:** penyebab komplain `wrong_order` dan `quality` (Tahap 3 hanya `slow_service`), status `thinking` (menunggu LLM di Tahap 6), perilaku Rina (Tahap 5).
 
@@ -189,6 +189,18 @@ Hasil Tahap 2, bahan untuk materi:
 **Selesai jika:** satu hari terskrip (dengan `AutoBoss`) berjalan penuh hanya lewat log dan tes lulus, dan `npm run dev` nyala dengan bos (lu) bisa menyetujui laporan lewat API.
 
 **Catatan pelajaran:** state machine agent, serah-terima antar karakter.
+
+Hasil Tahap 3, bahan untuk materi:
+
+- **Satu langkah = satu transaksi:** satu kejadian (item jatuh tempo atau klik bos) ditulis bersama **semua reaksi berantainya** dalam satu transaksi, dan baru dipublikasikan setelah commit. Serah-terima antar karakter jadi semua-atau-tidak-sama-sekali: tidak ada "tugas selesai tapi `cooking_done` belum tertulis". Dibuktikan dengan restart di 20 titik berbeda dan tiap 37 menit sepanjang satu hari penuh, hasilnya log identik.
+- **Reaksi atas event, bukan callback:** koki "mendengar" `agent_task_finished` untuk tugas memasak, lalu menulis `cooking_done`. Tiap karakter hanya punya peta "event apa memicu apa", dijalankan FIFO, jadi urutannya deterministik dan bisa dibaca dari log.
+- **State machine agent yang kecil:** status `idle`, `walking`, `working`, antrean tugas, dan hanya dua jenis tugas (`goto` dan `work`). ETA ditulis di event, jadi tampilan 3D di Tahap 4 cukup menginterpolasi tanpa bertanya apa pun ke server.
+- **Timer dinamis dari proyeksi:** akhir tugas dan kedatangan pemasok tidak disimpan di memori, tapi dibaca dari tabel (`agent_tasks`, `restock_orders`) setiap jam bergerak. Karena itu pemulihan setelah restart tidak butuh kode khusus.
+- **Hook "sebelum mulai":** stok dicek dan dikurangi saat tugas memasak benar-benar mulai, bukan saat ditugaskan. Pesanan yang antre di belakang baru ditahan ketika gilirannya tiba dan bahannya ternyata kurang. Itu perilaku yang benar, dan yang tadinya terlihat seperti bug di papan pantau.
+- **Aturan sebagai fallback LLM:** jalur `agent_think_requested` lalu `agent_decided` sudah dipakai oleh aturan. Di Tahap 6 LLM hanya menggantikan pengambil keputusannya, bukan alurnya.
+- **Bos manusia tanpa trigger manual:** satu-satunya masukan adalah Setujui/Tolak. Untuk tes, bos otomatis melihat mejanya tiap menit absolut supaya hasilnya tidak bergantung cara waktu dipotong. Percobaan pertama (cek di awal lompatan) tidak melihat laporan yang muncul di tengah lompatan: bug yang ketahuan saat menjalankan satu hari penuh, bukan di tes kecil.
+- **Uji nyata menemukan hal yang tes otomatis tidak:** dunia lama dari Tahap 2 ternyata tidak crash tapi meninggalkan pesanan yatim, dan jalur komplain-ke-bos tidak bisa tercapai dengan pengaturan bawaan (komplain selalu muncul di menit ke-20). Dua-duanya dicatat terang-terangan.
+- **Batas yang disadari:** satu koki kewalahan di jam makan siang (komplain "layanan lambat" muncul, itu bahan pelajaran tentang bottleneck), laporan yang tidak diklik menahan belanja, teks laporan dan balasan masih template, dan hanya komplain `slow_service`.
 
 ---
 

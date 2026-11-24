@@ -30,6 +30,7 @@ Daftar lengkapnya ada di brief bagian 4. Yang paling sering tergoda dilanggar:
 - **Event log (`events`) adalah sumber kebenaran.** Tabel lain adalah proyeksi, ditulis dalam transaksi yang sama dengan append event.
 - **Proyeksi hanya ditulis lewat `applyEvent`** (SQL, di `server`), dan `appendEvent` wajib di dalam transaksi. `core` memutuskan apa yang harus terjadi (fungsi murni), `server` mencatatnya (keputusan 019). Event yang proyeksinya belum dibuat melempar `ProjectionNotImplementedError`: tahap berikutnya wajib menambahkannya.
 - **State hidup di server.** `web` hanya presentasi dan tidak membuat keputusan.
+- **Satu langkah = satu transaksi** (keputusan 022): kejadian yang jatuh tempo atau klik bos ditulis bersama semua reaksi berantai karakter, commit sekali, baru dipublikasikan. Karakter bereaksi pada **event** (`agents/reactions.ts`), bukan lewat callback. Akhir tugas agent dan kedatangan pemasok dibaca dari proyeksi (keputusan 023), jangan disimpan di memori.
 - **Waktu virtual dalam detik (integer).** Di `packages/core` dilarang `Date.now()`, `Math.random()`, dan `new Date()` tanpa argumen (dijaga lint).
 - **"Kapan apa terjadi" adalah fungsi murni dari (seed, waktu absolut)** (`dueItems`, `rand(seed, key)` di `core`, keputusan 020). Jam (`VirtualClock`) memproses item berurutan, jadi hasilnya sama berapa pun granularitas `advance` dan setelah restart. Seed dunia dibaca dari `world_initialized` di log, bukan dari `.env`. Kecepatan dan pause (`Pacer`) bukan event (keputusan 021).
 - **`packages/core` tanpa I/O:** tidak ada fs, jaringan, atau `process`.
@@ -39,8 +40,8 @@ Daftar lengkapnya ada di brief bagian 4. Yang paling sering tergoda dilanggar:
 
 ## Peta repo
 
-- `packages/core`: domain murni (event, aturan masak dan ambang stok, label log, RNG tanpa state, jadwal dan generator dunia, `VirtualClock`).
-- `packages/server`: Node, SQLite, migrasi, seed, event store dan proyeksi (`applyEvent`), use case (pesanan, memasak), simulasi (`bootSimulation`: jam virtual, generator, pemulihan saat boot), `Pacer`, API kasir mock dan kontrol waktu (`node:http`), event bus, log terminal, `npm run dev`. WebSocket menyusul.
+- `packages/core`: domain murni (event, aturan masak dan ambang stok, usulan belanja dan triase komplain, rencana tugas agent, teks template dan kamus kata Indonesia, label log, RNG tanpa state, jadwal dan generator dunia, `VirtualClock` dengan item dinamis).
+- `packages/server`: Node, SQLite, migrasi, seed, event store dan proyeksi (`applyEvent`), use case (pesanan, memasak, keputusan bos), simulasi (`bootSimulation`: jam virtual, generator, pemulihan saat boot), mesin agent dan reaksi karakter (`agents/`: kasir, koki, admin stok), `Pacer`, API (kasir mock, kontrol waktu, bos: `/agents` `/orders` `/reports`, `node:http`), event bus, log terminal, papan pantau (`watch/`), `npm run dev`. WebSocket menyusul.
 - `packages/web`: stub sampai Tahap 4.
 - `tools/`: tes untuk tooling (aturan lint, tes drift `docs/events.md` terhadap kode).
 - `docs/`: plan, konsep, katalog event, skema, keputusan, referensi.
@@ -59,10 +60,14 @@ npm run db:migrate    # buat atau perbarui data/cafe.db
 npm run seed          # isi tabel referensi (menu, bahan, resep, langganan, pemasok)
 npm run demo:stage1   # demo Tahap 1 di database memori (pesanan lewat API, log, replay check)
 npm run demo:stage2   # demo Tahap 2: satu hari penuh, replay check dan restart check
-npm run dev           # server hidup: dunia, jam virtual, API di :3000 (lihat docs/testing.md)
+npm run demo:stage3   # demo Tahap 3: satu hari dengan karakter dan bos otomatis, replay check dan restart check
+npm run dev           # server hidup: dunia, karakter, jam virtual, API di :3000 (lihat docs/testing.md)
+npm run watch         # papan pantau live (karakter, pesanan, stok, laporan di meja bos); `-- --once` cetak sekali
 ```
 
-Golden test satu hari ada di `packages/server/src/sim/__golden__/day-seed-42.json`. Kalau dunia yang dihasilkan memang sengaja berubah, tinjau diff-nya lalu regenerasi dengan `UPDATE_GOLDEN=1 npm test`.
+Golden test satu hari ada di `packages/server/src/sim/__golden__/`: `day-seed-42.json` (dunia tanpa karakter, `agents: false`) dan `day-seed-42-agents.json` (dunia dengan karakter dan `AutoBoss`, waktu sampai detik). Kalau hasilnya memang sengaja berubah, tinjau diff-nya lalu regenerasi dengan `UPDATE_GOLDEN=1 npm test`.
+
+`bootSimulation` menjalankan karakter secara bawaan. Tes yang mengandalkan "belum ada yang memasak" (Tahap 2) memakai `agents: false`. `AutoBoss` dan `playDay` (`test-support/`) hanya untuk tes dan demo, bukan fitur produk.
 
 `docs/events.md` adalah kontrak event: ubah dokumen dan skema zod di `packages/core` bersamaan, tes drift akan gagal kalau keduanya berbeda.
 

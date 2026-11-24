@@ -6,7 +6,7 @@ Event-driven jadi tulang punggung (event log, antrean, replay). Generative agent
 
 ## Status
 
-**Tahap 0 (persiapan), 1 (data dan kasir mock), dan 2 (mesin kejadian, waktu virtual, replay) selesai.** Dunia kafe berjalan sendiri: jam virtual, pesanan datang dari generator, komplain muncul kalau pesanan menunggu, dan semuanya tercatat sebagai event. State bisa dibangun ulang dari log (replay), dan server yang mati lalu nyala melanjutkan dunia dari log. Hasilnya berupa log di terminal dan API lokal (`npm run dev`). Belum ada karakter yang memasak (Tahap 3) dan belum ada tampilan web (Tahap 4). Tahap berikutnya dimulai setelah pemilik bilang lanjut.
+**Tahap 0 sampai 3 selesai.** Dunia kafe berjalan sendiri (jam virtual, pesanan dari generator), dan sekarang ada **tiga karakter berbasis aturan**: kasir mencatat pesanan, koki memasak dan mengurangi stok, admin stok mengecek rak lalu membawa laporan usulan belanja ke meja bos. **Lu jadi bosnya**: setujui atau tolak laporan lewat API, lalu pemasok tiruan mengirim (tepat waktu, telat, atau kosong), stok terisi, dan pesanan yang tertahan lanjut dimasak. Semuanya tercatat sebagai event, bisa di-replay, dan dunia pulih setelah server dimatikan. Hasilnya berupa log di terminal, API lokal, dan papan pantau `npm run watch`. Belum ada tampilan 3D (Tahap 4) dan belum ada LLM (Tahap 5 dan 6): keputusan karakter masih aturan. Tahap berikutnya dimulai setelah pemilik bilang lanjut.
 
 ## Quickstart
 
@@ -21,7 +21,9 @@ npm run db:migrate    # membuat data/cafe.db
 npm run seed          # mengisi menu, bahan, resep, langganan, pemasok
 npm run demo:stage1   # demo Tahap 1: pesanan, stok turun, stock_low, replay check
 npm run demo:stage2   # demo Tahap 2: satu hari penuh dalam hitungan detik
-npm run dev           # server hidup: jam virtual jalan, API di http://127.0.0.1:3000
+npm run demo:stage3   # demo Tahap 3: satu hari dengan karakter dan bos otomatis
+npm run dev           # server hidup: jam virtual jalan, karakter bekerja, API di http://127.0.0.1:3000
+npm run watch         # (tab lain) papan pantau: siapa di mana, pesanan, stok, laporan menunggu
 ```
 
 Panduan mencoba sendiri langkah demi langkah (termasuk uji pemulihan setelah Ctrl+C): [`docs/testing.md`](docs/testing.md).

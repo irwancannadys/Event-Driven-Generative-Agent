@@ -17,7 +17,7 @@ npm install      # pasang dependency
 npm test
 ```
 
-**Yang diharapkan:** baris terakhir seperti `Tests  346 passed (346)` (angkanya naik tiap tahap) dan tidak ada tulisan `failed`. Kalau ada yang merah, nama tesnya menunjukkan bagian mana yang rusak.
+**Yang diharapkan:** baris terakhir seperti `Tests  588 passed (588)` (angkanya naik tiap tahap) dan tidak ada tulisan `failed`. Kalau ada yang merah, nama tesnya menunjukkan bagian mana yang rusak.
 
 Pemeriksaan lain yang cepat: `npm run lint`, `npm run typecheck`, `npm run format:check`. Ketiganya tidak boleh mencetak error.
 
@@ -50,13 +50,43 @@ npm run demo:stage2
 
 **Artinya:** hari yang sama bisa dijalankan sekali jalan atau diputus di tengah (server dimatikan jam 12:07 lalu dinyalakan lagi), dan hasilnya identik.
 
-## 4. Server hidup: `npm run dev`
+## 4. Demo Tahap 3: satu hari dengan karakter dan bos otomatis
 
-### 4.1 Nyalakan
+```
+npm run demo:stage3
+```
+
+Satu hari penuh, tapi sekarang ada kasir, koki, dan admin stok yang bekerja, dan bos yang dimainkan komputer (ia menyetujui laporan 10 menit setelah sampai di mejanya, kecuali setiap laporan keempat yang ia tolak).
+
+**Yang dicari di log:**
+
+- `order_created`, lalu `cooking_started` dan beberapa `stock_decreased`, lalu `cooking_done`. Pesanan sekarang benar-benar dimasak, satu per satu oleh satu koki.
+- Sekitar 13:01 `stock_low ingredient_id=susu`, disusul `agent_think_requested`, `agent_decided`, `restock_proposed`, `report_submitted`, `[Bos] report_decided`, `restock_ordered` (ada `supplier=on_time` atau `late`, dan jam `eta_sim_time`), lalu nanti `restock_arrived`.
+- `order_held` (pesanan ditahan karena susu kurang) dan beberapa saat kemudian `order_resumed` setelah stok datang.
+- `complaint_received` yang dijawab kasir (`complaint_triaged` lalu `complaint_replied`).
+- Event `agent_task_*` dan `agent_state_changed` **sengaja tidak tampil**: itu "kabel" gerak karakter, bukan cerita. Isinya tetap ada di database.
+
+**Di ringkasan (seed 42):**
+
+```
+Pesanan: 75 masuk, 75 selesai, 0 ditahan, 0 masih diproses (3 kali sempat ditahan karena bahan kurang)
+Belanja: 6 laporan ke meja bos (5 disetujui, 1 ditolak, 0 menunggu), pemasok tepat waktu 3, telat 2, kosong 0
+Komplain: 4 masuk, 4 dibalas (0 lewat bos)
+Replay check: OK (state hasil replay dari log sama dengan state live)
+Restart check: OK (restart pukul 12:07 memberi log yang identik)
+```
+
+**Artinya:** satu laporan yang ditolak diikuti usulan baru, tiga pesanan sempat tertahan lalu lanjut, dan hasilnya sama persis walau server dimatikan di tengah (jam 12:07, saat koki sedang memasak).
+
+## 5. Server hidup: `npm run dev`
+
+### 5.1 Nyalakan
 
 ```
 npm run dev
 ```
+
+**Kalau lu masih punya `data/cafe.db` dari Tahap 2, hapus dulu: `rm -f data/cafe.db*`.** Server baru tidak crash di atas dunia lama (gua coba), tapi pesanan dan komplain yang sudah ada di dunia itu tidak punya karakter yang mengurusnya, jadi mereka tertinggal berstatus `placed` dan `received` selamanya.
 
 Biarkan terminal ini terbuka. Server memakai file `data/cafe.db` dan API di `http://127.0.0.1:3000`. Jam virtual berjalan **60 kali lebih cepat** dari jam asli (1 detik asli = 1 menit virtual).
 
@@ -65,7 +95,7 @@ Biarkan terminal ini terbuka. Server memakai file `data/cafe.db` dan API di `htt
 ```
 === Server kafe virtual ===
 Database : /Users/irwancannady/lesson/data/cafe.db
-API      : http://127.0.0.1:3000  (GET /time /menu /stock, POST /orders /time)
+API      : http://127.0.0.1:3000  (GET /time /menu /stock /orders /agents /reports, POST /orders /time /reports/:id/decision)
 Kecepatan: 60x (1 detik asli = 60 detik virtual)
 Dunia baru dibuat: jam 07:50, hari 0, seed 42
 Tekan Ctrl+C untuk berhenti. Jam virtual disimpan saat berhenti.
@@ -74,7 +104,7 @@ Tekan Ctrl+C untuk berhenti. Jam virtual disimpan saat berhenti.
 
 Sekitar 10 detik kemudian muncul `day_opened` (jam 08:00), lalu pesanan masuk berkala.
 
-### 4.2 Pakai terminal kedua untuk `curl`
+### 5.2 Pakai terminal kedua untuk `curl`
 
 Buka tab terminal baru (server di tab pertama tetap jalan).
 
@@ -89,7 +119,7 @@ curl -s -X POST localhost:3000/orders \
 
 Pesanan manual terakhir muncul juga di log server sebagai `order_created`. Tambahkan `| python3 -m json.tool` di belakang `curl` kalau mau hasilnya rapi.
 
-### 4.3 Kontrol waktu
+### 5.3 Kontrol waktu
 
 ```
 # lebih cepat: 600x (1 detik asli = 10 menit virtual)
@@ -105,7 +135,7 @@ curl -s -X POST localhost:3000/time -H 'content-type: application/json' -d '{"ad
 
 **Yang dicari:** saat dijeda, log berhenti dan `/time` tidak bergerak. Saat dimajukan 30 menit, baris `sim_time_advanced` muncul diikuti semua kejadian di rentang itu, berurutan, tidak ada yang terlewat. Nilai yang tidak masuk akal (mis. `{"speed":0}`) ditolak dengan HTTP 400.
 
-### 4.4 Uji pemulihan (inti desain kita)
+### 5.4 Uji pemulihan (inti desain kita)
 
 1. Biarkan server jalan sampai ada beberapa event. Catat jam dari `curl -s localhost:3000/time`.
 2. Matikan server dengan **Ctrl+C**. Harus muncul `mematikan server...` lalu `Jam virtual disimpan. Sampai jumpa.`
@@ -125,7 +155,7 @@ Angka event harus sama dengan hasil `sqlite3` tadi, jam lanjut dari titik terakh
 
 Dua hal yang **sengaja tidak** dipulihkan: kecepatan kembali ke `SPEED` (atau 60), dan server selalu mulai tidak dijeda. Itu pengaturan menjalankan, bukan bagian dari dunia.
 
-### 4.5 Uji determinisme (seed)
+### 5.5 Uji determinisme (seed)
 
 "Kebetulan" di simulasi ini ditentukan oleh seed, jadi dua dunia dengan seed sama harus identik. Pakai kecepatan tinggi biar cepat kelihatan.
 
@@ -140,7 +170,7 @@ SEED=7  SPEED=3600 npm run dev     # pesanan berbeda
 
 Satu hal yang juga bisa dicoba: nyalakan dunia dengan `SEED=42`, matikan, lalu nyalakan lagi dengan `SEED=999` **tanpa** menghapus `data/cafe.db`. Log tetap menyebut `seed 42`: dunia yang sudah ada memakai seed yang tersimpan di log-nya, bukan seed dari pengaturan.
 
-### 4.6 Mulai dari nol
+### 5.6 Mulai dari nol
 
 ```
 rm -f data/cafe.db*
@@ -148,7 +178,7 @@ rm -f data/cafe.db*
 
 Lalu `npm run dev` membuat dunia baru dari awal.
 
-### 4.7 Pengaturan lain (opsional)
+### 5.7 Pengaturan lain (opsional)
 
 Semua lewat variabel lingkungan atau file `.env` (salin dari `.env.example`):
 
@@ -162,14 +192,133 @@ Semua lewat variabel lingkungan atau file `.env` (salin dari `.env.example`):
 
 Nilai yang salah (mis. `SPEED=abc`) membuat server menolak nyala dengan pesan yang menyebut nama variabelnya.
 
-## 5. Yang wajar dilihat, dan yang belum ada
+## 6. Tahap 3 langsung: karakter bekerja dan lu jadi bos
 
-- **Belum ada yang memasak.** Koki baru dibuat di Tahap 3. Pesanan yang masuk tetap berstatus `placed`, jadi stok tidak turun.
-- **Komplain muncul karena itu.** Pesanan yang menunggu lebih dari 20 menit virtual bisa dikomplain (peluang 15% per pesanan, hasil undiannya tetap per pesanan). Itu wajar: memang tidak ada yang melayani.
-- Belum ada tampilan web (Tahap 4) dan belum ada LLM (Tahap 5 dan 6).
-- Setelah `day_closed` (20:00) sampai `day_opened` hari berikutnya tidak ada event. Percepat dengan `{"speed":3600}` atau `{"advance_seconds":...}`.
+Ini inti Tahap 3. Buka **tiga tab terminal**, semuanya di folder repo.
 
-## 6. Kalau ada yang aneh
+### 6.1 Siapkan
+
+```
+rm -f data/cafe.db*        # tab 1: dunia baru
+npm run dev                # tab 1: server (biarkan jalan)
+npm run watch              # tab 2: papan pantau (biarkan jalan)
+```
+
+Tab 3 buat perintah `curl`. Papan di tab 2 digambar ulang tiap detik. Kalau server belum nyala, papan bilang `Belum bisa menyambung ke server...` dan menyambung sendiri begitu server siap. Kalau lu pakai port lain (`PORT=3100`), jalankan juga `PORT=3100 npm run watch`.
+
+Percepat dunia biar tidak menunggu lama (600x: satu detik asli = 10 menit virtual):
+
+```
+curl -s -X POST localhost:3000/time -H 'content-type: application/json' -d '{"speed":600}'
+```
+
+### 6.2 Lihat karakter bekerja
+
+Setelah `day_opened` (08:00) dan pesanan mulai masuk, papan menampilkan seperti ini (cuplikan asli dari jalan sungguhan, bagian atasnya):
+
+```
+=== Kafe Virtual ===  hari 0, 13:11  ·  kecepatan 600x
+────────────────────────────────────────────────────────────────────────
+KARAKTER
+  Kasir           Kasir      bekerja: mencatat pesanan (sampai 13:11)
+  Koki            Dapur      bekerja: memasak (sampai 13:23), antre 4
+  Admin Stok      Rak Stok   berjalan ke Rak Stok (sampai 13:12)
+  Rina (pelayan)  Meja 2     menganggur
+
+PESANAN
+  menunggu 5 · dimasak 1 · ditahan (bahan kurang) 0
+    #31 12:47 nasi_goreng×2  [dimasak]
+    #32 12:50 kopi_susu×1  [menunggu]
+...
+```
+
+**Yang dicari:** kasir `bekerja: mencatat pesanan` selama 45 detik virtual, lalu koki `bekerja: memasak` sampai jam yang tertulis. `antre 4` artinya koki punya empat tugas lagi di belakang yang sedang ia kerjakan. Pesanan bergeser dari `menunggu` ke `dimasak`, lalu ke daftar `selesai terakhir`. Stok di bagian STOK turun sesuai resep. Satu koki saja, jadi di jam makan siang pesanan mengantre.
+
+Datanya yang sama bisa dilihat mentah:
+
+```
+curl -s localhost:3000/agents | python3 -m json.tool
+curl -s 'localhost:3000/orders?status=held'
+```
+
+### 6.3 Sampai ada laporan di meja bos
+
+Dunia normal memunculkan laporan pertama sendiri (sekitar pukul 13:00, ketika susu menyentuh batas minimum): pada 600x itu sekitar 30 detik asli. Admin stok jalan ke rak, mengecek (90 detik virtual), memutuskan, jalan ke meja bos, dan menyerahkan laporan. Di papan, baris `Admin Stok` berganti-ganti: `berjalan ke Rak Stok`, `bekerja: mengecek stok`, `berjalan ke Meja Bos`, `bekerja: menyerahkan laporan`.
+
+**Jalan pintas** kalau lu tidak mau menunggu sampai siang: pesan 10 kopi susu lewat kasir mock (susu langsung menyentuh batasnya). Laporan sampai di meja bos sekitar 7 menit virtual kemudian.
+
+```
+curl -s -X POST localhost:3000/orders -H 'content-type: application/json' \
+  -d '{"items":[{"menu_item_id":"kopi_susu","qty":10}]}'
+```
+
+Begitu laporan sampai, papan punya bagian ini, lengkap dengan perintah yang tinggal lu salin:
+
+```
+MEJA BOS  (1 laporan menunggu keputusan lu)
+  #1 [belanja] Usul belanja: Susu
+     Urgensi: normal.
+     Susu: pesan 5000 ml (stok 1000 dari 6000).
+     setujui: curl -s -X POST http://127.0.0.1:3000/reports/1/decision -H 'content-type: application/json' -d '{"decision":"approved"}'
+     tolak  : curl -s -X POST http://127.0.0.1:3000/reports/1/decision -H 'content-type: application/json' -d '{"decision":"rejected"}'
+```
+
+Daftarnya juga ada di `curl -s 'localhost:3000/reports?status=submitted' | python3 -m json.tool`.
+
+### 6.4 Jadi bos: setujui
+
+```
+curl -s -X POST localhost:3000/reports/1/decision -H 'content-type: application/json' -d '{"decision":"approved"}'
+```
+
+**Yang dicari:** balasan berisi laporan dengan `"status":"approved"`. Di log server muncul `[Bos] report_decided report_id=1 decision=approved`. Admin stok jalan balik ke rak dan memesan ke pemasok (60 detik virtual), lalu muncul `restock_ordered ... supplier=on_time eta_sim_time=HH:MM`. Susu butuh sekitar 2 jam virtual (12 detik asli pada 600x): di jalan gua `restock_ordered` jatuh pukul 13:13 dengan `eta_sim_time=15:13`, dan tepat 15:13 muncul `[Trigger] restock_arrived`. Di `curl -s localhost:3000/stock` susu naik lagi dan `"low":false` (gua lihat 4950 ml, bukan 6000, karena koki sudah memakai sebagian selama dua jam itu).
+
+Pemasoknya diundi dari bobot di tabel `suppliers_mock`, hasilnya tetap untuk seed yang sama: `on_time` (tepat), `late` (lebih lambat dari biasanya), atau `out` (kosong: `restock_failed`, lalu admin menyiapkan usulan baru).
+
+Kalau ada pesanan yang tadinya `ditahan (bahan kurang)` (lihat `curl -s 'localhost:3000/orders?status=held'`), begitu stok datang muncul `order_resumed` dan pesanan itu dimasak.
+
+### 6.5 Jadi bos: tolak
+
+Pakai laporan berikutnya:
+
+```
+curl -s -X POST localhost:3000/reports/2/decision -H 'content-type: application/json' -d '{"decision":"rejected"}'
+```
+
+**Yang dicari:** `report_decided ... decision=rejected` dan tidak ada `restock_ordered`. Admin menunggu 1 jam virtual (papan: `bekerja: menunggu sebelum cek ulang`), mengecek lagi, dan kalau stok masih tipis menyerahkan **laporan baru** (id berikutnya).
+
+### 6.6 Salah pakai (gua sudah coba semuanya)
+
+| Perintah | Hasil |
+|---|---|
+| keputusan untuk laporan yang tidak ada (`/reports/99/decision`) | `404` `report_not_found` |
+| memutuskan laporan yang sama dua kali | `409` `report_not_submitted` |
+| memutuskan laporan yang admin belum sampaikan (masih dibawa jalan) | `409` yang sama |
+| `{"decision":"maybe"}` atau JSON rusak | `400` |
+| `GET /reports?status=waiting` | `400` `invalid_query` |
+
+### 6.7 Uji pemulihan dengan karakter
+
+1. Tunggu sampai koki sedang memasak (papan: `bekerja: memasak (sampai ...)`). Catat `curl -s localhost:3000/agents`: id tugas koki.
+2. **Ctrl+C** di tab 1. Harus muncul `mematikan server...` lalu `Jam virtual disimpan. Sampai jumpa.` Papan di tab 2 bilang tidak bisa menyambung.
+3. `npm run dev` lagi. Harus muncul `Dunia dipulihkan dari log: N event dibaca ulang, jam ...`, dan papan menyambung sendiri.
+
+**Yang dicari:** koki masih mengerjakan **tugas yang sama** (id sama di `/agents`), pesanannya sama, laporan yang menunggu di meja bos tetap ada, dan setelah waktu lewat `cooking_done` muncul tepat satu kali untuk pesanan itu. Gua uji ini di proses sungguhan: restart di tengah tugas memasak, hasilnya tidak ada pesanan yang dimasak dua kali.
+
+### 6.8 Kalau lu tidak mengklik
+
+Laporan yang dibiarkan menunggu terus menunggu (aturan v1, keputusan 024). Bahan itu tidak dipesan, jadi pesanan yang butuh bahan itu `ditahan (bahan kurang)` dan menumpuk di papan. Itu **wajar**, bukan bug: itulah akibat bos yang tidak bekerja. Setujui laporannya, dan pesanan yang tertahan lanjut sendiri.
+
+## 7. Yang wajar dilihat, dan yang belum ada
+
+- **Koki kewalahan di jam makan siang.** Ada satu koki dan pesanan sekitar 14 per jam, jadi antrean menumpuk dan komplain "layanan lambat" muncul. Itu perilaku yang wajar dan bahan pelajaran tentang bottleneck, bukan bug. Kasir menjawab komplain sendiri dengan template permohonan maaf.
+- **Komplain yang butuh bos belum bisa dilihat di dunia bawaan.** Komplain muncul tepat di menit ke-20, dan aturan kasir baru meminta persetujuan bos untuk pesanan yang menunggu lebih dari 40 menit. Jalurnya (kompensasi, laporan, keputusan bos, balasan) sudah dibuat dan dites otomatis, tapi tidak akan muncul di uji manual sampai ada pengaturan yang mengubah waktu komplain (lihat catatan di keputusan 024). Gua tidak menyembunyikannya.
+- Teks laporan dan balasan komplain masih **template** (bukan LLM). LLM baru di Tahap 5 dan 6.
+- Rina (pelayan) ada di papan di Meja 2 tapi belum melakukan apa pun (Tahap 5). Status `berpikir` juga belum dipakai (Tahap 6).
+- Belum ada tampilan 3D (Tahap 4).
+- Setelah `day_closed` (20:00) sampai `day_opened` hari berikutnya tidak ada pesanan baru, tapi karakter menyelesaikan sisa tugasnya. Percepat dengan `{"speed":3600}` atau `{"advance_seconds":...}`.
+
+## 8. Kalau ada yang aneh
 
 | Gejala | Kemungkinan penyebab dan cara cek |
 |---|---|
@@ -179,3 +328,8 @@ Nilai yang salah (mis. `SPEED=abc`) membuat server menolak nyala dengan pesan ya
 | Log tidak bergerak | Mungkin sedang dijeda. Cek `curl -s localhost:3000/time` |
 | Log terlalu lambat | Naikkan kecepatan: `{"speed":600}` |
 | `sqlite3: command not found` | Langkah itu opsional. Lewati saja |
+| `watch` bilang `Belum bisa menyambung ke server` | Server belum nyala atau port-nya beda. Nyalakan `npm run dev`, atau samakan: `PORT=3100 npm run watch` (atau `CAFE_API_URL=http://127.0.0.1:3100`) |
+| Laporan tidak kunjung muncul | Belum ada bahan yang menyentuh batas minimum. Percepat dunia (`{"speed":600}`) atau pakai jalan pintas 10 kopi susu (bagian 6.3) |
+| `409` saat menyetujui laporan | Laporan belum sampai di meja bos (admin masih jalan) atau sudah diputuskan. Lihat yang siap: `curl -s 'localhost:3000/reports?status=submitted'` |
+| Pesanan `ditahan` tidak lanjut | Laporan belanjanya belum diklik, atau pemasok `late` atau `out`. Cek `curl -s localhost:3000/reports` dan baris `restock_ordered ... supplier=` di log |
+| Banyak pesanan `placed` dan `received` yang tidak bergerak dari hari lama | Itu sisa dunia Tahap 2. `rm -f data/cafe.db*` lalu nyalakan lagi |
