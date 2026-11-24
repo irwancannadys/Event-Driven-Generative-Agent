@@ -1259,6 +1259,7 @@
   "20:03:00 agent_think_requested stock_admin policy_review",
   "20:03:00 agent_decided stock_admin policy_review",
   "20:03:00 daily_review_created day=0 Hari 0: 75 pesanan, 75 selesai, 3 kali ditahan, 4 komplain. Paling bermasalah: Susu (3x menahan pesanan).",
+  "20:03:00 memory_created observation susu: Hari 0: 75 pesanan, 3 kali ditahan, 4 komplain. Susu menahan 3 pesanan.",
   "20:03:00 policy_proposed report=#7 susu min 1000 -> 1500",
   "20:03:00 agent_task_assigned stock_admin #189 goto boss_desk",
   "20:03:00 agent_task_assigned stock_admin #190 work submitting_report",

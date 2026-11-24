@@ -220,3 +220,115 @@ describe('the decision of the boss', () => {
     expect(events(db, 'policy_proposed')).toHaveLength(1); // only the first night
   });
 });
+
+describe('the notes of the stock admin: what she saw and what came of what she proposed', () => {
+  const heldOrders = (
+    db: ReturnType<typeof boot>['db'],
+    day: number,
+    first: number,
+    count: number,
+  ) =>
+    appendInTransaction(
+      db,
+      ...Array.from({ length: count }, (_, index) => first + index).flatMap((id) => [
+        ev.orderCreated(id, [{ menu_item_id: 'kopi_susu', qty: 1 }], simTime(day, 12, id)),
+        ev.orderHeld(
+          id,
+          [{ ingredient_id: 'susu', needed: 150, available: 100 }],
+          simTime(day, 12, id),
+        ),
+      ]),
+    );
+  const notes = (db: ReturnType<typeof boot>['db']) =>
+    db.prepare('SELECT kind, ingredient_id, text, sim_time FROM memories ORDER BY id').all() as {
+      kind: string;
+      ingredient_id: string | null;
+      text: string;
+      sim_time: number;
+    }[];
+  const reportId = (sim: ReturnType<typeof boot>['sim']) =>
+    sim.ctx.db
+      .prepare("SELECT id FROM reports WHERE type = 'policy' ORDER BY id DESC")
+      .pluck()
+      .get() as number;
+  const NIGHT1 = simTime(1, 20) + TASK_DURATION_SEC.reviewing_day + 10;
+
+  it('writes down what she saw every night, about the ingredient that gave the most trouble', () => {
+    const { db, sim } = boot();
+    goTo(sim, WRITTEN_AT);
+    expect(notes(db)).toEqual([
+      expect.objectContaining({ kind: 'observation', ingredient_id: 'susu', sim_time: WRITTEN_AT }),
+    ]);
+    expect(notes(db)[0]?.text).toContain('Hari 0: 3 pesanan, 3 kali ditahan');
+    const [made] = events(db, 'memory_created');
+    expect(made).toMatchObject({ actor: 'stock_admin', origin: 'rule' });
+  });
+
+  it('writes an observation also on a day without trouble, and then it is about no ingredient', () => {
+    const { db, sim } = boot({ trouble: false });
+    goTo(sim, WRITTEN_AT);
+    expect(notes(db)).toEqual([
+      expect.objectContaining({ kind: 'observation', ingredient_id: null }),
+    ]);
+  });
+
+  it('notes that the boss refused, and does not propose the ingredient again, however much trouble it gives', () => {
+    const { db, sim, llm } = boot();
+    goTo(sim, WRITTEN_AT + 1000);
+    decideReport(sim.ctx, { report_id: reportId(sim), decision: 'rejected' });
+    expect(notes(db).at(-1)).toMatchObject({ kind: 'reflection', ingredient_id: 'susu' });
+    expect(notes(db).at(-1)?.text).toContain('Bos menolak');
+    expect(notes(db).at(-1)?.text).toContain('Jangan diulang');
+    heldOrders(db, 1, 4, 5); // more trouble with milk the next day
+    goTo(sim, NIGHT1);
+    expect(events(db, 'daily_review_created')).toHaveLength(2);
+    expect(events(db, 'policy_proposed')).toHaveLength(1); // the first night only
+    // and the model was told what she knows
+    expect(llm?.calls.at(-1)?.request.context).toContain('Catatan:');
+    expect(llm?.calls.at(-1)?.request.context).toContain('Bos menolak');
+  });
+
+  it('judges the next night whether an approved change helped, and says so: fewer orders were held', () => {
+    const { db, sim } = boot();
+    goTo(sim, WRITTEN_AT + 1000);
+    decideReport(sim.ctx, { report_id: reportId(sim), decision: 'approved' });
+    heldOrders(db, 1, 4, 1); // a better day: one order held instead of three
+    goTo(sim, NIGHT1);
+    const reflections = notes(db).filter((entry) => entry.kind === 'reflection');
+    expect(reflections).toHaveLength(1);
+    expect(reflections[0]).toMatchObject({ ingredient_id: 'susu' });
+    expect(reflections[0]?.text).toBe(
+      'Batas Susu dinaikkan dari 1000 ke 2000 ml: membantu (pesanan tertahan 3 jadi 1, habis 0 jadi 0 menit).',
+    );
+    // it is looked at once: the night after, nothing new about it
+    goTo(sim, simTime(2, 20) + TASK_DURATION_SEC.reviewing_day + 10);
+    expect(notes(db).filter((entry) => entry.kind === 'reflection')).toHaveLength(1);
+  });
+
+  it('says that a change did not help when as many or more orders were held, and does not try it again', () => {
+    const { db, sim } = boot();
+    goTo(sim, WRITTEN_AT + 1000);
+    decideReport(sim.ctx, { report_id: reportId(sim), decision: 'approved' });
+    heldOrders(db, 1, 4, 4); // a worse day
+    goTo(sim, NIGHT1);
+    const [reflection] = notes(db).filter((entry) => entry.kind === 'reflection');
+    expect(reflection?.text).toContain('tidak membantu (pesanan tertahan 3 jadi 4');
+    expect(reflection?.text).toContain('Jangan diulang');
+    // the review of the same night comes after the note: no second proposal for milk
+    expect(events(db, 'policy_proposed')).toHaveLength(1);
+  });
+
+  it('waits for a whole day under the new minimum: a change approved the next morning is judged a night later', () => {
+    const { db, sim } = boot();
+    goTo(sim, simTime(1, 9)); // the boss approves in the morning of day 1
+    decideReport(sim.ctx, { report_id: reportId(sim), decision: 'approved' });
+    heldOrders(db, 1, 4, 1);
+    goTo(sim, NIGHT1);
+    expect(notes(db).filter((entry) => entry.kind === 'reflection')).toEqual([]); // day 1 was not whole
+    heldOrders(db, 2, 7, 2);
+    goTo(sim, simTime(2, 20) + TASK_DURATION_SEC.reviewing_day + 10);
+    const reflections = notes(db).filter((entry) => entry.kind === 'reflection');
+    expect(reflections).toHaveLength(1);
+    expect(reflections[0]?.text).toContain('pesanan tertahan 3 jadi 2'); // day 0 against day 2
+  });
+});
