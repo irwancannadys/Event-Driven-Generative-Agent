@@ -10,7 +10,7 @@ describe('parseConfig', () => {
       databasePath: '/repo/data/cafe.db',
       port: 3000,
       speed: 60,
-      scenario: { seed: 42, crowdPct: 100, complaintChancePct: 15, complaintWaitSec: 1200 },
+      scenario: { seed: 42, crowdPct: 150, complaintChancePct: 15, complaintWaitSec: 1200 },
     });
   });
 

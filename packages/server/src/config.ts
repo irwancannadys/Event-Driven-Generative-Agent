@@ -47,7 +47,7 @@ export function parseConfig(env: Env, repoRoot: string): Config {
     scenario: makeScenario(
       intSetting(env, 'SEED', 42, Number.MIN_SAFE_INTEGER, Number.MAX_SAFE_INTEGER),
       {
-        crowdPct: intSetting(env, 'CROWD_PCT', 100, 0, 1000),
+        crowdPct: intSetting(env, 'CROWD_PCT', 150, 0, 1000),
         complaintChancePct: intSetting(env, 'COMPLAINT_CHANCE_PCT', 15, 0, 100),
         // In minutes, like people think about it. Complaints about a slow order arise at exactly this wait.
         complaintWaitSec:
