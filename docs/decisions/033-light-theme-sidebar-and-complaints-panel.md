@@ -13,3 +13,9 @@ Status: diterima (2026-11-24). Asal: revisi Tahap 4 (putaran 3), permintaan pemi
 ## Konsekuensi
 - Tidak ada mode gelap. Kalau nanti dibutuhkan, itu satu blok variabel warna di `style.css`.
 - Waiter yang mengantar makanan juga ditunda ke Tahap 5, karena butuh meja yang dikenal domain dan event `order_served`.
+
+## Pembaruan: token warna dan gaya kartu dari pemilik (Tahap 5)
+- Pemilik memberi satu set **token warna** (teal tua untuk pita atas, teal sedang untuk Meja bos, amber sebagai aksen, mint untuk status hidup dan tombol Setujui, abu kehijauan untuk permukaan, dan warna status: teal, oranye, merah, biru, ungu) dan dua gambar acuan. `style.css` ditulis ulang memakainya (`:root` memuat semua token) dan mengikuti gambar: pita teal tua di atas (full-bleed), kartu putih bersudut besar dengan ubin ikon berwarna, Meja bos gelap dengan tombol Setujui mint, Stok dengan chip status, Kejadian dengan filter.
+- Logo tetap hitam-putih (cangkir kopi): pemilik menyukainya, dan token "tile logo amber" tidak dipakai untuknya.
+- Bagian yang tidak ada di aplikasi ini tidak dibuat.
+- Susunan mengikuti gambar: Pesanan, Komplain, Karakter, dan kartu baru Admin Stok di bawah gambar; Meja bos, Stok, dan Kejadian di sidebar. Ikon ubin adalah gambar SVG di CSS (`mask`), jadi tidak ada DOM atau dependency baru.

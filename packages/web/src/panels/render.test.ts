@@ -61,9 +61,13 @@ describe('the panels', () => {
     expect(root.textContent).toContain('Menyambung ke server');
     // only the titles that fold a section and the button of the menu are left, no time control
     const buttons = root.findAll((node) => node.tag === 'button');
-    expect(buttons.every((node) => ['panel-toggle', 'menu-button'].includes(node.className))).toBe(
-      true,
-    );
+    expect(
+      buttons.every(
+        (node) =>
+          ['panel-toggle', 'menu-button'].includes(node.className) ||
+          node.className.startsWith('seg'),
+      ),
+    ).toBe(true);
   });
 
   it('show the connection, the time, the characters, the orders, the stock, the log and the boss desk', () => {
@@ -74,13 +78,14 @@ describe('the panels', () => {
     expect(text).toContain('Hari 0, 08:20');
     expect(text).toContain('kecepatan 60x');
     expect(text).toContain('Kasir');
-    expect(text).toContain('idle');
+    expect(text).toContain('Idle');
     expect(text).toContain('Susu');
-    expect(text).toContain('1000 / 6000 ml RENDAH');
+    expect(text).toContain('1.000 / 6.000 ml');
+    expect(text).toContain('Rendah');
     expect(text).toContain('Kafe buka (hari 0)');
     expect(text).toContain('Usul belanja: Susu');
     expect(text).toContain('Susu: pesan 5000 ml.');
-    expect(text).toContain('ditahan (bahan kurang)');
+    expect(text).toContain('Ditahan');
   });
 
   it('let the boss approve or reject a report on the desk, and not twice while it is being sent', async () => {
@@ -208,7 +213,8 @@ describe('the choice between the picture and the panels', () => {
       'Pesanan',
       'Stok',
       'Kejadian',
-      'Meja Bos',
+      'Meja bos',
+      'Admin Stok',
       'Usul belanja: Susu',
     ]) {
       expect(root.textContent).toContain(text);
@@ -306,11 +312,11 @@ describe('the complaints panel', () => {
     panels.update({ state, status: 'open', nowMs: 1000 });
     const text = complaintsPanel(root)?.textContent ?? '';
     for (const part of [
-      '#7',
-      'kualitas',
+      'Pesanan #7',
+      'Kualitas',
       'menunggu keputusan bos',
       'usul: item gratis',
-      '1 terbuka',
+      'terbuka',
     ])
       expect(text).toContain(part);
   });
@@ -381,5 +387,154 @@ describe('the time menu', () => {
     expect(shown(root)).toBe(true);
     root.fire('keydown', { key: 'Escape' });
     expect(shown(root)).toBe(false);
+  });
+});
+
+describe('the cards of the page', () => {
+  const card = (root: FakeNode, name: string) =>
+    root.findAll(
+      (node) => node.tag === 'section' && node.className.startsWith(`panel ${name}`),
+    )[0] as FakeNode;
+
+  it('puts the orders, the complaints, the characters and the stock admin under the picture, and the boss desk, the stock and the log beside it', () => {
+    const { root } = setup();
+    const under = root.findAll((node) => node.className === 'info')[0] as FakeNode;
+    const beside = root.findAll((node) => node.className === 'side')[0] as FakeNode;
+    const names = (node: FakeNode) =>
+      node.children.map((child) =>
+        typeof child === 'string' ? '' : child.className.split(' ')[1],
+      );
+    expect(names(under)).toEqual(['orders', 'complaints', 'agents', 'admin']);
+    expect(names(beside)).toEqual(['boss', 'stock', 'log']);
+  });
+
+  it('shows the orders as a big number of those that wait, a bar, three tiles, and how many were done', () => {
+    const { root, panels } = setup();
+    panels.update({ state: world(), status: 'open', nowMs: 1000 });
+    const orders = card(root, 'orders');
+    expect(orders.textContent).toContain('4 selesai');
+    expect(orders.textContent).toContain('2menunggu'); // the big number and what it counts
+    for (const label of ['Menunggu', 'Dimasak', 'Ditahan'])
+      expect(orders.textContent).toContain(label);
+    const parts = orders.findAll((node) => node.className.startsWith('order-seg'));
+    expect(parts.map((node) => node.style.width)).toEqual(['50%', '25%', '25%']);
+  });
+
+  it('shows every character with the letters of the name and a pill for what they do, and how many are busy', () => {
+    const { root, panels } = setup();
+    panels.update({ state: world(), status: 'open', nowMs: 1000 });
+    const agents = card(root, 'agents');
+    expect(agents.textContent).toContain('0 dari 2 bekerja');
+    expect(
+      agents.findAll((node) => node.className.startsWith('avatar')).map((node) => node.textContent),
+    ).toEqual(['K', 'Ko']);
+    expect(
+      agents.findAll((node) => node.className === 'pill').map((node) => node.textContent),
+    ).toEqual(['Idle', 'Idle']);
+  });
+
+  it('shows a report of stock as rows of ingredients with what to order, and the urgency as a chip', () => {
+    const { root, panels } = setup();
+    const state = apply(
+      world(),
+      event('restock_proposed', {
+        report: {
+          report_id: 9,
+          title: 'Usul belanja: Nasi',
+          body: 'Urgensi: normal.\nNasi: pesan 7000 g (stok 1000 dari 8000).',
+        },
+        items: [{ ingredient_id: 'nasi', qty: 7000 }],
+        urgency: 'normal',
+        rationale: 'x',
+      }),
+      event('report_submitted', { report_id: 9 }),
+    );
+    panels.update({ state, status: 'open', nowMs: 1000 });
+    const boss = card(root, 'boss');
+    expect(boss.textContent).toContain('2 menunggu');
+    expect(boss.textContent).toContain('Urgensi: normal');
+    expect(boss.textContent).toContain('Stok 1.000 / 8.000 g');
+    expect(boss.textContent).toContain('+7.000 g');
+  });
+
+  it('shows the stock with a chip for each ingredient and how many are out or low in the corner', () => {
+    const { root, panels } = setup();
+    panels.update({ state: world(), status: 'open', nowMs: 1000 });
+    const stock = card(root, 'stock');
+    expect(stock.textContent).toContain('1 rendah');
+    expect(
+      stock
+        .findAll((node) => node.className.startsWith('chip chip-'))
+        .map((node) => node.textContent),
+    ).toContain('Rendah');
+  });
+
+  it('narrows the log to one kind of event with the buttons in its corner, and back to all', () => {
+    const { root, panels } = setup();
+    const state = apply(
+      world(),
+      event('stock_low', { ingredient_id: 'susu', qty: 900, min_qty: 1000 }, 28_830),
+      event('day_opened', { day: 0 }, 28_840, { origin: 'scheduler' }),
+    );
+    panels.update({ state, status: 'open', nowMs: 1000 });
+    const sentences = () =>
+      card(root, 'log')
+        .findAll((node) => node.className === 'sentence')
+        .map((node) => node.textContent);
+    // the log has three events: the opening of the world (a rule here), the stock that is low (a rule), and the
+    // opening of the day (a trigger)
+    expect(sentences()).toHaveLength(3);
+    root.button('Aturan').click();
+    expect(sentences()).toHaveLength(2);
+    expect(sentences().some((text) => text.includes('Stok Susu menipis'))).toBe(true);
+    root.button('Trigger').click();
+    expect(sentences()).toEqual(['Kafe buka (hari 0)']);
+    root.button('LLM').click();
+    expect(sentences()).toEqual([]);
+    root.button('Semua').click();
+    expect(sentences()).toHaveLength(3);
+  });
+
+  it('shows the stock admin: before the first night what she does, afterwards her review, the policy and her notes', () => {
+    const { root, panels } = setup();
+    panels.update({ state: world(), status: 'open', nowMs: 1000 });
+    expect(card(root, 'admin').textContent).toContain('Belum ada review');
+    const state = apply(
+      world(),
+      event(
+        'daily_review_created',
+        {
+          day: 0,
+          summary: 'Hari 0: 75 pesanan.',
+          metrics: {
+            orders: 75,
+            done: 75,
+            held: 3,
+            complaints: 4,
+            held_by_ingredient: {},
+            stockout_sec: {},
+          },
+        },
+        72_180,
+        { origin: 'llm', actor: 'stock_admin' },
+      ),
+      event(
+        'memory_created',
+        { agent_id: 'stock_admin', kind: 'observation', text: 'Hari 0 ramai.' },
+        72_180,
+      ),
+    );
+    panels.update({ state, status: 'open', nowMs: 1000 });
+    const text = card(root, 'admin').textContent;
+    for (const part of [
+      'Review hari 0',
+      'LLM',
+      'Hari 0: 75 pesanan.',
+      'Kebijakan berlaku',
+      'Belum ada yang diubah dari awal.',
+      'Pengamatan',
+      'Hari 0 ramai.',
+    ])
+      expect(text).toContain(part);
   });
 });
