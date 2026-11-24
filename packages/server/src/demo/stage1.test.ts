@@ -65,7 +65,7 @@ describe('stage 1 demo', () => {
       (line) => line.includes('stock_low') && line.includes('ingredient_id=susu'),
     );
     expect(milkWarning).toBe(
-      '08:37  [Aturan]     stock_low          ingredient_id=susu qty=1000 min_qty=1000',
+      '08:37  [Aturan]     stock_low              ingredient_id=susu qty=1000 min_qty=1000',
     );
   });
 

@@ -19,7 +19,7 @@ const LABEL_TEXT: Record<LogLabel, string> = {
 };
 
 const LABEL_WIDTH = 11; // fits "[Inisiatif]"
-const TYPE_WIDTH = 17; // fits the longest event types of stage 1
+const TYPE_WIDTH = 21; // fits the longest event type (agent_think_requested)
 const MAX_INLINE_OBJECT = 60;
 
 /** The log line for an event, or `null` for plumbing events that are hidden from the log. */

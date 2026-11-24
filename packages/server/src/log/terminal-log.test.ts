@@ -7,15 +7,15 @@ function stored(event: Event, id = 1): StoredEvent {
   return { ...event, id } as StoredEvent;
 }
 
-/** The documented layout: clock, [label] (11 wide), type (17 wide), details. */
+/** The documented layout: clock, [label] (11 wide), type (21 wide), details. */
 function line(clock: string, label: string, type: string, details: string): string {
-  return `${clock}  ${`[${label}]`.padEnd(11)}  ${type.padEnd(17)}  ${details}`;
+  return `${clock}  ${`[${label}]`.padEnd(11)}  ${type.padEnd(21)}  ${details}`;
 }
 
 describe('formatEvent', () => {
   it('prints one aligned line per event', () => {
     expect(formatEvent(stored(ev.orderCreated(1)))).toBe(
-      '08:00  [Trigger]    order_created      order_id=1 source=walk_in items=kopi_susu×1',
+      '08:00  [Trigger]    order_created          order_id=1 source=walk_in items=kopi_susu×1',
     );
   });
 
