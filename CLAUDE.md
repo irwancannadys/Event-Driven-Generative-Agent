@@ -39,8 +39,9 @@ Daftar lengkapnya ada di brief bagian 4. Yang paling sering tergoda dilanggar:
 - `packages/core`: domain murni (event, agent, aturan, sim clock).
 - `packages/server`: Node, SQLite, migrasi, seed. WebSocket dan API menyusul.
 - `packages/web`: stub sampai Tahap 4.
-- `tools/`: tes untuk tooling (aturan lint).
-- `docs/`: plan, katalog event, skema, keputusan, referensi.
+- `tools/`: tes untuk tooling (aturan lint, tes drift `docs/events.md` terhadap kode).
+- `docs/`: plan, konsep, katalog event, skema, keputusan, referensi.
+- `data/`: file SQLite lokal (tidak di-commit).
 
 ## Perintah
 
@@ -51,7 +52,11 @@ npm run lint          # eslint
 npm run typecheck     # tsc di tiap package
 npm run format        # prettier --write (kode dan config saja, bukan docs)
 npm run format:check
+npm run db:migrate    # buat atau perbarui data/cafe.db
+npm run seed          # isi tabel referensi (menu, bahan, resep, langganan, pemasok)
 ```
+
+`docs/events.md` adalah kontrak event: ubah dokumen dan skema zod di `packages/core` bersamaan, tes drift akan gagal kalau keduanya berbeda.
 
 ## Konvensi
 

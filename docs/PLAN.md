@@ -47,24 +47,34 @@
 **Tujuan:** pondasi repo dan dokumen desain siap sebelum satu baris logika bisnis ditulis.
 
 **Tugas:**
-- [ ] `git init`, `.gitignore`, lisensi (opsional), README singkat
-- [ ] Pilih tool: package manager, TypeScript strict, linter, formatter, test runner
-- [ ] Workspaces: `packages/core`, `packages/server`, `packages/web`
-- [ ] `CLAUDE.md` ringkas (aturan kerja dari brief bagian 15, pointer ke brief dan plan)
-- [ ] `docs/events.md`: katalog event final (tipe, payload, pemicu, penangan, aturan atau LLM)
-- [ ] `docs/schema.md` dan file migrasi SQL awal
-- [ ] Data seed: menu (5 sampai 6), bahan, resep, pelanggan langganan, pemasok tiruan
-- [ ] Skema zod untuk event (discriminated union, tipe TS diturunkan), `LLMClient`, schema output LLM, plus tes drift terhadap `docs/events.md`
-- [ ] Interface dan spesifikasi `SimClock` (detik virtual, kecepatan, `advance(seconds)`, deterministik). Implementasi di Tahap 2
-- [ ] `docs/concept.md`: konsep satu halaman
-- [ ] `docs/decisions/001-...` untuk keputusan bagian 1
-- [ ] Skrip: `test`, `lint`, `typecheck`, `db:migrate`, `seed` (`dev` ditunda ke Tahap 1, belum ada yang bisa dijalankan)
+- [x] `git init`, `.gitignore`, lisensi (opsional, dilewati), README singkat
+- [x] Pilih tool: package manager, TypeScript strict, linter, formatter, test runner
+- [x] Workspaces: `packages/core`, `packages/server`, `packages/web`
+- [x] `CLAUDE.md` ringkas (aturan kerja dari brief bagian 15, pointer ke brief dan plan)
+- [x] `docs/events.md`: katalog event final (tipe, payload, pemicu, penangan, aturan atau LLM)
+- [x] `docs/schema.md` dan file migrasi SQL awal
+- [x] Data seed: menu (5 sampai 6), bahan, resep, pelanggan langganan, pemasok tiruan
+- [x] Skema zod untuk event (discriminated union, tipe TS diturunkan), `LLMClient`, schema output LLM, plus tes drift terhadap `docs/events.md`
+- [x] Interface dan spesifikasi `SimClock` (detik virtual, kecepatan, `advance(seconds)`, deterministik). Implementasi di Tahap 2
+- [x] `docs/concept.md`: konsep satu halaman
+- [x] `docs/decisions/001-...` untuk keputusan bagian 1
+- [x] Skrip: `test`, `lint`, `typecheck`, `db:migrate`, `seed` (`dev` ditunda ke Tahap 1, belum ada yang bisa dijalankan)
 
 **Hasil jadi:** repo yang bisa `install`, `test` (tes sepele lulus), dan `seed`; dokumen events dan schema disetujui.
 
 **Selesai jika:** pemilik menyetujui `events.md`, `schema.md`, dan keputusan arsitektur.
 
 **Catatan pelajaran (kursus):** apa itu event-driven, kenapa desain event dulu sebelum kode.
+
+Hasil Tahap 0, bahan untuk materi:
+
+- Event adalah fakta yang sudah terjadi dan tidak diubah. State adalah hasil `reduce` atas event, dan replay menjalankannya ulang (lihat `docs/concept.md`).
+- Daftar event adalah **kontrak** antarbagian. Dokumen dijaga agar tidak berbeda dari kode oleh satu tes drift (`tools/events-doc.test.ts`). Tes itu terbukti gagal saat dokumen sengaja dirusak.
+- Keputusan yang tampak kecil membuka pertanyaan arsitektur: satuan waktu, siapa memegang waktu gerak, bagaimana LLM bisa direplay. Semuanya ditulis di `docs/decisions/` supaya bisa dijelaskan ke murid.
+- Determinisme dijaga secara mekanis, bukan janji: lint melarang `Date.now` dan `Math.random` di `core`, `core` tanpa tipe Node, semua jumlah integer (tanpa float), RNG tanpa state.
+- Skema memvalidasi bentuk **dan** aturan lintas-field (origin yang boleh, ETA pemasok, `fallback_reason` hanya untuk fallback). Valid belum tentu benar: pengecekan terhadap kondisi dunia dilakukan saat keputusan diterapkan.
+- Tooling bisa mengejutkan: TypeScript 7 belum didukung `typescript-eslint`, jadi TypeScript ditahan di 6.0 (lihat keputusan 017). Catat versi dan alasannya.
+- Proses: berhenti di gerbang review dokumen sebelum menulis kode yang bergantung padanya mencegah kerja ulang.
 
 ---
 
