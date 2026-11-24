@@ -15,7 +15,8 @@
     "typecheck": "npm run typecheck --workspaces --if-present && tsc --noEmit -p tools",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "db:migrate": "npm run db:migrate -w @cafe/server"
+    "db:migrate": "npm run db:migrate -w @cafe/server",
+    "seed": "npm run seed -w @cafe/server"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
