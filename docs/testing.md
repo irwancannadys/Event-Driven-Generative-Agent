@@ -376,10 +376,10 @@ Buka alamat yang dicetak tab 2 (biasanya `http://localhost:5173`; kalau port itu
 
 ### 9.2 Yang dicari
 
-- **Pojok atas:** logo dan nama **Cand's Coffee** di kiri, dan di kanan satu tombol berisi titik koneksi dan jam virtual (tanpa kartu status). Tampilannya terang berwarna teal, tidak ikut mode gelap sistem.
+- **Pojok atas:** logo hitam-putih (kotak bulat dengan cincin, cangkir dilihat dari atas) dan nama **Cand's Coffee** di kiri, dan di kanan satu tombol berisi titik koneksi dan jam virtual (tanpa kartu status). Tampilannya terang berwarna teal, tidak ikut mode gelap sistem.
 - **Tombol jam** membuka menu **Kontrol waktu**: status koneksi dan kecepatan, Jeda, kecepatan (1x sampai 3600x), majukan waktu, dan tautan Panel saja. Menu tetap terbuka selagi lu menekan beberapa kontrol; klik di mana saja di luar menu atau tekan Escape untuk menutupnya. Klik **600x** supaya cepat.
 - **Sidebar kanan:** **Kejadian** dan **Stok**. Klik judul sebuah bagian untuk melipatnya (panah ▾ dan ▸); lipatan diingat di browser.
-- **Kartu** punya warna masing-masing (Karakter biru-teal, Pesanan amber, Komplain jingga, Meja Bos ungu, Kejadian teal, Stok hijau). Kartu di bawah gambar setinggi isinya sendiri: kalau Meja Bos panjang, hanya kartu itu yang memanjang.
+- **Kartu** putih polos dengan bayangan tipis dan garis di bawah judulnya. Kartu di bawah gambar setinggi isinya sendiri: kalau Meja Bos panjang, hanya kartu itu yang memanjang.
 - **Gambar besar di kiri:** kafe potong di atas alas. Dapur (kanan belakang) dan ruang bos (kiri belakang) dipisah sekat kaca dengan pintu. Pintu masuk kaca di depan, tujuh meja, kasir di tengah belakang dengan etalase dan papan menu, rak stok di belakang, bangku, lukisan, tanaman, lampu gantung.
 - **Karyawan** berbaju hijau dan bercelana putih (koki bertopi putih), bos berjas gelap di ruangnya. Label di atas kepala menyebut nama dan sedang apa. Ada cewek (kasir dan Rina: rambut panjang atau sanggul, bibir merah) dan cowok (admin stok, koki berjenggot, bos). Pelanggan juga campur: ada yang berambut panjang atau dikuncir, ada yang berjenggot.
 - **Rina (pelayan) diam.** Dia sudah ada di denah dan di panel Karakter, tapi perilakunya (ingatan, inisiatif, melayani meja) baru dikerjakan di Tahap 5, jadi untuk sekarang dia memang cuma idle di mejanya.

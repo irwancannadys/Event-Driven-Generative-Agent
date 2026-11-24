@@ -165,7 +165,7 @@ export function createPanels(
   const brand = el(
     'h1',
     'brand',
-    el('span', 'brand-mark', 'C'),
+    el('span', 'brand-mark'),
     el(
       'span',
       'brand-name',
