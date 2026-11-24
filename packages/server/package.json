@@ -5,9 +5,14 @@
   "type": "module",
   "description": "Server Node: SQLite, migrasi, seed. WebSocket dan API menyusul di tahap berikutnya.",
   "dependencies": {
-    "@cafe/core": "*"
+    "@cafe/core": "*",
+    "better-sqlite3": "^13.2.0"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:migrate": "tsx src/db/migrate-cli.ts"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^9.6.0"
   }
 }

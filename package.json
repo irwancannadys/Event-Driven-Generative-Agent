@@ -14,7 +14,8 @@
     "lint": "eslint .",
     "typecheck": "npm run typecheck --workspaces --if-present && tsc --noEmit -p tools",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "db:migrate": "npm run db:migrate -w @cafe/server"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
