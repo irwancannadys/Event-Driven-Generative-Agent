@@ -188,7 +188,7 @@ Semua lewat variabel lingkungan atau file `.env` (salin dari `.env.example`):
 | `PORT` | port API | 3000 |
 | `SPEED` | detik virtual per detik asli (1 sampai 3600) | 60 |
 | `SEED` | seed dunia **baru** | 42 |
-| `CROWD_PCT` | keramaian, 100 = normal, 200 = dua kali lipat | 100 |
+| `CROWD_PCT` | keramaian, 100 = hari biasa, 200 = dua kali lipat (server mulai di 150 supaya sering ada kejadian; di atas 250 satu koki tertinggal berjam-jam) | 150 |
 | `COMPLAINT_CHANCE_PCT` | peluang pesanan yang menunggu sampai batas waktu komplain jadi komplain | 15 |
 | `COMPLAINT_WAIT_MIN` | menit virtual menunggu sebelum pesanan bisa dikomplain (1 sampai 1440) | 20 |
 
@@ -378,11 +378,14 @@ Buka alamat yang dicetak tab 2 (biasanya `http://localhost:5173`; kalau port itu
 
 - **Pojok atas:** titik hijau "Tersambung", jam virtual yang berjalan, tombol Jeda, kecepatan (1x sampai 3600x), dan majukan waktu. Klik **600x** supaya cepat.
 - **Gambar besar di kiri:** kafe potong di atas alas. Dapur (kanan belakang) dan ruang bos (kiri belakang) dipisah sekat kaca dengan pintu. Pintu masuk kaca di depan, tujuh meja, kasir di tengah belakang dengan etalase dan papan menu, rak stok di belakang, bangku, lukisan, tanaman, lampu gantung.
-- **Karyawan** berbaju hijau dan bercelana putih (koki bertopi putih), bos berjas gelap di ruangnya. Label di atas kepala menyebut nama dan sedang apa.
-- **Pelanggan** masuk lewat pintu depan, berdiri di kasir, duduk atau berdiri menunggu, mengambil pesanan di **jendela dapur** (piringnya muncul di sana), lalu pulang. Gelembung `!` merah = komplain, "Menunggu bahan" = pesanan ditahan, "Siap!" hijau = masakan selesai. Lebih dari 14 orang jadi tulisan "+N antre".
+- **Karyawan** berbaju hijau dan bercelana putih (koki bertopi putih), bos berjas gelap di ruangnya. Label di atas kepala menyebut nama dan sedang apa. Ada cewek (kasir dan Rina: rambut panjang atau sanggul, bibir merah) dan cowok (admin stok, koki berjenggot, bos). Pelanggan juga campur: ada yang berambut panjang atau dikuncir, ada yang berjenggot.
+- **Rina (pelayan) diam.** Dia sudah ada di denah dan di panel Karakter, tapi perilakunya (ingatan, inisiatif, melayani meja) baru dikerjakan di Tahap 5, jadi untuk sekarang dia memang cuma menganggur di mejanya.
+- **Langkah kaki** mengikuti jarak yang ditempuh: ayunan kaki dan tangan sesuai panjang langkah, dan berhenti begitu karakter berhenti. Di kecepatan sangat tinggi ayunannya dibatasi supaya tidak berkedip.
+- **Pelanggan** masuk lewat pintu depan, berdiri di kasir, duduk atau berdiri menunggu, mengambil pesanan di **jendela dapur** (piringnya muncul di sana), lalu pulang. Gelembung `!` merah = komplain, "Menunggu bahan" = pesanan ditahan, "Siap!" hijau = masakan selesai. Lebih dari 20 orang jadi tulisan "+N antre". Pelanggan tiba di kasir tidak lama setelah log mencatat pesanannya, dan keramaian bawaan (`CROWD_PCT=150`) membuat pesanan masuk lebih rapat.
 - **Admin stok** jalan ke rak, ke ruang bos lewat pintunya, menaruh **kertas laporan** di meja bos, lalu pulang. Kotak di **rak stok** berkurang sesuai stok (merah-oranye = hampir habis).
 - **Kolom kanan:** Kejadian (log, bisa digulir) dan Stok. **Di bawah gambar:** Karakter, Pesanan, dan **Meja Bos** dengan tombol **Setujui/Tolak** (ganti `curl`).
-- **Geser** gambar dengan mouse untuk memutar kamera sedikit.
+- **Geser** gambar dengan mouse: kiri-kanan memutar kamera sedikit, **atas-bawah** menurunkan atau mengangkat kamera (dari sejajar meja sampai hampir tegak lurus dari atas). Seluruh kafe tetap masuk gambar di semua sudut.
+- Di belakang kafe ada alas kayu bulat dengan latar gelap bercahaya hangat (bukan hitam polos lagi).
 
 ### 9.3 Uji ketahanan
 
@@ -397,4 +400,6 @@ Buka alamat yang dicetak tab 2 (biasanya `http://localhost:5173`; kalau port itu
 - Karakter bergaya game, bukan foto. Warna dan terang-gelap bisa disetel: kirim screenshot.
 - Empat dari tujuh meja hanya tempat duduk tambahan; domain baru punya tiga meja (untuk Rina di Tahap 5).
 - Kalau lu melihat pelanggan "melompat", cek dulu apakah waktu baru dimajukan: itu wajar.
+- Karyawan bisa berjalan menembus pelanggan yang sedang berdiri (jalurnya hanya menghindari perabot, belum menghindari orang).
+- Gua sudah mengaudit gerak lawan log (`tools/scene-audit.test.ts`): pelanggan tiba di kasir sebelum kasir selesai mencatat, tidak ada dua pelanggan di titik yang sama, dan semua titik tunggu bebas dari meja. Itu bukan jaminan bebas bug: kalau lu lihat yang janggal, kirim screenshot dan jamnya.
 
