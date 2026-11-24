@@ -13,6 +13,10 @@ export const ID = {
   'waiting.world': 'Menunggu data dunia dari server...',
 
   'scene.boss': 'Bos (kamu)',
+  'customer.upset': '!',
+  'customer.ready': 'Siap!',
+  'customer.held': 'Menunggu bahan',
+  'customer.queueMore': 'antre',
   'scene.lost':
     'Gambar 3D terhenti (WebGL hilang). Muat ulang halaman kalau tidak kembali sendiri.',
   'view.panelOnly': 'Panel saja',

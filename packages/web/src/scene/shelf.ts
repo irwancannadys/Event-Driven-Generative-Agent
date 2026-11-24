@@ -1,4 +1,11 @@
-import { BoxGeometry, Group, Mesh, MeshLambertMaterial } from 'three';
+import {
+  BoxGeometry,
+  CylinderGeometry,
+  Group,
+  Mesh,
+  MeshLambertMaterial,
+  SphereGeometry,
+} from 'three';
 import type { StockLevel } from '@cafe/core';
 
 // The stock shelf shows the real stock (brief section 11): every ingredient has a place on one of the
@@ -105,6 +112,42 @@ export class PapersView {
       paper.name = 'paper';
       paper.position.set(0, 0.95 + index * 0.06, 0);
       this.group.add(paper);
+    }
+  }
+}
+
+/** The most dishes drawn on the counter. */
+export const MAX_DISHES = 4;
+
+export function dishCount(waiting: number): number {
+  return Math.max(0, Math.min(MAX_DISHES, waiting));
+}
+
+/** A plate with a meal on it for every order that is done and not picked up yet. */
+export class DishesView {
+  private readonly plate = new CylinderGeometry(0.2, 0.2, 0.03, 20);
+  private readonly meal = new SphereGeometry(0.13, 12, 8);
+  private readonly plateMaterial = new MeshLambertMaterial({ color: 0xffffff });
+  private readonly mealMaterial = new MeshLambertMaterial({ color: 0xc8782a });
+  private shown = -1;
+
+  constructor(private readonly group: Group) {}
+
+  update(waiting: number): void {
+    const count = dishCount(waiting);
+    if (count === this.shown) return;
+    this.shown = count;
+    this.group.clear();
+    for (let index = 0; index < count; index += 1) {
+      const dish = new Group();
+      dish.name = 'dish';
+      dish.position.set(index * 0.5, 0.02, 0);
+      const plate = new Mesh(this.plate, this.plateMaterial);
+      const meal = new Mesh(this.meal, this.mealMaterial);
+      meal.position.y = 0.1;
+      meal.scale.y = 0.7;
+      dish.add(plate, meal);
+      this.group.add(dish);
     }
   }
 }

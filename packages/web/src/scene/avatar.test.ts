@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { AGENT_IDS } from '@cafe/core';
 import type { Mesh, MeshLambertMaterial } from 'three';
-import { AVATAR_COLORS, createAvatar, type AvatarRole } from './avatar';
+import { AVATAR_COLORS, CUSTOMER_COLORS, createAvatar, type StaffRole } from './avatar';
 
-const ROLES: AvatarRole[] = [...AGENT_IDS, 'boss'];
+const ROLES: StaffRole[] = [...AGENT_IDS, 'boss'];
 
 describe('createAvatar', () => {
   it.each(ROLES)('builds %s from a body, a head and a nose, in the colour of the role', (role) => {
@@ -15,7 +15,7 @@ describe('createAvatar', () => {
   });
 
   it('gives every role its own colour', () => {
-    expect(new Set(Object.values(AVATAR_COLORS)).size).toBe(ROLES.length);
+    expect(new Set(ROLES.map((role) => AVATAR_COLORS[role])).size).toBe(ROLES.length);
   });
 
   it('puts the nose on the front (+z), so the rotation shows which way the character looks', () => {
@@ -58,5 +58,35 @@ describe('createAvatar', () => {
     expect([avatar.object.position.x, avatar.object.position.z, avatar.object.rotation.y]).toEqual([
       1, 2, 1.2,
     ]);
+  });
+
+  it('gives a customer the shirt that its number picks, and different customers different shirts', () => {
+    const shirt = (variant: number) =>
+      (
+        (createAvatar('customer', variant).object.getObjectByName('body') as Mesh)
+          .material as MeshLambertMaterial
+      ).color.getHex();
+    expect(shirt(0)).toBe(CUSTOMER_COLORS[0]);
+    expect(shirt(3)).toBe(CUSTOMER_COLORS[3]);
+    expect(shirt(CUSTOMER_COLORS.length + 2)).toBe(shirt(2));
+    expect(shirt(-1)).toBe(CUSTOMER_COLORS[1]);
+    expect(new Set([0, 1, 2, 3, 4].map(shirt)).size).toBe(5);
+  });
+
+  it('shares its shapes between characters, so that customers coming and going leak nothing', () => {
+    const a = createAvatar('customer', 1).object.getObjectByName('body') as Mesh;
+    const b = createAvatar('customer', 9).object.getObjectByName('body') as Mesh;
+    expect(a.geometry).toBe(b.geometry);
+    expect(a.material).toBe(b.material); // the same shirt colour is the same material
+  });
+
+  it('holds a cup in its hand only when told to', () => {
+    const avatar = createAvatar('customer', 2);
+    const cup = avatar.object.getObjectByName('cup');
+    expect(cup?.visible).toBe(false);
+    avatar.carry(true);
+    expect(cup?.visible).toBe(true);
+    avatar.carry(false);
+    expect(cup?.visible).toBe(false);
   });
 });

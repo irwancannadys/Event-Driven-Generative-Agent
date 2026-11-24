@@ -34,6 +34,8 @@ export interface Room {
   shelfBoxes: Group;
   /** The papers on the boss desk are put here. */
   reportPapers: Group;
+  /** The dishes that wait on the kitchen counter for their customers are put here. */
+  dishes: Group;
 }
 
 function part(
@@ -91,6 +93,12 @@ export function buildRoom(): Room {
     pot,
   );
 
+  // The near end of the counter is where finished dishes wait for their customers
+  const dishes = new Group();
+  dishes.name = 'dishes';
+  dishes.position.set(kitchen.x - 1.1, 1, kitchen.z + 0.1);
+  group.add(dishes);
+
   // Boss desk, and the place where the papers of the reports lie
   group.add(box('boss-desk', 3, 0.9, 1.2, COLORS.woodDark, bossDesk.x, 0.45, bossDesk.z));
   const reportPapers = new Group();
@@ -138,5 +146,5 @@ export function buildRoom(): Room {
     );
   }
 
-  return { group, pot, shelfBoxes, reportPapers };
+  return { group, pot, shelfBoxes, reportPapers, dishes };
 }

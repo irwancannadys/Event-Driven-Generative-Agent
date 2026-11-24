@@ -6,7 +6,15 @@ import { FakeNode, installFakeDom } from '../panels/fake-dom';
 import { AZIMUTH_LIMIT, CAMERA_TARGET, cameraPosition, fovForAspect } from './camera';
 import { createScene } from './index';
 import { projectToScreen } from './projection';
-import { FURNITURE, STATION_SPOTS, standingPoint } from './registry';
+import {
+  DOOR,
+  FURNITURE,
+  ORDER_SPOT,
+  PICKUP_SPOT,
+  STATION_SPOTS,
+  standingPoint,
+  waitingSpot,
+} from './registry';
 
 // The real renderer needs WebGL, so a stand-in takes its place; everything else (the room, the
 // characters, the labels, the loop) runs for real.
@@ -95,6 +103,21 @@ const frame = () => frames.at(-1)?.(0);
 const labelTexts = (root: FakeNode) =>
   root.findAll((node) => node.className.includes('scene-label')).map((node) => node.textContent);
 
+const customersWorld = (): WorldState =>
+  applySnapshot(
+    snapshot({
+      recent_orders: Array.from({ length: 20 }, (_, index) => ({
+        id: index + 1,
+        status: 'cooking' as const,
+        source: 'walk_in' as const,
+        created_at_sim: 29_950 + index,
+        done_at_sim: null,
+      })),
+      open_complaints: [{ complaint_id: 1, order_id: 20 }],
+    }),
+    performance.now(),
+  );
+
 describe('createScene', () => {
   it('draws on its own and labels the stations and the boss from the start', () => {
     const slot = container();
@@ -136,6 +159,46 @@ describe('createScene', () => {
       expect(Number.isFinite(parseFloat(label.style.top ?? 'x')), label.textContent).toBe(true);
     }
     expect(frames.length).toBeGreaterThanOrEqual(6); // each frame asks for the next one
+  });
+
+  it('shows the upset customer and counts the customers it does not draw', () => {
+    const slot = container();
+    createScene(slot as unknown as HTMLElement, () => customersWorld());
+    frame();
+    const texts = labelTexts(slot);
+    expect(texts).toContain('!'); // the customer of order 20 complained
+    expect(texts).toContain('+6 antre'); // 20 customers, 14 drawn
+    // only the customer with something to show has a bubble
+    expect(slot.findAll((node) => node.className.includes('bubble'))).toHaveLength(1);
+  });
+
+  it('lets the customers come and go: one that is gone is taken away with its bubble', () => {
+    const slot = container();
+    let state = customersWorld();
+    createScene(slot as unknown as HTMLElement, () => state);
+    frame();
+    expect(labelTexts(slot)).toContain('!');
+    // a day later every order of this state is long gone from the picture
+    state = {
+      ...state,
+      clock: {
+        ...state.clock,
+        time: { ...state.clock.time, sim_time: state.clock.time.sim_time + 86_400 },
+      },
+    };
+    state = {
+      ...state,
+      customers: Object.fromEntries(
+        Object.entries(state.customers).map(([id, c]) => [
+          id,
+          { ...c, status: 'done' as const, doneAt: c.createdAt + 100, complaint: 'none' as const },
+        ]),
+      ),
+    };
+    frame();
+    expect(labelTexts(slot)).not.toContain('!');
+    const more = slot.findAll((node) => node.className.includes('queue-more'))[0];
+    expect(more?.style.display).toBe('none'); // nobody is left to count
   });
 
   it('stops drawing and takes its own parts away when it is disposed', () => {
@@ -181,11 +244,15 @@ describe('framing', () => {
     standingPoint('boss_desk', 'waiter'),
     { x: FURNITURE.shelf.x, y: 2.7, z: FURNITURE.shelf.z },
     { x: FURNITURE.cashierDesk.x - 1.5, y: 0.5, z: FURNITURE.cashierDesk.z },
-    { x: -8.8, y: 0, z: 0.6 }, // the door
-    { x: -8.8, y: 2.4, z: 0.6 },
-    { x: -7.2, y: 2.4, z: -2.2 }, // the queue at the cashier
-    { x: 3.4, y: 2.4, z: -2.2 }, // the pick-up spot at the kitchen
-    { x: 3.4, y: 0, z: -2.2 },
+    ...[
+      DOOR,
+      ORDER_SPOT,
+      PICKUP_SPOT,
+      ...Array.from({ length: 12 }, (_, id) => waitingSpot(id)),
+    ].flatMap((spot) => [
+      { x: spot.x, y: 0, z: spot.z },
+      { x: spot.x, y: 2.4, z: spot.z },
+    ]),
   ].map((point) => ({ x: point.x, y: 'y' in point ? point.y : 0, z: point.z }));
 
   it.each([1.5, 1.78, 2, 2.6, 3])(

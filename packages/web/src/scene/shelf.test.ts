@@ -2,11 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { Group } from 'three';
 import type { StockLevel } from '@cafe/core';
 import {
+  DishesView,
   MAX_BOXES,
+  MAX_DISHES,
   MAX_PAPERS,
   PapersView,
   ShelfView,
   boxCount,
+  dishCount,
   paperCount,
   shelfPlacements,
 } from './shelf';
@@ -131,5 +134,26 @@ describe('papers on the boss desk', () => {
     expect(group.children).toHaveLength(0);
     view.update(7);
     expect(group.children).toHaveLength(MAX_PAPERS);
+  });
+});
+
+describe('dishes on the counter', () => {
+  it('has a plate for every order waiting to be picked up, up to four', () => {
+    expect([0, 1, 3, 4, 9].map(dishCount)).toEqual([0, 1, 3, MAX_DISHES, MAX_DISHES]);
+    expect(dishCount(-2)).toBe(0);
+  });
+
+  it('puts the plates side by side with a meal on each, and follows the number', () => {
+    const group = new Group();
+    const view = new DishesView(group);
+    view.update(2);
+    expect(group.children).toHaveLength(2);
+    expect(group.children[1]?.position.x).toBeGreaterThan(group.children[0]?.position.x ?? 9);
+    expect(group.children[0]?.children).toHaveLength(2); // a plate and a meal
+    const first = group.children[0];
+    view.update(2);
+    expect(group.children[0]).toBe(first); // not rebuilt
+    view.update(0);
+    expect(group.children).toHaveLength(0);
   });
 });

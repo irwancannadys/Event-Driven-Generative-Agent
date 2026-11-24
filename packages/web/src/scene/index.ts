@@ -14,9 +14,10 @@ import {
 import { createAvatar, type Avatar } from './avatar';
 import { LabelLayer } from './labels';
 import { agentPose, potTilt } from './pose';
-import { PapersView, ShelfView } from './shelf';
+import { visibleCustomers, dishesOnCounter } from './customer';
+import { DishesView, PapersView, ShelfView } from './shelf';
 import { projectToScreen } from './projection';
-import { BOSS_SPOT, FURNITURE } from './registry';
+import { BOSS_SPOT, FURNITURE, WAITING_SPOTS } from './registry';
 import { buildRoom } from './room';
 
 // The 3D picture of the cafe (decisions 027 and 028). It only reads the state of the world and draws it:
@@ -76,6 +77,8 @@ export function createScene(
 
   const shelf = new ShelfView(room.shelfBoxes);
   const papers = new PapersView(room.reportPapers);
+  const dishes = new DishesView(room.dishes);
+  const customerViews = new Map<number, Avatar>();
 
   const camera = new PerspectiveCamera(BASE_FOV, 1, 0.1, 100);
   let azimuth = AZIMUTH_START;
@@ -167,6 +170,44 @@ export function createScene(
       }
       shelf.update(Object.values(state.stock));
       papers.update(state.reports.filter((report) => report.status === 'submitted').length);
+      // The customers: drawn for the newest orders, the rest counted
+      const { shown, hidden } = visibleCustomers(state.customers, now);
+      const present = new Set(shown.map((entry) => entry.customer.orderId));
+      for (const [orderId, view] of customerViews) {
+        if (present.has(orderId)) continue;
+        scene.remove(view.object);
+        labels.remove(`customer:${orderId}`);
+        customerViews.delete(orderId);
+      }
+      for (const { customer, pose } of shown) {
+        let view = customerViews.get(customer.orderId);
+        if (!view) {
+          view = createAvatar('customer', customer.orderId);
+          customerViews.set(customer.orderId, view);
+          scene.add(view.object);
+        }
+        view.object.position.set(pose.x, 0, pose.z);
+        view.object.rotation.y = pose.facing;
+        view.play(pose.moving ? 'walking' : 'idle', seconds);
+        view.carry(pose.carrying);
+        const key = `customer:${customer.orderId}`;
+        if (pose.bubble) {
+          labels.set(key, t(`customer.${pose.bubble}`), `bubble bubble-${pose.bubble}`);
+          const at = projectToScreen(camera, { x: pose.x, y: 1.75, z: pose.z }, width, height);
+          labels.place(key, at.x, at.y, at.visible);
+        } else {
+          labels.hide(key);
+        }
+      }
+      dishes.update(dishesOnCounter(state.customers, now));
+      if (hidden > 0) {
+        labels.set('queue-more', `+${hidden} ${t('customer.queueMore')}`, 'queue-more');
+        const spot = WAITING_SPOTS[8] as { x: number; z: number };
+        const at = projectToScreen(camera, { x: spot.x, y: 1.4, z: spot.z }, width, height);
+        labels.place('queue-more', at.x, at.y, at.visible);
+      } else {
+        labels.hide('queue-more');
+      }
       const cook = state.agents.cook;
       room.pot.rotation.z = potTilt(cook?.state === 'working' && cook.label === 'cooking', seconds);
     }

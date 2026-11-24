@@ -51,3 +51,39 @@ export const FURNITURE = {
 
 /** The boss sits at his desk and does not move (he is you). */
 export const BOSS_SPOT: Spot = { x: -5.5, z: 1.7, facing: 0 };
+
+// --- Where customers go (decision 029) ---
+
+/** The door on the left wall: customers come in and go out here. */
+export const DOOR: Spot = { x: -8.8, z: 0.6, facing: Math.PI / 2 };
+/** Where a customer stands to order, in front of the cashier, who looks at the queue on the left. */
+export const ORDER_SPOT: Spot = { x: -6.8, z: -2.2, facing: Math.PI / 2 };
+/** Where food is picked up: the near end of the kitchen counter, facing the cook. */
+export const PICKUP_SPOT: Spot = { x: 3.4, z: -2.2, facing: Math.PI / 2 };
+
+export interface WaitingSpot extends Spot {
+  /** A seat at a table, as opposed to a place to stand. */
+  seat: boolean;
+}
+
+/** Places to wait for the food: two seats at each of the three tables, and six places to stand. */
+export const WAITING_SPOTS: WaitingSpot[] = [
+  ...FURNITURE.tables.flatMap((table): WaitingSpot[] => [
+    { x: table.x, z: table.z - 0.95, facing: 0, seat: true }, // behind the table, facing the front
+    { x: table.x, z: table.z + 0.95, facing: Math.PI, seat: true }, // in front of it, facing the wall
+  ]),
+  { x: -3, z: 2.8, facing: Math.PI, seat: false },
+  { x: -1.5, z: 3.2, facing: Math.PI, seat: false },
+  { x: 0, z: 2.8, facing: Math.PI, seat: false },
+  { x: 1.5, z: 3.2, facing: Math.PI, seat: false },
+  { x: 3, z: 2.8, facing: Math.PI, seat: false },
+  { x: 4.2, z: 2.2, facing: Math.PI, seat: false },
+];
+
+/** The place where the customer of an order waits: the same one every time, whoever else is waiting. */
+export function waitingSpot(orderId: number): WaitingSpot {
+  const base = WAITING_SPOTS[orderId % WAITING_SPOTS.length] as WaitingSpot;
+  // Customers beyond the number of places share one, standing a little apart.
+  const round = Math.floor(orderId / WAITING_SPOTS.length) % 3;
+  return base.seat ? base : { ...base, x: base.x + (round - 1) * 0.35 };
+}

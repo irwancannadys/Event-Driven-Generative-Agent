@@ -392,3 +392,28 @@ button.reject {
     max-height: 420px;
   }
 }
+
+.scene-label.bubble {
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: #fff;
+  color: #2c2c2a;
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+.scene-label.bubble-upset {
+  background: var(--bad);
+  color: #fff;
+}
+.scene-label.bubble-ready {
+  background: var(--ok);
+  color: #fff;
+}
+.scene-label.bubble-held {
+  background: var(--warn);
+  color: #fff;
+}
+.scene-label.queue-more {
+  background: rgba(44, 44, 42, 0.75);
+  color: #fff;
+}

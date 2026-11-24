@@ -34,6 +34,9 @@ describe('buildRoom', () => {
     expect(room.reportPapers.position.x).toBe(FURNITURE.bossDesk.x);
     expect(room.shelfBoxes.children).toHaveLength(0);
     expect(room.reportPapers.children).toHaveLength(0);
+    expect(room.dishes.children).toHaveLength(0);
+    expect(room.dishes.position.x).toBeLessThan(FURNITURE.kitchen.x); // the near end of the counter
+    expect(room.dishes.position.y).toBe(1); // on the counter top
   });
 
   it('keeps everything inside a box around the room, with no broken numbers', () => {

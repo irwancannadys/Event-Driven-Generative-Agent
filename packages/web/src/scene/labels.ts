@@ -31,6 +31,17 @@ export class LabelLayer {
     label.style.top = `${y}px`;
   }
 
+  /** Hides a label without taking it away (it is shown again by `place`). */
+  hide(id: string): void {
+    const label = this.labels.get(id);
+    if (label) label.style.display = 'none';
+  }
+
+  remove(id: string): void {
+    this.labels.get(id)?.remove();
+    this.labels.delete(id);
+  }
+
   clear(): void {
     for (const label of this.labels.values()) label.remove();
     this.labels.clear();
