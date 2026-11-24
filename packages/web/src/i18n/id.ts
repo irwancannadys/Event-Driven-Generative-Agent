@@ -9,9 +9,15 @@ export const ID = {
   'clock.day': 'Hari',
   'clock.speed': 'kecepatan',
   'clock.paused': 'JEDA',
+  'clock.disconnected': 'berhenti (terputus)',
   'waiting.world': 'Menunggu data dunia dari server...',
 
   'scene.boss': 'Bos (kamu)',
+  'scene.lost':
+    'Gambar 3D terhenti (WebGL hilang). Muat ulang halaman kalau tidak kembali sendiri.',
+  'view.panelOnly': 'Panel saja',
+  'view.scene': 'Tampilan 3D',
+  'view.noWebgl': 'Browser ini tidak mendukung 3D (WebGL): hanya panel yang tampil.',
   'scene.unavailable': 'Tampilan 3D tidak bisa dibuat di browser ini. Panel tetap jalan.',
 
   'panel.agents': 'Karakter',

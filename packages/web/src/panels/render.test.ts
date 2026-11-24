@@ -2,12 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { agent, apply, event, snapshot, stockRow } from '../state/test-fixtures';
 import { applySnapshot } from '../state/world';
 import { asElement, FakeNode, installFakeDom } from './fake-dom';
+import type { ViewChoice } from '../view-mode';
 import { createPanels, type PanelActions } from './render';
 
 beforeEach(() => installFakeDom());
 afterEach(() => vi.unstubAllGlobals());
 
-function setup(overrides: Partial<PanelActions> = {}) {
+function setup(overrides: Partial<PanelActions> = {}, view?: ViewChoice) {
   const root = new FakeNode('div');
   const calls = { decide: [] as unknown[][], time: [] as unknown[] };
   const actions: PanelActions = {
@@ -21,7 +22,7 @@ function setup(overrides: Partial<PanelActions> = {}) {
     },
     ...overrides,
   };
-  const panels = createPanels(asElement(root), actions);
+  const panels = createPanels(asElement(root), actions, { view });
   return { root, panels, calls };
 }
 
@@ -149,5 +150,63 @@ describe('the panels', () => {
     expect(root.textContent).toContain('08:20');
     panels.update({ state, status: 'open', nowMs: 61_000 }); // a real minute later, at 60x
     expect(root.textContent).toContain('09:20');
+  });
+
+  it('say that the connection is lost over the picture and in the clock, and take it away again', () => {
+    const { root, panels } = setup();
+    const banner = () => root.findAll((node) => node.className === 'scene-banner')[0];
+    const state = world();
+    panels.update({ state, status: 'open', nowMs: 1000 });
+    expect(banner()?.style.display).toBe('none');
+    panels.update({ state, status: 'closed', nowMs: 1000 });
+    expect(banner()?.style.display).toBe('');
+    expect(banner()?.textContent).toContain('Terputus');
+    expect(root.textContent).toContain('berhenti (terputus)');
+    expect(root.textContent).not.toContain('kecepatan 60x');
+    panels.update({ state, status: 'open', nowMs: 2000 });
+    expect(banner()?.style.display).toBe('none');
+    expect(root.textContent).toContain('kecepatan 60x');
+  });
+});
+
+describe('the choice between the picture and the panels', () => {
+  const link = (root: FakeNode) =>
+    root.findAll((node) => node.tag === 'a')[0] as unknown as { textContent: string; href: string };
+  const slot = (root: FakeNode) =>
+    root.findAll((node) => node.className === 'scene-slot')[0] as FakeNode;
+
+  it('offers "panels only" next to the picture', () => {
+    const { root } = setup({}, { mode: 'scene', reason: 'default' });
+    expect(link(root).textContent).toBe('Panel saja');
+    expect(link(root).href).toBe('?view=panel');
+    expect(slot(root).style.display).toBeUndefined();
+  });
+
+  it('hides the place of the picture in panels-only mode, and offers the picture', () => {
+    const { root } = setup({}, { mode: 'panel', reason: 'asked' });
+    expect(slot(root).style.display).toBe('none');
+    expect(link(root).textContent).toBe('Tampilan 3D');
+    expect(link(root).href).toBe('?view=3d');
+  });
+
+  it('says why there is no picture when the browser has no WebGL, with no link to a picture it cannot show', () => {
+    const { root } = setup({}, { mode: 'panel', reason: 'no-webgl' });
+    expect(root.textContent).toContain('tidak mendukung 3D');
+    expect(root.findAll((node) => node.tag === 'a')).toHaveLength(0);
+  });
+
+  it('still shows all the panels in panels-only mode', () => {
+    const { root, panels } = setup({}, { mode: 'panel', reason: 'asked' });
+    panels.update({ state: world(), status: 'open', nowMs: 1000 });
+    for (const text of [
+      'Karakter',
+      'Pesanan',
+      'Stok',
+      'Kejadian',
+      'Meja Bos',
+      'Usul belanja: Susu',
+    ]) {
+      expect(root.textContent).toContain(text);
+    }
   });
 });

@@ -116,7 +116,23 @@ export function createScene(
   window.addEventListener('pointermove', onMove);
   window.addEventListener('pointerup', onUp);
 
+  // The browser may take the WebGL context away (a sleeping GPU, too many tabs): stop drawing and say so,
+  // and carry on when it is given back.
   let frame = 0;
+  const canvas = renderer.domElement;
+  const onContextLost = (event: Event): void => {
+    event.preventDefault();
+    cancelAnimationFrame(frame);
+    labels.set('lost', t('scene.lost'), 'lost');
+    labels.place('lost', width / 2, height / 2, true);
+  };
+  const onContextRestored = (): void => {
+    labels.place('lost', 0, 0, false);
+    draw();
+  };
+  canvas.addEventListener('webglcontextlost', onContextLost);
+  canvas.addEventListener('webglcontextrestored', onContextRestored);
+
   const draw = (): void => {
     frame = requestAnimationFrame(draw);
     const nowMs = performance.now();
@@ -165,6 +181,8 @@ export function createScene(
     dispose() {
       cancelAnimationFrame(frame);
       observer.disconnect();
+      canvas.removeEventListener('webglcontextlost', onContextLost);
+      canvas.removeEventListener('webglcontextrestored', onContextRestored);
       container.removeEventListener('pointerdown', onDown);
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);

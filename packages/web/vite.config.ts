@@ -10,6 +10,8 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, repoRoot, '');
   const target = env.CAFE_API_URL || `http://127.0.0.1:${env.PORT || 3000}`;
   return {
+    // Three.js alone is about 600 kB: fine for a page that runs on this machine.
+    build: { chunkSizeWarningLimit: 900 },
     server: {
       proxy: {
         '/api': { target, rewrite: (path) => path.replace(/^\/api/, '') },

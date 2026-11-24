@@ -265,3 +265,19 @@ export function virtualNow(clock: ClockState, nowMs: number): number {
   if (clock.time.paused) return clock.time.sim_time;
   return clock.time.sim_time + ((nowMs - clock.atMs) / 1000) * clock.time.speed;
 }
+
+/**
+ * Stops the clock where it is, for when the connection to the server is lost: nobody knows what time it
+ * is any more, so the picture must not run on. The snapshot after the reconnect sets everything right.
+ */
+export function freezeClock(state: WorldState, nowMs: number): WorldState {
+  const { time } = state.clock;
+  if (time.paused) return state;
+  return {
+    ...state,
+    clock: {
+      time: { ...time, sim_time: virtualNow(state.clock, nowMs), paused: true },
+      atMs: nowMs,
+    },
+  };
+}

@@ -150,6 +150,26 @@ describe('createScene', () => {
   });
 });
 
+describe('when the browser takes WebGL away', () => {
+  it('stops drawing and says so, then carries on when it is given back', () => {
+    const slot = container();
+    createScene(slot as unknown as HTMLElement, () => world());
+    frame();
+    const canvas = slot.findAll((node) => node.tag === 'canvas')[0] as FakeNode;
+    const asked: string[] = [];
+    canvas.fire('webglcontextlost', { preventDefault: () => asked.push('prevented') });
+    expect(asked).toEqual(['prevented']); // otherwise the browser would never give the context back
+    expect(cancelled).toHaveLength(1);
+    expect(labelTexts(slot).some((text) => text.includes('WebGL hilang'))).toBe(true);
+
+    const before = frames.length;
+    canvas.fire('webglcontextrestored');
+    expect(frames.length).toBeGreaterThan(before); // drawing again
+    const lost = slot.findAll((node) => node.className.includes('lost'))[0];
+    expect(lost?.style.display).toBe('none');
+  });
+});
+
 describe('framing', () => {
   // The room must fit the picture at the sizes the page gives it (aspect ratio 2 to 3), also with the
   // camera swung to either side: every place a character stands, and every piece of furniture.

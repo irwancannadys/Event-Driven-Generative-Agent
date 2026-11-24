@@ -318,3 +318,29 @@ button.reject {
   background: #2c2c2a;
   color: #fff;
 }
+
+.view-control {
+  margin-left: 8px;
+}
+.view-link {
+  color: var(--accent);
+}
+.scene-banner {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  z-index: 2;
+  transform: translateX(-50%);
+  padding: 3px 12px;
+  border-radius: 12px;
+  background: var(--bad);
+  color: #fff;
+  pointer-events: none;
+}
+.scene-label.lost {
+  padding: 6px 12px;
+  background: var(--bad);
+  color: #fff;
+  white-space: normal;
+  text-align: center;
+}

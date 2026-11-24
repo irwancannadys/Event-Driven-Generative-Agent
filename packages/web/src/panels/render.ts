@@ -3,6 +3,7 @@ import { t, type TextKey } from '../i18n';
 import type { ApiResult, TimeRequest } from '../net/api';
 import type { ConnectionStatus } from '../net/connection';
 import type { WorldState } from '../state/world';
+import type { ViewChoice } from '../view-mode';
 import { changeDetector, el } from './dom';
 import {
   JUMPS,
@@ -45,7 +46,12 @@ function section(title: TextKey, className: string): { root: HTMLElement; body: 
   return { root: el('section', `panel ${className}`, el('h2', '', t(title)), body), body };
 }
 
-export function createPanels(root: HTMLElement, actions: PanelActions): Panels {
+export function createPanels(
+  root: HTMLElement,
+  actions: PanelActions,
+  options: { view?: ViewChoice } = {},
+): Panels {
+  const view: ViewChoice = options.view ?? { mode: 'scene', reason: 'default' };
   const changed = changeDetector();
   const pending = new Set<number>();
   let latest: PanelInput | undefined;
@@ -58,7 +64,16 @@ export function createPanels(root: HTMLElement, actions: PanelActions): Panels {
   const pace = el('span', 'pace');
   const controls = el('div', 'controls');
   const notice = el('div', 'notice');
-  const strip = el('header', 'status-strip', dot, connection, clock, pace, controls);
+  // The way to switch between the picture and the panels only, or the reason there is no picture.
+  const viewControl = el('span', 'view-control');
+  if (view.reason === 'no-webgl') {
+    viewControl.append(el('span', 'muted', t('view.noWebgl')));
+  } else {
+    const link = el('a', 'view-link', t(view.mode === 'scene' ? 'view.panelOnly' : 'view.scene'));
+    link.href = view.mode === 'scene' ? '?view=panel' : '?view=3d';
+    viewControl.append(link);
+  }
+  const strip = el('header', 'status-strip', dot, connection, clock, pace, controls, viewControl);
 
   const showNotice = (message: string): void => {
     notice.textContent = message;
@@ -85,6 +100,10 @@ export function createPanels(root: HTMLElement, actions: PanelActions): Panels {
   );
 
   const sceneSlot = el('section', 'scene-slot');
+  const banner = el('div', 'scene-banner', t('status.closed'));
+  banner.style.display = 'none';
+  sceneSlot.append(banner);
+  if (view.mode === 'panel') sceneSlot.style.display = 'none';
   root.replaceChildren(el('h1', '', t('app.title')), strip, notice, sceneSlot, columns);
 
   const drawControls = (paused: boolean, speed: number, enabled: boolean): void => {
@@ -168,6 +187,9 @@ export function createPanels(root: HTMLElement, actions: PanelActions): Panels {
         dot.className = `dot ${status}`;
         connection.textContent = t(`status.${status}`);
       });
+      changed('banner', status, () => {
+        banner.style.display = status === 'closed' ? '' : 'none';
+      });
       if (!state) {
         changed('clock', 'none', () => {
           clock.textContent = t('waiting.world');
@@ -179,7 +201,12 @@ export function createPanels(root: HTMLElement, actions: PanelActions): Panels {
 
       const time = statusView(state, nowMs);
       clock.textContent = `${t('clock.day')} ${time.day}, ${time.clock}`;
-      pace.textContent = time.paused ? t('clock.paused') : `${t('clock.speed')} ${time.speed}x`;
+      pace.textContent =
+        status === 'closed'
+          ? t('clock.disconnected')
+          : time.paused
+            ? t('clock.paused')
+            : `${t('clock.speed')} ${time.speed}x`;
       changed('controls', [time.paused, time.speed, status], () =>
         drawControls(time.paused, time.speed, status === 'open'),
       );

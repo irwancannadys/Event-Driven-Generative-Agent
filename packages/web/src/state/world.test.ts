@@ -6,6 +6,7 @@ import {
   applyEvent,
   applyMessage,
   applySnapshot,
+  freezeClock,
   virtualNow,
 } from './world';
 
@@ -354,5 +355,26 @@ describe('virtualNow', () => {
   it('stands still while paused', () => {
     const clock = applyClock(start(), { ...TIME, paused: true }, 1000).clock;
     expect(virtualNow(clock, 9000)).toBe(30_000);
+  });
+});
+
+describe('freezeClock', () => {
+  it('stops the clock at the time it had, so nothing runs on without the server', () => {
+    const running = applyClock(start(), { ...TIME, sim_time: 30_000, speed: 60 }, 1000);
+    const frozen = freezeClock(running, 3000); // two real seconds later: 120 virtual seconds
+    expect(frozen.clock.time.paused).toBe(true);
+    expect(virtualNow(frozen.clock, 3000)).toBe(30_120);
+    expect(virtualNow(frozen.clock, 99_000)).toBe(30_120);
+  });
+
+  it('leaves a clock that is paused already as it is', () => {
+    const paused = applyClock(start(), { ...TIME, paused: true }, 1000);
+    expect(freezeClock(paused, 5000)).toBe(paused);
+  });
+
+  it('is replaced by the snapshot of the reconnect, which has the running clock again', () => {
+    const frozen = freezeClock(start(), 4000);
+    const next = applyMessage(frozen, { kind: 'snapshot', snapshot: snapshot() }, 5000);
+    expect(next?.clock.time.paused).toBe(false);
   });
 });

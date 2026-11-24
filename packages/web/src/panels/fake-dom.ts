@@ -20,7 +20,7 @@ export class FakeNode {
     remove: (name: string): void => void this.classes.delete(name),
   };
   parent: FakeNode | undefined;
-  private readonly listeners = new Map<string, (() => void)[]>();
+  private readonly listeners = new Map<string, ((event: never) => void)[]>();
 
   constructor(readonly tag: string) {}
 
@@ -49,21 +49,28 @@ export class FakeNode {
       .join('');
   }
 
-  addEventListener(type: string, listener: () => void): void {
+  addEventListener(type: string, listener: (event: never) => void): void {
     this.listeners.set(type, [...(this.listeners.get(type) ?? []), listener]);
   }
 
-  removeEventListener(type: string, listener: () => void): void {
+  removeEventListener(type: string, listener: (event: never) => void): void {
     this.listeners.set(
       type,
       (this.listeners.get(type) ?? []).filter((existing) => existing !== listener),
     );
   }
 
+  /** Runs the listeners of an event, as the browser does when it happens. */
+  fire(type: string, event: object = {}): void {
+    for (const listener of (this.listeners.get(type) ?? []) as ((event: object) => void)[]) {
+      listener(event);
+    }
+  }
+
   /** What a click on the element does. A disabled button does nothing, as in a browser. */
   click(): void {
     if (this.disabled) return;
-    for (const listener of this.listeners.get('click') ?? []) listener();
+    this.fire('click');
   }
 
   /** Every element below this one (and itself) that fits. */
