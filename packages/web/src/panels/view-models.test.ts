@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { agent, apply, event, snapshot, stockRow, TIME } from '../state/test-fixtures';
 import { applyClock, applySnapshot, type WorldState } from '../state/world';
-import { agentRows, bossDeskView, logRows, namesOf, statusView, stockRows } from './view-models';
+import {
+  agentRows,
+  bossDeskView,
+  complaintsView,
+  logRows,
+  namesOf,
+  statusView,
+  stockRows,
+} from './view-models';
 
 const world = (overrides = {}): WorldState => applySnapshot(snapshot(overrides), 1000);
 
@@ -173,5 +181,70 @@ describe('bossDeskView', () => {
 
   it('is empty when there is nothing to decide', () => {
     expect(bossDeskView(world())).toEqual({ waiting: [], onTheWay: [] });
+  });
+});
+
+describe('complaintsView', () => {
+  const complaint = (id: number, overrides = {}) => ({
+    complaint_id: id,
+    order_id: id + 20,
+    cause: 'slow_service' as const,
+    status: 'received' as const,
+    received_at_sim: 30_000,
+    replied_at_sim: null,
+    compensation: null,
+    ...overrides,
+  });
+  const NOW = 30_000 + 25 * 60;
+  const stateWith = (complaints: ReturnType<typeof complaint>[]) =>
+    world({ time: { ...TIME, sim_time: NOW }, complaints });
+
+  it('says there is nothing when nobody complained', () => {
+    expect(complaintsView(stateWith([]), 1000)).toEqual({ open: 0, answered: 0, rows: [] });
+  });
+
+  it('lists the complaints that wait for an answer first, oldest first, and how long they have waited', () => {
+    const state = stateWith([
+      complaint(1, {
+        status: 'replied',
+        replied_at_sim: 30_300,
+        compensation: 'none',
+        received_at_sim: 29_900,
+      }),
+      complaint(2, { status: 'triaged', compensation: 'discount_10' }),
+      complaint(3, { received_at_sim: 30_600 }),
+    ]);
+    const view = complaintsView(state, 1000);
+    expect(view.rows.map((row) => row.id)).toEqual([2, 3, 1]);
+    expect([view.open, view.answered]).toEqual([2, 1]);
+    expect(view.rows[0]).toEqual({
+      id: 2,
+      title: 'Pesanan #22 \u00b7 layanan lambat',
+      status: 'triaged',
+      statusLabel: 'menunggu keputusan bos',
+      span: 'sudah menunggu 25 menit',
+      offer: 'usul: diskon 10%',
+    });
+    expect(view.rows[1]).toMatchObject({ statusLabel: 'dicatat kasir', offer: '' });
+    expect(view.rows[2]).toMatchObject({
+      statusLabel: 'dibalas',
+      span: 'dibalas dalam 7 menit',
+      offer: 'tanpa kompensasi',
+    });
+  });
+
+  it('keeps the clock running on the waiting time, between the messages of the server', () => {
+    const state = stateWith([complaint(1)]);
+    expect(complaintsView(state, 1000).rows[0]?.span).toBe('sudah menunggu 25 menit');
+    expect(complaintsView(state, 61_000).rows[0]?.span).toBe('sudah menunggu 1 jam 25 menit'); // a minute later at 60x
+  });
+
+  it('shows the newest answered complaints when there are more than fit, and never hides one that waits', () => {
+    const answered = Array.from({ length: 10 }, (_, index) =>
+      complaint(index + 1, { status: 'replied', replied_at_sim: 30_100, compensation: 'none' }),
+    );
+    const view = complaintsView(stateWith([...answered, complaint(11)]), 1000, 4);
+    expect(view.rows.map((row) => row.id)).toEqual([11, 10, 9, 8]);
+    expect(view.answered).toBe(10);
   });
 });

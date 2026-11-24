@@ -1,6 +1,7 @@
 import {
   AGENT_IDS,
   type AgentId,
+  type ComplaintView,
   type OrderItem,
   type RecipeLine,
   type StationId,
@@ -279,11 +280,18 @@ export function readRecentOrders(db: Db, doneSince: number, limit: number): Rece
   return rows.reverse();
 }
 
-/** Complaints that have not been answered yet. */
-export function readOpenComplaints(db: Db): { complaint_id: number; order_id: number }[] {
+/**
+ * The complaints that are not answered yet and those answered at `repliedSince` or later, oldest first.
+ * `compensation` is the proposal of the cashier until the customer is answered, then what was given.
+ */
+export function readComplaintViews(db: Db, repliedSince: number): ComplaintView[] {
   return db
     .prepare(
-      "SELECT id AS complaint_id, order_id FROM complaints WHERE status <> 'replied' ORDER BY id",
+      `SELECT id AS complaint_id, order_id, cause, status, received_at_sim, replied_at_sim,
+              COALESCE(final_compensation, suggested_compensation) AS compensation
+       FROM complaints
+       WHERE status <> 'replied' OR replied_at_sim >= ?
+       ORDER BY id`,
     )
-    .all() as { complaint_id: number; order_id: number }[];
+    .all(repliedSince) as ComplaintView[];
 }

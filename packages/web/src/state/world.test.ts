@@ -397,7 +397,26 @@ describe('customers', () => {
           },
           { id: 5, status: 'done', source: 'walk_in', created_at_sim: 29_100, done_at_sim: 29_900 },
         ],
-        open_complaints: [{ complaint_id: 2, order_id: 4 }],
+        complaints: [
+          {
+            complaint_id: 2,
+            order_id: 4,
+            cause: 'slow_service',
+            status: 'received',
+            received_at_sim: 29_500,
+            replied_at_sim: null,
+            compensation: null,
+          },
+          {
+            complaint_id: 1,
+            order_id: 5,
+            cause: 'quality',
+            status: 'replied',
+            received_at_sim: 29_200,
+            replied_at_sim: 29_400,
+            compensation: 'discount_10',
+          },
+        ],
       }),
       0,
     );
@@ -419,7 +438,28 @@ describe('customers', () => {
         complaint: 'none',
       },
     });
-    expect(state.openComplaints).toEqual({ 2: 4 });
+    expect(state.complaints).toEqual({
+      2: {
+        id: 2,
+        orderId: 4,
+        cause: 'slow_service',
+        status: 'received',
+        receivedAt: 29_500,
+        repliedAt: null,
+        compensation: null,
+      },
+      1: {
+        id: 1,
+        orderId: 5,
+        cause: 'quality',
+        status: 'replied',
+        receivedAt: 29_200,
+        repliedAt: 29_400,
+        compensation: 'discount_10',
+      },
+    });
+    // a customer is upset only about a complaint that is not answered yet
+    expect(state.customers[5]?.complaint).toBe('none');
   });
 
   it('gets a customer when an order comes in, and follows the order until it is done', () => {
@@ -450,16 +490,56 @@ describe('customers', () => {
     let state = apply(start(), placed(9));
     state = apply(
       state,
-      event('complaint_received', { complaint_id: 3, order_id: 9, cause: 'slow_service' }),
+      event('complaint_received', { complaint_id: 3, order_id: 9, cause: 'slow_service' }, 30_500),
     );
     expect(state.customers[9]?.complaint).toBe('open');
-    expect(state.openComplaints).toEqual({ 3: 9 });
+    expect(state.complaints[3]).toEqual({
+      id: 3,
+      orderId: 9,
+      cause: 'slow_service',
+      status: 'received',
+      receivedAt: 30_500,
+      repliedAt: null,
+      compensation: null,
+    });
     state = apply(
       state,
-      event('complaint_replied', { complaint_id: 3, compensation: 'none', reply_text: 'x' }),
+      event(
+        'complaint_replied',
+        { complaint_id: 3, compensation: 'none', reply_text: 'x' },
+        30_560,
+      ),
     );
     expect(state.customers[9]?.complaint).toBe('none');
-    expect(state.openComplaints).toEqual({});
+    expect(state.complaints[3]).toMatchObject({
+      status: 'replied',
+      repliedAt: 30_560,
+      compensation: 'none',
+    });
+  });
+
+  it('shows the proposal of the cashier on a complaint that waits for the boss', () => {
+    let state = apply(
+      apply(start(), placed(9)),
+      event('complaint_received', { complaint_id: 3, order_id: 9, cause: 'quality' }, 30_500),
+    );
+    state = apply(
+      state,
+      event(
+        'complaint_triaged',
+        {
+          complaint_id: 3,
+          category: 'quality',
+          severity: 2,
+          suggested_compensation: 'discount_10',
+          draft_reply: 'maaf',
+          needs_boss_decision: true,
+        },
+        30_560,
+      ),
+    );
+    expect(state.complaints[3]).toMatchObject({ status: 'triaged', compensation: 'discount_10' });
+    expect(state.customers[9]?.complaint).toBe('open'); // still not answered
   });
 
   it('ignores what is about an order or a complaint it does not know', () => {
@@ -469,7 +549,7 @@ describe('customers', () => {
       apply(
         base,
         event('complaint_replied', { complaint_id: 99, compensation: 'none', reply_text: 'x' }),
-      ).openComplaints,
+      ).complaints,
     ).toEqual({});
   });
 

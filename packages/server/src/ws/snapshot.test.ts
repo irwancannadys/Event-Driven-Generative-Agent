@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { makeScenario, walkDurationSec, type TimeView } from '@cafe/core';
+import {
+  RECENT_COMPLAINT_WINDOW_SEC,
+  makeScenario,
+  walkDurationSec,
+  type TimeView,
+} from '@cafe/core';
 import { EventBus } from '../events/bus';
 import { FIRST_BOOT_START, bootSimulation, type Simulation } from '../sim/simulation';
 import { ev } from '../test-support/events';
@@ -57,7 +62,7 @@ describe('buildSnapshot', () => {
     });
     expect(snapshot.orders).toEqual({ placed: 0, held: 0, cooking: 0, done: 0 });
     expect(snapshot.recent_orders).toEqual([]);
-    expect(snapshot.open_complaints).toEqual([]);
+    expect(snapshot.complaints).toEqual([]);
     expect(snapshot.reports).toEqual([]);
     expect(snapshot.events.map((event) => event.type)).toEqual(['world_initialized']);
     expect(snapshot.last_event_id).toBe(snapshot.events.at(-1)?.id);
@@ -214,7 +219,7 @@ describe('the orders and complaints in a snapshot', () => {
     expect(recent_orders.at(-1)?.id).toBe(SNAPSHOT_ORDER_COUNT + 15);
   });
 
-  it('lists a complaint from the moment it comes in until the cashier has answered it', () => {
+  it('lists a complaint from the moment it comes in, and for two hours after the cashier has answered it', () => {
     const db = createTestDb();
     const sim = bootSimulation({
       db,
@@ -225,12 +230,26 @@ describe('the orders and complaints in a snapshot', () => {
     // Complaints are only checked once the cafe is open (at 600 s), so the first one comes at 660 s, and the
     // cashier, who has to write it down for a minute, answers at 720 s.
     runTo(sim, 659);
-    expect(buildSnapshot(sim.ctx, at(sim)).open_complaints).toEqual([]);
+    expect(buildSnapshot(sim.ctx, at(sim)).complaints).toEqual([]);
     runTo(sim, 700);
-    expect(buildSnapshot(sim.ctx, at(sim)).open_complaints).toEqual([
-      { complaint_id: 1, order_id: 1 },
+    expect(buildSnapshot(sim.ctx, at(sim)).complaints).toEqual([
+      {
+        complaint_id: 1,
+        order_id: 1,
+        cause: 'slow_service',
+        status: 'received',
+        received_at_sim: FIRST_BOOT_START + 660,
+        replied_at_sim: null,
+        compensation: null,
+      },
     ]);
-    runTo(sim, 730);
-    expect(buildSnapshot(sim.ctx, at(sim)).open_complaints).toEqual([]);
+    runTo(sim, 730); // answered: it stays, with what the customer was given
+    expect(buildSnapshot(sim.ctx, at(sim)).complaints).toMatchObject([
+      { complaint_id: 1, status: 'replied', replied_at_sim: FIRST_BOOT_START + 720 },
+    ]);
+    runTo(sim, 720 + RECENT_COMPLAINT_WINDOW_SEC - 10);
+    expect(buildSnapshot(sim.ctx, at(sim)).complaints).toHaveLength(1);
+    runTo(sim, 720 + RECENT_COMPLAINT_WINDOW_SEC + 10); // long ago: gone
+    expect(buildSnapshot(sim.ctx, at(sim)).complaints).toEqual([]);
   });
 });

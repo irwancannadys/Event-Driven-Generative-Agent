@@ -260,6 +260,7 @@ describe('the sidebar', () => {
       'true',
       'true',
       'true',
+      'true',
     ]);
     root.button('Kontrol waktu\u25be').click();
     expect(body(root, 'Kontrol waktu').style.display).toBe('none');
@@ -289,5 +290,50 @@ describe('the sidebar', () => {
     second.panels.update({ state: world(), status: 'open', nowMs: 1000 });
     expect(body(second.root, 'Kejadian').style.display).toBe('none');
     expect(body(second.root, 'Stok').style.display).toBe('');
+  });
+});
+
+describe('the complaints panel', () => {
+  const complaintsPanel = (root: FakeNode) =>
+    root.findAll(
+      (node) => node.tag === 'section' && node.className.startsWith('panel complaints'),
+    )[0];
+
+  it('has a section of its own in the sidebar, which says so when nobody complained', () => {
+    const { root, panels } = setup();
+    panels.update({ state: world(), status: 'open', nowMs: 1000 });
+    expect(complaintsPanel(root)?.textContent).toContain('Komplain');
+    expect(complaintsPanel(root)?.textContent).toContain('Belum ada komplain.');
+    expect(complaintsPanel(root)?.parent?.className).toBe('side');
+  });
+
+  it('shows each complaint with its order, its cause, where it stands and what is offered', () => {
+    const { root, panels } = setup();
+    const state = apply(
+      world(),
+      event('complaint_received', { complaint_id: 1, order_id: 7, cause: 'quality' }, 30_000),
+      event(
+        'complaint_triaged',
+        {
+          complaint_id: 1,
+          category: 'quality',
+          severity: 2,
+          suggested_compensation: 'free_item',
+          draft_reply: 'maaf',
+          needs_boss_decision: true,
+        },
+        30_060,
+      ),
+    );
+    panels.update({ state, status: 'open', nowMs: 1000 });
+    const text = complaintsPanel(root)?.textContent ?? '';
+    for (const part of [
+      '#7',
+      'kualitas',
+      'menunggu keputusan bos',
+      'usul: item gratis',
+      '1 terbuka',
+    ])
+      expect(text).toContain(part);
   });
 });

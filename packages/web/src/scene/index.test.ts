@@ -125,7 +125,17 @@ const customersWorld = (): WorldState =>
         created_at_sim: 29_950 + index,
         done_at_sim: null,
       })),
-      open_complaints: [{ complaint_id: 1, order_id: 26 }],
+      complaints: [
+        {
+          complaint_id: 1,
+          order_id: 26,
+          cause: 'slow_service',
+          status: 'received',
+          received_at_sim: 29_000,
+          replied_at_sim: null,
+          compensation: null,
+        },
+      ],
     }),
     performance.now(),
   );

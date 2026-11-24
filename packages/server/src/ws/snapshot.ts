@@ -1,5 +1,6 @@
 import {
   AGENT_HOME_STATION,
+  RECENT_COMPLAINT_WINDOW_SEC,
   RECENT_DONE_WINDOW_SEC,
   type AgentId,
   type AgentView,
@@ -10,7 +11,7 @@ import {
 import type { Db } from '../db/database';
 import {
   readAgentOverview,
-  readOpenComplaints,
+  readComplaintViews,
   readOrderCounts,
   readRecentOrders,
   readReports,
@@ -62,7 +63,7 @@ export function buildSnapshot(ctx: Context, time: TimeView): Snapshot {
       time.sim_time - RECENT_DONE_WINDOW_SEC,
       SNAPSHOT_ORDER_COUNT,
     ),
-    open_complaints: readOpenComplaints(db),
+    complaints: readComplaintViews(db, time.sim_time - RECENT_COMPLAINT_WINDOW_SEC),
     reports: [...readReports(db, 'drafted'), ...readReports(db, 'submitted')].sort(
       (a, b) => a.id - b.id,
     ),

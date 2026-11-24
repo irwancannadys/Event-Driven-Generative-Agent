@@ -45,7 +45,7 @@ export function snapshot(overrides: Partial<Snapshot> = {}): Snapshot {
     stock: [stockRow('susu', 2500, 1000), stockRow('nasi', 100, 1000)],
     orders: { placed: 0, held: 0, cooking: 0, done: 0 },
     recent_orders: [],
-    open_complaints: [],
+    complaints: [],
     reports: [],
     events: [],
     ...overrides,

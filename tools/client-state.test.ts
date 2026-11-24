@@ -1,16 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import {
+  RECENT_COMPLAINT_WINDOW_SEC,
   RECENT_DONE_WINDOW_SEC,
   SECONDS_PER_DAY,
   dayOf,
   formatClock,
   makeScenario,
+  type Scenario,
   type TimeView,
 } from '@cafe/core';
 import { openSeededMemoryDb } from '../packages/server/src/db/memory';
 import { EventBus } from '../packages/server/src/events/bus';
 import { bootSimulation } from '../packages/server/src/sim/simulation';
-import { AutoBoss } from '../packages/server/src/test-support/auto-boss';
+import { AutoBoss, type AutoBossOptions } from '../packages/server/src/test-support/auto-boss';
 import { decideLikeTheTestBoss } from '../packages/server/src/test-support/play-day';
 import { buildSnapshot } from '../packages/server/src/ws/snapshot';
 import { applyEvent, applySnapshot, type WorldState } from '../packages/web/src/state/world';
@@ -41,17 +43,22 @@ function comparable(state: WorldState, now: number) {
     customers: Object.values(state.customers).filter(
       (customer) => customer.doneAt === null || customer.doneAt >= now - RECENT_DONE_WINDOW_SEC,
     ),
-    openComplaints: state.openComplaints,
+    // the same for a complaint that was answered long ago
+    complaints: Object.values(state.complaints).filter(
+      (complaint) =>
+        complaint.repliedAt === null || complaint.repliedAt >= now - RECENT_COMPLAINT_WINDOW_SEC,
+    ),
     newestEvents: state.log.slice(-50).map((event) => event.id),
   };
 }
 
-describe('the page state equals the server snapshot', () => {
-  it('at every moment of a whole day, for a page that was there from the start and for one that joined late', () => {
+/** Follows a whole day with two pages and compares them with the server at every cut, and counts what it saw. */
+function followDay(scenario: Scenario, bossDecides: AutoBossOptions['decide']) {
+  {
     const db = openSeededMemoryDb();
     const bus = new EventBus();
-    const sim = bootSimulation({ db, bus, scenario: makeScenario(42) });
-    const boss = new AutoBoss(sim, { decide: decideLikeTheTestBoss });
+    const sim = bootSimulation({ db, bus, scenario });
+    const boss = new AutoBoss(sim, { decide: bossDecides });
 
     const time = (): TimeView => ({
       sim_time: sim.clock.now(),
@@ -79,6 +86,8 @@ describe('the page state equals the server snapshot', () => {
       leaving: 0,
       upset: 0,
       customers: 0,
+      waitingForBoss: 0,
+      answered: 0,
     };
     const STEP = 47; // a prime number of seconds: the cuts fall everywhere, also in the middle of walks
     for (let cut = sim.clock.now() + STEP; cut <= SECONDS_PER_DAY; cut += STEP) {
@@ -104,10 +113,20 @@ describe('the page state equals the server snapshot', () => {
       if (customers.length > 0) seen.customers += 1;
       if (customers.some((customer) => customer.doneAt !== null)) seen.leaving += 1;
       if (customers.some((customer) => customer.complaint === 'open')) seen.upset += 1;
+      const complaints = Object.values(truth.complaints);
+      if (complaints.some((complaint) => complaint.status === 'triaged')) seen.waitingForBoss += 1;
+      if (complaints.some((complaint) => complaint.status === 'replied')) seen.answered += 1;
     }
 
+    return seen;
+  }
+}
+
+describe('the page state equals the server snapshot', () => {
+  it('at every moment of a whole day, for a page that was there from the start and for one that joined late', () => {
+    const seen = followDay(makeScenario(42), decideLikeTheTestBoss);
     // The day must have had something to compare: walks, work, a report on the desk, held orders, customers
-    // waiting, leaving and upset.
+    // waiting, leaving and upset, and complaints that were answered.
     expect(seen.cuts).toBeGreaterThan(1200);
     expect(seen.walking).toBeGreaterThan(40);
     expect(seen.working).toBeGreaterThan(500);
@@ -117,5 +136,15 @@ describe('the page state equals the server snapshot', () => {
     expect(seen.customers).toBeGreaterThan(800);
     expect(seen.leaving).toBeGreaterThan(600);
     expect(seen.upset).toBeGreaterThan(3);
+    expect(seen.answered).toBeGreaterThan(3);
+  });
+
+  it('also on a day of long waits, when complaints go to the boss and wait there for his decision', () => {
+    const seen = followDay(
+      makeScenario(42, { crowdPct: 250, complaintChancePct: 100, complaintWaitSec: 2400 }),
+      decideLikeTheTestBoss,
+    );
+    expect(seen.waitingForBoss).toBeGreaterThan(20);
+    expect(seen.answered).toBeGreaterThan(20);
   });
 });

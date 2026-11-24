@@ -1,5 +1,7 @@
 import type { StoredEvent } from './events';
 import type { AgentId, StationId } from './ids';
+import type { ComplaintCause } from './rules';
+import type { Compensation } from './schema-parts';
 import type { SimTime } from './time';
 
 // What travels between the server and the web page (decision 026). Types only: the server builds these
@@ -82,10 +84,25 @@ export interface OrderView {
   done_at_sim: SimTime | null;
 }
 
-/** A complaint that has not been answered yet, and the order it is about. */
+export type ComplaintStatus = 'received' | 'triaged' | 'replied';
+
+/** A replied complaint stays in the snapshot this long (two virtual hours), for the complaints panel. */
+export const RECENT_COMPLAINT_WINDOW_SEC = 7200;
+
+/** A complaint and where it stands: noted by the cashier, waiting for the boss, or answered. */
 export interface ComplaintView {
   complaint_id: number;
   order_id: number;
+  cause: ComplaintCause;
+  status: ComplaintStatus;
+  received_at_sim: SimTime;
+  /** `null` until it is answered. */
+  replied_at_sim: SimTime | null;
+  /**
+   * What the customer is offered: the cashier's proposal once she has judged the complaint, the
+   * compensation given once it is answered, `null` before that.
+   */
+  compensation: Compensation | null;
 }
 
 /** The state of the world at one moment, sent once when a page connects. */
@@ -102,7 +119,11 @@ export interface Snapshot {
    * (a customer is still on the way out). Oldest first, at most 200 of the newest.
    */
   recent_orders: OrderView[];
-  open_complaints: ComplaintView[];
+  /**
+   * The complaints that are not answered yet, and the ones answered in the last two virtual hours
+   * (`RECENT_COMPLAINT_WINDOW_SEC`). Oldest first.
+   */
+  complaints: ComplaintView[];
   /** Reports that are not decided yet (`drafted` and `submitted`). */
   reports: ReportView[];
   /** The newest events, oldest first, so the log on the page is filled from the start. */

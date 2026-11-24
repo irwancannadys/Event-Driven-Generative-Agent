@@ -6,10 +6,11 @@ import {
   formatClock,
   isHiddenFromLog,
   logLabel,
+  type ComplaintStatus,
   type LogLabel,
   type OrderStatus,
 } from '@cafe/core';
-import { describeEvent, type Names } from '../i18n';
+import { describeEvent, formatSpan, t, type Names, type TextKey } from '../i18n';
 import { agentActivity } from '../state/agent-text';
 import { virtualNow, type ReportCard, type WorldState } from '../state/world';
 
@@ -136,6 +137,64 @@ export function bossDeskView(state: WorldState): BossDeskView {
     waiting: state.reports.filter((card) => card.status === 'submitted').map(toRow),
     onTheWay: state.reports.filter((card) => card.status === 'drafted').map(toRow),
   };
+}
+
+export interface ComplaintRowView {
+  id: number;
+  /** Which order it is about and why the customer complains. */
+  title: string;
+  status: ComplaintStatus;
+  statusLabel: string;
+  /** How long it has been open, or how long it took to answer. */
+  span: string;
+  /** What is offered (a proposal while the boss has not decided) or was given. Empty before the cashier judged it. */
+  offer: string;
+}
+
+export interface ComplaintsView {
+  open: number;
+  answered: number;
+  rows: ComplaintRowView[];
+}
+
+/** The most complaints the panel lists. */
+export const COMPLAINT_ROWS = 8;
+
+/**
+ * The complaints that wait for an answer first, oldest first (they are the ones that need something), then
+ * the answered ones, newest first, up to `limit` rows.
+ */
+export function complaintsView(
+  state: WorldState,
+  nowMs: number,
+  limit = COMPLAINT_ROWS,
+): ComplaintsView {
+  const now = Math.floor(virtualNow(state.clock, nowMs));
+  const all = Object.values(state.complaints);
+  const open = all
+    .filter((complaint) => complaint.status !== 'replied')
+    .sort((a, b) => a.id - b.id);
+  const answered = all
+    .filter((complaint) => complaint.status === 'replied')
+    .sort((a, b) => b.id - a.id);
+  const rows = [...open, ...answered].slice(0, limit).map((complaint): ComplaintRowView => {
+    const replied = complaint.status === 'replied';
+    const offer =
+      complaint.compensation === null
+        ? ''
+        : `${replied ? '' : `${t('complaint.offered')}: `}${t(`complaint.offer.${complaint.compensation}` as TextKey)}`;
+    return {
+      id: complaint.id,
+      title: `${t('complaint.order')} #${complaint.orderId} \u00b7 ${t(`complaint.cause.${complaint.cause}` as TextKey)}`,
+      status: complaint.status,
+      statusLabel: t(`complaint.${complaint.status}` as TextKey),
+      span: replied
+        ? `${t('complaint.answeredIn')} ${formatSpan((complaint.repliedAt ?? now) - complaint.receivedAt)}`
+        : `${t('complaint.waiting')} ${formatSpan(Math.max(0, now - complaint.receivedAt))}`,
+      offer,
+    };
+  });
+  return { open: open.length, answered: answered.length, rows };
 }
 
 /** The speeds of the time controls, in virtual seconds per real second (the server allows 1 to 3600). */

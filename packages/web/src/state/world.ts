@@ -2,6 +2,9 @@ import { RECENT_DONE_WINDOW_SEC } from '@cafe/core';
 import type {
   AgentId,
   AgentState as AgentStatus,
+  ComplaintCause,
+  ComplaintStatus,
+  Compensation,
   OrderStatus,
   ServerMessage,
   Snapshot,
@@ -57,6 +60,19 @@ export interface CustomerState {
   complaint: 'none' | 'open';
 }
 
+/** A complaint, from the moment it comes in until it is answered (and for a while after). */
+export interface ComplaintState {
+  id: number;
+  orderId: number;
+  cause: ComplaintCause;
+  status: ComplaintStatus;
+  receivedAt: number;
+  /** `null` until the cashier has answered. */
+  repliedAt: number | null;
+  /** What is offered: the cashier's proposal after she judged it, what was given after the answer. */
+  compensation: Compensation | null;
+}
+
 /** The last clock the server sent, and the real time (ms) at which it arrived. */
 export interface ClockState {
   time: TimeView;
@@ -73,8 +89,8 @@ export interface WorldState {
   reports: ReportCard[];
   /** The customers, by order id: the orders that are not done and the ones done a short while ago. */
   customers: Record<number, CustomerState>;
-  /** The complaints that are not answered yet, as complaint id to order id. */
-  openComplaints: Record<number, number>;
+  /** The complaints that are not answered yet and the ones answered a short while ago, by complaint id. */
+  complaints: Record<number, ComplaintState>;
   /** The newest events, oldest first (the event log panel). */
   log: StoredEvent[];
 }
@@ -122,14 +138,27 @@ export function applySnapshot(snapshot: Snapshot, atMs: number): WorldState {
           status: order.status,
           createdAt: order.created_at_sim,
           doneAt: order.done_at_sim,
-          complaint: snapshot.open_complaints.some((c) => c.order_id === order.id)
+          complaint: snapshot.complaints.some(
+            (c) => c.order_id === order.id && c.status !== 'replied',
+          )
             ? ('open' as const)
             : ('none' as const),
         },
       ]),
     ),
-    openComplaints: Object.fromEntries(
-      snapshot.open_complaints.map((complaint) => [complaint.complaint_id, complaint.order_id]),
+    complaints: Object.fromEntries(
+      snapshot.complaints.map((complaint) => [
+        complaint.complaint_id,
+        {
+          id: complaint.complaint_id,
+          orderId: complaint.order_id,
+          cause: complaint.cause,
+          status: complaint.status,
+          receivedAt: complaint.received_at_sim,
+          repliedAt: complaint.replied_at_sim,
+          compensation: complaint.compensation,
+        },
+      ]),
     ),
     log: snapshot.events.slice(-LOG_LIMIT),
   };
@@ -247,23 +276,41 @@ function react(state: WorldState, event: StoredEvent): WorldState {
       return changeCustomer(
         {
           ...state,
-          openComplaints: {
-            ...state.openComplaints,
-            [event.payload.complaint_id]: event.payload.order_id,
+          complaints: {
+            ...state.complaints,
+            [event.payload.complaint_id]: {
+              id: event.payload.complaint_id,
+              orderId: event.payload.order_id,
+              cause: event.payload.cause,
+              status: 'received',
+              receivedAt: event.sim_time,
+              repliedAt: null,
+              compensation: null,
+            },
           },
         },
         event.payload.order_id,
         (customer) => ({ ...customer, complaint: 'open' }),
       );
     case 'complaint_replied': {
-      const orderId = state.openComplaints[event.payload.complaint_id];
-      if (orderId === undefined) return state;
-      const openComplaints = { ...state.openComplaints };
-      delete openComplaints[event.payload.complaint_id];
-      return changeCustomer({ ...state, openComplaints }, orderId, (customer) => ({
-        ...customer,
-        complaint: 'none',
-      }));
+      const complaint = state.complaints[event.payload.complaint_id];
+      if (complaint === undefined) return state;
+      return changeCustomer(
+        {
+          ...state,
+          complaints: {
+            ...state.complaints,
+            [complaint.id]: {
+              ...complaint,
+              status: 'replied',
+              repliedAt: event.sim_time,
+              compensation: event.payload.compensation,
+            },
+          },
+        },
+        complaint.orderId,
+        (customer) => ({ ...customer, complaint: 'none' }),
+      );
     }
 
     case 'stock_decreased':
@@ -317,10 +364,25 @@ function react(state: WorldState, event: StoredEvent): WorldState {
 
     case 'restock_proposed':
       return addReport(state, event.payload.report, 'restock', event.sim_time);
-    case 'complaint_triaged':
-      return event.payload.report
-        ? addReport(state, event.payload.report, 'complaint', event.sim_time)
+    case 'complaint_triaged': {
+      const complaint = state.complaints[event.payload.complaint_id];
+      const judged: WorldState = complaint
+        ? {
+            ...state,
+            complaints: {
+              ...state.complaints,
+              [complaint.id]: {
+                ...complaint,
+                status: 'triaged',
+                compensation: event.payload.suggested_compensation,
+              },
+            },
+          }
         : state;
+      return event.payload.report
+        ? addReport(judged, event.payload.report, 'complaint', event.sim_time)
+        : judged;
+    }
     case 'report_submitted':
       return changeReport(state, event.payload.report_id, (card) => ({
         ...card,

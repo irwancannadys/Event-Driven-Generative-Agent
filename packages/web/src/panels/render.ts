@@ -11,6 +11,7 @@ import {
   SPEEDS,
   agentRows,
   bossDeskView,
+  complaintsView,
   logRows,
   orderCounts,
   statusView,
@@ -120,6 +121,7 @@ export function createPanels(
   const boss = section('panel.boss', 'boss');
   const controlsPanel = foldable('time', 'panel.time', 'time');
   const log = foldable('log', 'panel.log', 'log');
+  const complaints = foldable('complaints', 'panel.complaints', 'complaints');
   const stock = foldable('stock', 'panel.stock', 'stock');
   controlsPanel.body.append(controls, viewControl);
   const sceneSlot = el('section', 'scene-slot');
@@ -131,7 +133,7 @@ export function createPanels(
   // it, and a column on the right with the log (it scrolls) and the stock below it.
   const topbar = el('header', 'topbar', el('h1', '', t('app.title')), strip);
   const main = el('div', 'main', sceneSlot, el('div', 'info', agents.root, orders.root, boss.root));
-  const side = el('aside', 'side', controlsPanel.root, log.root, stock.root);
+  const side = el('aside', 'side', controlsPanel.root, log.root, complaints.root, stock.root);
   root.replaceChildren(topbar, notice, el('main', 'watch', main, side));
 
   const drawControls = (paused: boolean, speed: number, enabled: boolean): void => {
@@ -307,6 +309,35 @@ export function createPanels(
           ...(cards.length > 0 ? cards : [el('div', 'muted', t('boss.empty'))]),
         );
       });
+
+      const complaintList = complaintsView(state, nowMs);
+      changed('complaints', complaintList, () =>
+        complaints.body.replaceChildren(
+          ...(complaintList.rows.length > 0
+            ? [
+                el(
+                  'div',
+                  'muted complaint-summary',
+                  `${complaintList.open} ${t('complaints.summary.open')} \u00b7 ${complaintList.answered} ${t('complaints.summary.answered')}`,
+                ),
+                ...complaintList.rows.map((row) =>
+                  el(
+                    'article',
+                    'complaint-row',
+                    el(
+                      'div',
+                      'complaint-head',
+                      el('strong', '', row.title),
+                      el('span', `tag tag-complaint-${row.status}`, row.statusLabel),
+                    ),
+                    el('div', 'muted', row.span),
+                    ...(row.offer ? [el('div', 'muted', row.offer)] : []),
+                  ),
+                ),
+              ]
+            : [el('div', 'muted', t('complaints.empty'))]),
+        ),
+      );
 
       const rows = logRows(state);
       changed(
