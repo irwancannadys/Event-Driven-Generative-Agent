@@ -52,7 +52,7 @@ SQLite lewat `better-sqlite3`. Migrasi awal: `0001_init.sql` (Langkah 10). Dafta
 
 **`order_items`**: `order_id` FK, `menu_item_id` FK, `qty` INTEGER > 0. PK gabungan.
 
-**`agents`**: `id` TEXT PK (`cashier`, `cook`, `stock_admin`, `waiter`), `role` TEXT, `station` TEXT (StationId), `state` (`idle`, `walking`, `working`, `thinking`).
+**`agents`**: `id` TEXT PK (`cashier`, `cook`, `stock_admin`, `waiter`), `role` TEXT, `station` TEXT (StationId), `state` (`idle`, `walking`, `working`, `thinking`). Stasiun asal: kasir `cashier`, koki `kitchen`, admin stok `stock_shelf`, pelayan `table_2`. Selama berjalan, `station` adalah posisi sekarang atau tujuan (saat `walking`).
 
 **`agent_tasks`**: `id` INTEGER PK, `agent_id` FK, `kind` (`goto`, `work`), `params_json` (station, label, ref), `status` (`queued`, `active`, `done`), `duration_sim_sec`, `started_at_sim` nullable, `ends_at_sim` nullable. Urutan antrean = urutan `id`. `ends_at_sim` dipakai klien untuk interpolasi animasi.
 

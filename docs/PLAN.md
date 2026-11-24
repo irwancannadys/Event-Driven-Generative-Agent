@@ -161,23 +161,32 @@ Hasil Tahap 2, bahan untuk materi:
 
 ### Tahap 3: Karakter berbasis aturan
 
-**Tujuan:** kasir, koki, dan admin stok bekerja sendiri lewat aturan. Belum ada 3D dan belum ada LLM.
+**Tujuan:** kasir, koki, dan admin stok bekerja sendiri lewat aturan, dan bos (pemilik) menyetujui atau menolak laporan. Belum ada 3D dan belum ada LLM, tapi keputusan sudah memakai jalur `agent_think_requested` dan `agent_decided` yang nanti dipakai LLM.
+
+**Pembagian tugas (keputusan 022 sampai 024):** `core` memegang aturan murni (rencana tugas, usulan belanja, triase komplain, teks template). `server` memegang mesin agent: satu langkah (item jatuh tempo atau klik bos) ditulis dalam **satu transaksi bersama semua reaksi berantainya**. Akhir tugas agent dan kedatangan pemasok adalah **item dinamis** yang dibaca dari proyeksi.
 
 **Tugas:**
-- [ ] Model agent: peran, stasiun saat ini, status (`idle`, `walking`, `working`), antrean tugas
-- [ ] Jenis tugas: `goto(station)`, `work(duration, label)`, `do(action)`
-- [ ] Durasi jalan dari tabel jarak (keputusan #3)
-- [ ] Penangan: kasir (catat pesanan), koki (masak dan kurangi stok), admin stok (cek stok, usulan belanja berbasis aturan "isi sampai penuh")
-- [ ] Alur laporan: `report_submitted` (karakter tiba di meja bos), `report_decided` (setuju/tolak lewat API)
-- [ ] Putuskan perilaku laporan yang tidak diklik (v1: menunggu). `AutoBoss` (skrip yang menyetujui laporan) hanya dipakai di tes
-- [ ] Pemasok tiruan (tepat waktu, telat, kosong; diundi seeded dari bobot di `suppliers_mock`) dan `restock_arrived`
-- [ ] Alur komplain berbasis aturan (balasan templat) dengan laporan ke bos
+- [ ] Aturan murni di `core`: stasiun asal tiap agent, durasi tugas, perencana tugas (`goto` hanya bila perlu, `finalStation`)
+- [ ] Keputusan aturan di `core`: usulan belanja "isi sampai penuh", triase komplain, teks template Indonesia
+- [ ] `VirtualClock` dengan item dinamis (akhir tugas agent dan kedatangan pemasok dibaca dari proyeksi, item yang sudah lewat waktunya jatuh tempo sekarang)
+- [ ] Langkah atomik: `transact` bersarang dan antrean reaksi yang dikuras sebelum commit
+- [ ] Proyeksi untuk event Tahap 3 (agents, antrean tugas, laporan, pesanan belanja, komplain, pesanan dilanjutkan)
+- [ ] Mesin agent: peran, stasiun, status (`idle`, `walking`, `working`), antrean tugas; jenis tugas `goto` dan `work` (tanpa `do`); durasi jalan dari tabel jarak; hook sebelum mulai untuk memasak
+- [ ] Reaksi pesanan: kasir mencatat, koki memasak (stok dikurangi saat tugas memasak dimulai), `cooking_done`
+- [ ] Reaksi belanja: admin mengecek, usulan "isi sampai penuh", laporan sampai di meja bos (`report_submitted`), keputusan bos (`report_decided` lewat API), pemesanan per bahan, pemasok tiruan (tepat waktu, telat, kosong; diundi seeded dari bobot `suppliers_mock`), `restock_arrived`, pesanan tertahan dilanjutkan FIFO (`order_resumed`)
+- [ ] Penolakan bos: admin menunggu 1 jam virtual, lalu mengecek lagi dan mengusulkan ulang bila masih tipis
+- [ ] Alur komplain berbasis aturan (balasan template), lapor ke bos bila butuh kompensasi
+- [ ] Perilaku laporan yang tidak diklik: menunggu (v1). `AutoBoss` hanya dipakai di tes dan demo
 - [ ] Event `agent_state_changed` dengan ETA untuk tampilan
-- [ ] Tampilan CLI "watch" yang mencetak status agent
+- [ ] API: `GET /agents`, `GET /orders`, `GET /reports`, `POST /reports/:id/decision`
+- [ ] Tampilan CLI `npm run watch` yang mencetak status agent dan laporan yang menunggu
+- [ ] Golden test satu hari dengan `AutoBoss`, `npm run demo:stage3`, panduan uji Tahap 3 di `docs/testing.md`
 
-**Tes:** skenario skrip (pesanan, masak, stok tipis, laporan, setuju, restock), banyak pesanan sekaligus (antre), stok habis menahan pesanan lalu diproses setelah restock.
+**Ditunda:** penyebab komplain `wrong_order` dan `quality` (Tahap 3 hanya `slow_service`), status `thinking` (menunggu LLM di Tahap 6), perilaku Rina (Tahap 5).
 
-**Selesai jika:** satu hari terskrip berjalan penuh hanya lewat log, dan tes lulus.
+**Tes:** skenario skrip (pesanan, masak, stok tipis, laporan, setuju, restock), banyak pesanan sekaligus (antre), stok habis menahan pesanan lalu diproses setelah restock, tiga perilaku pemasok, restart di banyak titik memberi log identik.
+
+**Selesai jika:** satu hari terskrip (dengan `AutoBoss`) berjalan penuh hanya lewat log dan tes lulus, dan `npm run dev` nyala dengan bos (lu) bisa menyetujui laporan lewat API.
 
 **Catatan pelajaran:** state machine agent, serah-terima antar karakter.
 

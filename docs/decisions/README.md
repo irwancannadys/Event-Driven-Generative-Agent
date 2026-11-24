@@ -25,3 +25,6 @@ Satu file per keputusan, beberapa baris tiap file. Brief menang jika ada bentura
 | [019](019-sql-projections-with-pure-rules.md) | Proyeksi lewat SQL, aturan murni di core |
 | [020](020-pure-time-engine.md) | Mesin waktu: sumber murni, jam virtual, seed dari log |
 | [021](021-pacing-and-time-controls.md) | Pacing dan kontrol waktu |
+| [022](022-agents-task-queue-and-atomic-steps.md) | Agent, antrean tugas, dan langkah atomik dengan reaksi |
+| [023](023-dynamic-due-items.md) | Timer dinamis di VirtualClock |
+| [024](024-rule-based-restock-and-complaints.md) | Usulan belanja dan triase komplain berbasis aturan |

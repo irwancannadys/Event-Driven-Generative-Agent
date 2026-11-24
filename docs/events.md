@@ -234,6 +234,9 @@ order_resumed          (jika ada pesanan tertahan)                 rule
 - **Kontrol waktu (pause, kecepatan) bukan event.** Itu hanya mengatur kecepatan jam real. Hanya loncat waktu yang jadi event (`sim_time_advanced`).
 - **Efek samping tugas lewat penangan event, bukan callback.** Misalnya koki mendengar `agent_task_finished` untuk tugas memasak, lalu menulis `cooking_done`.
 - **Satu keputusan satu hasil.** `agent_decided` mencatat keputusan, event hasil (`restock_proposed`, `table_prepared`, dst.) mencatat efeknya di dunia.
+- **Satu langkah, satu transaksi.** Satu item jatuh tempo (atau satu klik bos) dan semua reaksi berantainya (event turunan) ditulis dalam satu transaksi, urutannya FIFO. Hasilnya: server yang mati tidak pernah meninggalkan serah-terima setengah jalan (keputusan 022).
+- **Satu `restock_ordered` per bahan.** Pemasok tiruan per bahan, jadi satu laporan bisa menghasilkan beberapa pesanan belanja, masing-masing dengan `restock_id` sendiri (keputusan 024).
+- **`agent_state_changed` menandai mulainya tugas.** Untuk `walking`, `station` adalah tujuan dan `eta_sim_time` waktu tiba. Untuk `working`, `station` adalah posisi sekarang. `idle` tidak membawa `task_id`.
 
 ## 6. Label di panel log
 
