@@ -392,10 +392,20 @@ describe('customers', () => {
             id: 4,
             status: 'cooking',
             source: 'walk_in',
+            customer_id: 48_300,
             created_at_sim: 29_000,
+            recorded_at_sim: 29_045,
             done_at_sim: null,
           },
-          { id: 5, status: 'done', source: 'walk_in', created_at_sim: 29_100, done_at_sim: 29_900 },
+          {
+            id: 5,
+            status: 'done',
+            source: 'walk_in',
+            customer_id: null,
+            created_at_sim: 29_100,
+            recorded_at_sim: null,
+            done_at_sim: 29_900,
+          },
         ],
         complaints: [
           {
@@ -423,17 +433,21 @@ describe('customers', () => {
     expect(state.customers).toEqual({
       4: {
         orderId: 4,
+        customerId: 48_300,
         source: 'walk_in',
         status: 'cooking',
         createdAt: 29_000,
+        recordedAt: 29_045,
         doneAt: null,
         complaint: 'open',
       },
       5: {
         orderId: 5,
+        customerId: null,
         source: 'walk_in',
         status: 'done',
         createdAt: 29_100,
+        recordedAt: null,
         doneAt: 29_900,
         complaint: 'none',
       },
@@ -466,9 +480,11 @@ describe('customers', () => {
     let state = apply(start(), placed(7, 30_100));
     expect(state.customers[7]).toEqual({
       orderId: 7,
+      customerId: null,
       source: 'walk_in',
       status: 'placed',
       createdAt: 30_100,
+      recordedAt: null,
       doneAt: null,
       complaint: 'none',
     });
@@ -476,6 +492,60 @@ describe('customers', () => {
     expect(state.customers[7]?.status).toBe('cooking');
     state = apply(state, event('cooking_done', { order_id: 7 }, 30_300));
     expect(state.customers[7]).toMatchObject({ status: 'done', doneAt: 30_300 });
+  });
+
+  it('sees a customer come in at the door, and the order of that customer at the counter', () => {
+    let state = apply(start(), event('customer_arrived', { customer_id: 48_300 }, 30_000));
+    expect(state.arrivals).toEqual({ 48_300: 30_000 });
+    expect(state.customers).toEqual({}); // no order yet: nothing to cook, nothing to report
+    state = apply(
+      state,
+      event(
+        'order_created',
+        { order_id: 7, source: 'walk_in', customer_id: 48_300, items: [] },
+        30_200,
+      ),
+    );
+    expect(state.arrivals).toEqual({});
+    expect(state.customers[7]).toMatchObject({ orderId: 7, customerId: 48_300, createdAt: 30_200 });
+  });
+
+  it('leaves the other customers on their way when one of them has placed its order', () => {
+    let state = apply(
+      start(),
+      event('customer_arrived', { customer_id: 1 }, 30_000),
+      event('customer_arrived', { customer_id: 2 }, 30_050),
+    );
+    state = apply(
+      state,
+      event('order_created', { order_id: 1, source: 'walk_in', customer_id: 1, items: [] }, 30_200),
+    );
+    expect(state.arrivals).toEqual({ 2: 30_050 });
+  });
+
+  it('notes when the cashier has written an order down, from the task the cook is given', () => {
+    const task = (task_id: number, order_id: number, sim_time: number, label = 'cooking') =>
+      event(
+        'agent_task_assigned',
+        {
+          agent_id: 'cook',
+          task_id,
+          kind: 'work',
+          label,
+          duration_sim_sec: 180,
+          ref: { type: 'order', id: order_id },
+        },
+        sim_time,
+      );
+    let state = apply(start(), placed(7, 30_000));
+    expect(state.customers[7]?.recordedAt).toBeNull();
+    state = apply(state, task(1, 7, 30_020, 'recording_order')); // the cashier's own task is not it
+    expect(state.customers[7]?.recordedAt).toBeNull();
+    state = apply(state, task(2, 7, 30_045));
+    expect(state.customers[7]?.recordedAt).toBe(30_045);
+    state = apply(state, task(3, 7, 33_000)); // held, then cooked again: the first moment stays
+    expect(state.customers[7]?.recordedAt).toBe(30_045);
+    expect(apply(state, task(4, 99, 33_100)).customers[99]).toBeUndefined();
   });
 
   it('waits when the order is held for want of ingredients, and goes on when it is resumed', () => {

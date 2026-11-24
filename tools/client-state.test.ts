@@ -43,6 +43,7 @@ function comparable(state: WorldState, now: number) {
     customers: Object.values(state.customers).filter(
       (customer) => customer.doneAt === null || customer.doneAt >= now - RECENT_DONE_WINDOW_SEC,
     ),
+    arrivals: state.arrivals,
     // the same for a complaint that was answered long ago
     complaints: Object.values(state.complaints).filter(
       (complaint) =>
@@ -88,6 +89,8 @@ function followDay(scenario: Scenario, bossDecides: AutoBossOptions['decide']) {
       customers: 0,
       waitingForBoss: 0,
       answered: 0,
+      walkingIn: 0,
+      recorded: 0,
     };
     const STEP = 47; // a prime number of seconds: the cuts fall everywhere, also in the middle of walks
     for (let cut = sim.clock.now() + STEP; cut <= SECONDS_PER_DAY; cut += STEP) {
@@ -113,6 +116,8 @@ function followDay(scenario: Scenario, bossDecides: AutoBossOptions['decide']) {
       if (customers.length > 0) seen.customers += 1;
       if (customers.some((customer) => customer.doneAt !== null)) seen.leaving += 1;
       if (customers.some((customer) => customer.complaint === 'open')) seen.upset += 1;
+      if (Object.keys(truth.arrivals).length > 0) seen.walkingIn += 1;
+      if (customers.some((customer) => customer.recordedAt !== null)) seen.recorded += 1;
       const complaints = Object.values(truth.complaints);
       if (complaints.some((complaint) => complaint.status === 'triaged')) seen.waitingForBoss += 1;
       if (complaints.some((complaint) => complaint.status === 'replied')) seen.answered += 1;
@@ -137,6 +142,8 @@ describe('the page state equals the server snapshot', () => {
     expect(seen.leaving).toBeGreaterThan(600);
     expect(seen.upset).toBeGreaterThan(3);
     expect(seen.answered).toBeGreaterThan(3);
+    expect(seen.walkingIn).toBeGreaterThan(200); // customers on their way from the door to the counter
+    expect(seen.recorded).toBeGreaterThan(800);
   });
 
   it('also on a day of long waits, when complaints go to the boss and wait there for his decision', () => {

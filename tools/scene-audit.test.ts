@@ -132,9 +132,11 @@ function play(crowdPct: number) {
     const orderId = (event.payload as { order_id: number }).order_id;
     const customer = {
       orderId,
+      customerId: null,
       source: 'walk_in' as const,
       status: 'placed' as const,
       createdAt: event.sim_time,
+      recordedAt: null,
       doneAt: null,
       complaint: 'none' as const,
     };

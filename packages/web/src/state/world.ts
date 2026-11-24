@@ -51,10 +51,16 @@ export interface ReportCard {
  */
 export interface CustomerState {
   orderId: number;
+  /**
+   * The customer that came in at the door and walked to the cashier to place this order (decision 032):
+   * the same person from the door to the counter. `null` for an order made by hand.
+   */
+  customerId: number | null;
   source: 'walk_in' | 'regular';
   status: OrderStatus;
-  /** When the order came in, and when it was done (`null` while it is not). */
+  /** When the order came in, when the cashier had written it down (`null` before), and when it was done. */
   createdAt: number;
+  recordedAt: number | null;
   doneAt: number | null;
   /** `open` from a complaint about the order until the cashier has answered it. */
   complaint: 'none' | 'open';
@@ -89,6 +95,8 @@ export interface WorldState {
   reports: ReportCard[];
   /** The customers, by order id: the orders that are not done and the ones done a short while ago. */
   customers: Record<number, CustomerState>;
+  /** The customers that came in at the door and have not placed their order yet: customer id to the time of arrival. */
+  arrivals: Record<number, number>;
   /** The complaints that are not answered yet and the ones answered a short while ago, by complaint id. */
   complaints: Record<number, ComplaintState>;
   /** The newest events, oldest first (the event log panel). */
@@ -134,9 +142,11 @@ export function applySnapshot(snapshot: Snapshot, atMs: number): WorldState {
         order.id,
         {
           orderId: order.id,
+          customerId: order.customer_id,
           source: order.source,
           status: order.status,
           createdAt: order.created_at_sim,
+          recordedAt: order.recorded_at_sim,
           doneAt: order.done_at_sim,
           complaint: snapshot.complaints.some(
             (c) => c.order_id === order.id && c.status !== 'replied',
@@ -145,6 +155,9 @@ export function applySnapshot(snapshot: Snapshot, atMs: number): WorldState {
             : ('none' as const),
         },
       ]),
+    ),
+    arrivals: Object.fromEntries(
+      snapshot.arrivals_in_flight.map((arrival) => [arrival.customer_id, arrival.arrived_at_sim]),
     ),
     complaints: Object.fromEntries(
       snapshot.complaints.map((complaint) => [
@@ -216,23 +229,43 @@ function changeReport(
 
 function react(state: WorldState, event: StoredEvent): WorldState {
   switch (event.type) {
-    case 'order_created': {
-      const { order_id, source } = event.payload;
+    case 'customer_arrived':
       return {
         ...state,
+        arrivals: { ...state.arrivals, [event.payload.customer_id]: event.sim_time },
+      };
+    case 'order_created': {
+      const { order_id, source, customer_id } = event.payload;
+      // the customer that was on its way to the cashier is at the counter now: it has an order
+      const arrivals = { ...state.arrivals };
+      if (customer_id !== undefined) delete arrivals[customer_id];
+      return {
+        ...state,
+        arrivals,
         orders: { ...state.orders, placed: state.orders.placed + 1 },
         customers: {
           ...state.customers,
           [order_id]: {
             orderId: order_id,
+            customerId: customer_id ?? null,
             source,
             status: 'placed',
             createdAt: event.sim_time,
+            recordedAt: null,
             doneAt: null,
             complaint: 'none',
           },
         },
       };
+    }
+    case 'agent_task_assigned': {
+      // The cook is given the order when the cashier has written it down. A held order that is cooked
+      // again later keeps its first moment.
+      const { label, ref } = event.payload;
+      if (label !== 'cooking' || ref?.type !== 'order') return state;
+      return changeCustomer(state, Number(ref.id), (customer) =>
+        customer.recordedAt === null ? { ...customer, recordedAt: event.sim_time } : customer,
+      );
     }
     case 'order_held':
       return changeCustomer(

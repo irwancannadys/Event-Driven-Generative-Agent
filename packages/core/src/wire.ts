@@ -79,9 +79,19 @@ export interface OrderView {
   id: number;
   status: OrderStatus;
   source: 'walk_in' | 'regular';
+  /** The customer that came in at the door and placed it (decision 032), `null` for an order made by hand. */
+  customer_id: number | null;
   created_at_sim: SimTime;
+  /** When the cashier had written it down and the cook got it, `null` before that. */
+  recorded_at_sim: SimTime | null;
   /** When it was cooked, `null` while it is not done. */
   done_at_sim: SimTime | null;
+}
+
+/** A customer that came in at the door and is on its way to the cashier to place its order. */
+export interface ArrivalView {
+  customer_id: number;
+  arrived_at_sim: SimTime;
 }
 
 export type ComplaintStatus = 'received' | 'triaged' | 'replied';
@@ -119,6 +129,8 @@ export interface Snapshot {
    * (a customer is still on the way out). Oldest first, at most 200 of the newest.
    */
   recent_orders: OrderView[];
+  /** The customers that are on their way to the cashier (`WALK_IN_SEC` after the door they order). */
+  arrivals_in_flight: ArrivalView[];
   /**
    * The complaints that are not answered yet, and the ones answered in the last two virtual hours
    * (`RECENT_COMPLAINT_WINDOW_SEC`). Oldest first.

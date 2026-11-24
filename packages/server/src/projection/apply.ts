@@ -48,11 +48,18 @@ export function applyEvent(db: Db, event: StoredEvent): void {
       return initializeWorld(db, event.payload);
 
     case 'order_created': {
-      const { order_id, source, regular_id, table_id, items } = event.payload;
+      const { order_id, source, regular_id, table_id, customer_id, items } = event.payload;
       db.prepare(
-        `INSERT INTO orders (id, status, source, regular_id, table_id, created_at_sim)
-         VALUES (?, 'placed', ?, ?, ?, ?)`,
-      ).run(order_id, source, regular_id ?? null, table_id ?? null, event.sim_time);
+        `INSERT INTO orders (id, status, source, regular_id, table_id, customer_id, created_at_sim)
+         VALUES (?, 'placed', ?, ?, ?, ?, ?)`,
+      ).run(
+        order_id,
+        source,
+        regular_id ?? null,
+        table_id ?? null,
+        customer_id ?? null,
+        event.sim_time,
+      );
       const insertItem = db.prepare(
         'INSERT INTO order_items (order_id, menu_item_id, qty) VALUES (?, ?, ?)',
       );
@@ -131,6 +138,13 @@ export function applyEvent(db: Db, event: StoredEvent): void {
         `INSERT INTO agent_tasks (id, agent_id, kind, params_json, status, duration_sim_sec)
          VALUES (?, ?, ?, ?, 'queued', ?)`,
       ).run(task_id, agent_id, kind, JSON.stringify(params), duration_sim_sec);
+      // The cook is given the order the moment the cashier has written it down. An order that was held
+      // and is cooked again later keeps the first moment.
+      if (label === 'cooking' && ref?.type === 'order') {
+        db.prepare(
+          'UPDATE orders SET recorded_at_sim = COALESCE(recorded_at_sim, ?) WHERE id = ?',
+        ).run(event.sim_time, Number(ref.id));
+      }
       return;
     }
 

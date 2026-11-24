@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   RECENT_COMPLAINT_WINDOW_SEC,
+  WALK_IN_SEC,
   makeScenario,
   walkDurationSec,
   type TimeView,
@@ -178,13 +179,18 @@ describe('the orders and complaints in a snapshot', () => {
         id: 1,
         status: 'placed',
         source: 'walk_in',
+        customer_id: null,
         created_at_sim: FIRST_BOOT_START,
+        recorded_at_sim: null,
         done_at_sim: null,
       },
     ]);
 
     runTo(sim, 45 + 5); // the cashier is done writing it down, the cook starts
-    expect(buildSnapshot(sim.ctx, at(sim)).recent_orders[0]).toMatchObject({ status: 'cooking' });
+    expect(buildSnapshot(sim.ctx, at(sim)).recent_orders[0]).toMatchObject({
+      status: 'cooking',
+      recorded_at_sim: FIRST_BOOT_START + 45,
+    });
 
     runTo(sim, 45 + 180 + 5); // cooked: it stays in the snapshot, with the time it was done
     expect(buildSnapshot(sim.ctx, at(sim)).recent_orders).toMatchObject([
@@ -195,6 +201,22 @@ describe('the orders and complaints in a snapshot', () => {
     expect(buildSnapshot(sim.ctx, at(sim)).recent_orders).toHaveLength(1);
     runTo(sim, 45 + 180 + RECENT_DONE_WINDOW_SEC + 10); // gone
     expect(buildSnapshot(sim.ctx, at(sim)).recent_orders).toEqual([]);
+  });
+
+  it('lists a customer that came in at the door until it places its order, and ties the order to it', () => {
+    const db = createTestDb();
+    const sim = bootSimulation({ db, bus: new EventBus(), scenario: makeScenario(42) });
+    sim.clock.advance(28_993 - sim.clock.now());
+    expect(buildSnapshot(sim.ctx, at(sim)).arrivals_in_flight).toEqual([]);
+    sim.clock.advance(29_000 - sim.clock.now()); // in at the door at 28994 (08:03:14), still walking
+    expect(buildSnapshot(sim.ctx, at(sim)).arrivals_in_flight).toEqual([
+      { customer_id: 48_300, arrived_at_sim: 28_994 },
+    ]);
+    expect(buildSnapshot(sim.ctx, at(sim)).recent_orders).toEqual([]);
+    sim.clock.advance(28_994 + WALK_IN_SEC - sim.clock.now()); // at the counter: the order comes in
+    const snapshot = buildSnapshot(sim.ctx, at(sim));
+    expect(snapshot.arrivals_in_flight.map((arrival) => arrival.customer_id)).not.toContain(48_300);
+    expect(snapshot.recent_orders[0]).toMatchObject({ id: 1, customer_id: 48_300 });
   });
 
   it('keeps an order that is still not done however old it is', () => {

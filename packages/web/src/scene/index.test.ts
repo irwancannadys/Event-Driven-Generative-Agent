@@ -122,7 +122,9 @@ const customersWorld = (): WorldState =>
         id: index + 1,
         status: 'cooking' as const,
         source: 'walk_in' as const,
+        customer_id: null,
         created_at_sim: 29_950 + index,
+        recorded_at_sim: null,
         done_at_sim: null,
       })),
       complaints: [

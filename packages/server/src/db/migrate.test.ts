@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { openDatabase, type Db } from './database';
-import { loadMigrations, runMigrations } from './migrate';
+import { loadMigrations, runMigrations, type Migration } from './migrate';
 
 const EXPECTED_TABLES = [
   'agent_tasks',
@@ -55,6 +55,21 @@ describe('migration runner', () => {
     expect(names).toEqual([...names].sort());
   });
 
+  it('adds the customer and the recording moment to a database that already has orders', () => {
+    // a world that was made before decision 032 keeps its orders, with nothing for the new columns
+    const db = openDatabase(':memory:');
+    const [first, second] = loadMigrations() as [Migration, Migration];
+    runMigrations(db, [first]);
+    db.prepare(
+      "INSERT INTO orders (id, status, source, created_at_sim) VALUES (1, 'placed', 'walk_in', 100)",
+    ).run();
+    runMigrations(db, [first, second]);
+    expect(db.prepare('SELECT customer_id, recorded_at_sim FROM orders').get()).toEqual({
+      customer_id: null,
+      recorded_at_sim: null,
+    });
+  });
+
   it('creates every table from docs/schema.md', () => {
     expect(tableNames(migratedDb())).toEqual(EXPECTED_TABLES);
   });
@@ -62,10 +77,11 @@ describe('migration runner', () => {
   it('is safe to run twice and records each migration once', () => {
     const db = openDatabase(':memory:');
     const migrations = loadMigrations();
-    expect(runMigrations(db, migrations)).toEqual(['0001_init.sql']);
+    const all = ['0001_init.sql', '0002_order_customer.sql'];
+    expect(runMigrations(db, migrations)).toEqual(all);
     expect(runMigrations(db, migrations)).toEqual([]);
     const recorded = db.prepare('SELECT name FROM schema_migrations').pluck().all();
-    expect(recorded).toEqual(['0001_init.sql']);
+    expect(recorded).toEqual(all);
   });
 
   it('rolls back a failing migration and does not record it', () => {

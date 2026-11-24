@@ -2,6 +2,7 @@ import {
   AGENT_HOME_STATION,
   RECENT_COMPLAINT_WINDOW_SEC,
   RECENT_DONE_WINDOW_SEC,
+  WALK_IN_SEC,
   type AgentId,
   type AgentView,
   type Snapshot,
@@ -11,6 +12,7 @@ import {
 import type { Db } from '../db/database';
 import {
   readAgentOverview,
+  readArrivalsInFlight,
   readComplaintViews,
   readOrderCounts,
   readRecentOrders,
@@ -63,6 +65,7 @@ export function buildSnapshot(ctx: Context, time: TimeView): Snapshot {
       time.sim_time - RECENT_DONE_WINDOW_SEC,
       SNAPSHOT_ORDER_COUNT,
     ),
+    arrivals_in_flight: readArrivalsInFlight(db, time.sim_time - WALK_IN_SEC),
     complaints: readComplaintViews(db, time.sim_time - RECENT_COMPLAINT_WINDOW_SEC),
     reports: [...readReports(db, 'drafted'), ...readReports(db, 'submitted')].sort(
       (a, b) => a.id - b.id,

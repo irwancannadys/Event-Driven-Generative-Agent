@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { INITIAL_STOCK, INITIAL_VISITS, type Event } from '@cafe/core';
 import { readStock } from '../db/queries';
-import { ev } from '../test-support/events';
+import { AT, ev } from '../test-support/events';
 import {
   appendInTransaction,
   countRows,
@@ -246,5 +246,61 @@ describe('events without a projection', () => {
     };
     expect(() => appendInTransaction(db, regularArrived)).toThrow(ProjectionNotImplementedError);
     expect(countRows(db, 'events')).toBe(1); // only world_initialized: the failed one rolled back
+  });
+});
+
+describe('the customer and the moment of recording on an order (decision 032)', () => {
+  const column = (db: ReturnType<typeof createTestDb>, name: string, id: number) =>
+    db.prepare(`SELECT ${name} FROM orders WHERE id = ?`).pluck().get(id);
+  const cookTask = (task_id: number, order_id: number, sim_time: number): Event => ({
+    type: 'agent_task_assigned',
+    sim_time,
+    actor: 'cook',
+    origin: 'rule',
+    payload: {
+      agent_id: 'cook',
+      task_id,
+      kind: 'work',
+      label: 'cooking',
+      duration_sim_sec: 180,
+      ref: { type: 'order', id: order_id },
+    },
+  });
+
+  it('keeps the customer of a walk-in order, and none for an order made by hand', () => {
+    const db = createInitializedDb();
+    const withCustomer = ev.orderCreated(1);
+    if (withCustomer.type === 'order_created') withCustomer.payload.customer_id = 48_300;
+    appendInTransaction(db, withCustomer, ev.orderCreated(2));
+    expect(column(db, 'customer_id', 1)).toBe(48_300);
+    expect(column(db, 'customer_id', 2)).toBeNull();
+    expect(column(db, 'recorded_at_sim', 1)).toBeNull();
+  });
+
+  it('notes when the cook is given the order, and keeps the first moment when it is given again', () => {
+    const db = createInitializedDb();
+    appendInTransaction(db, ev.orderCreated(1), cookTask(1, 1, AT + 45));
+    expect(column(db, 'recorded_at_sim', 1)).toBe(AT + 45);
+    appendInTransaction(db, cookTask(2, 1, AT + 5000)); // held for want of milk, cooked again later
+    expect(column(db, 'recorded_at_sim', 1)).toBe(AT + 45);
+  });
+
+  it('does not take any other task for the moment of recording', () => {
+    const db = createInitializedDb();
+    appendInTransaction(db, ev.orderCreated(1), {
+      type: 'agent_task_assigned',
+      sim_time: AT + 10,
+      actor: 'cashier',
+      origin: 'rule',
+      payload: {
+        agent_id: 'cashier',
+        task_id: 1,
+        kind: 'work',
+        label: 'recording_order',
+        duration_sim_sec: 45,
+        ref: { type: 'order', id: 1 },
+      },
+    });
+    expect(column(db, 'recorded_at_sim', 1)).toBeNull();
   });
 });

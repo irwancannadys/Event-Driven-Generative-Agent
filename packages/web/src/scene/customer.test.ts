@@ -18,9 +18,11 @@ const PICKUP_SPOT = pickupSpot(3);
 const T0 = 10_000;
 const customer = (overrides: Partial<CustomerState> = {}): CustomerState => ({
   orderId: 3,
+  customerId: null,
   source: 'walk_in',
   status: 'placed',
   createdAt: T0,
+  recordedAt: null,
   doneAt: null,
   complaint: 'none',
   ...overrides,

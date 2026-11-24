@@ -48,7 +48,7 @@ SQLite lewat `better-sqlite3`. Migrasi awal: `0001_init.sql` (Langkah 10). Dafta
 
 **`stock`**: `ingredient_id` PK FK, `qty` INTEGER >= 0, `low_flagged` 0/1, `out_flagged` 0/1. Penanda membuat `stock_low` dan `stock_out` idempoten; direset saat `restock_arrived` mengangkat `qty` di atas `min_qty`.
 
-**`orders`**: `id` INTEGER PK, `status` (`placed`, `held`, `cooking`, `done`), `source` (`walk_in`, `regular`), `regular_id` FK nullable, `table_id` 1 sampai 3 nullable, `created_at_sim`, `done_at_sim` nullable.
+**`orders`**: `id` INTEGER PK, `status` (`placed`, `held`, `cooking`, `done`), `source` (`walk_in`, `regular`), `regular_id` FK nullable, `table_id` 1 sampai 3 nullable, `created_at_sim`, `done_at_sim` nullable, `customer_id` nullable (pelanggan yang masuk dan memesan; keputusan 032), `recorded_at_sim` nullable (saat kasir selesai mencatat dan koki diberi pesanannya).
 
 **`order_items`**: `order_id` FK, `menu_item_id` FK, `qty` INTEGER > 0. PK gabungan.
 
@@ -73,8 +73,9 @@ SQLite lewat `better-sqlite3`. Migrasi awal: `0001_init.sql` (Langkah 10). Dafta
 | Event | Tabel yang berubah |
 |---|---|
 | `world_initialized` | Kosongkan semua proyeksi, isi `stock`, `regular_state`, `agents` (idle di stasiun asal), `cafe_tables` (empty) |
-| `order_created` | `orders` (placed), `order_items` |
+| `order_created` | `orders` (placed, `customer_id`), `order_items` |
 | `order_held` / `order_resumed` | `orders.status` (held / placed) |
+| `agent_task_assigned` (label `cooking`, ref pesanan) | `orders.recorded_at_sim` (sekali, saat pertama) |
 | `cooking_started` / `cooking_done` | `orders.status` (cooking / done), `done_at_sim` |
 | `stock_decreased` | `stock.qty` |
 | `stock_low` / `stock_out` | `stock.low_flagged` / `out_flagged` |

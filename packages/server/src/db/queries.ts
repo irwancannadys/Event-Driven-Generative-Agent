@@ -261,7 +261,11 @@ export interface RecentOrderRow {
   id: number;
   status: OrderRow['status'];
   source: 'walk_in' | 'regular';
+  /** The customer that came in at the door and placed this order, `null` for an order made by hand. */
+  customer_id: number | null;
   created_at_sim: number;
+  /** When the cashier had written it down (the cook was given the order), `null` before that. */
+  recorded_at_sim: number | null;
   done_at_sim: number | null;
 }
 
@@ -272,7 +276,7 @@ export interface RecentOrderRow {
 export function readRecentOrders(db: Db, doneSince: number, limit: number): RecentOrderRow[] {
   const rows = db
     .prepare(
-      `SELECT id, status, source, created_at_sim, done_at_sim FROM orders
+      `SELECT id, status, source, customer_id, created_at_sim, recorded_at_sim, done_at_sim FROM orders
        WHERE status <> 'done' OR done_at_sim >= ?
        ORDER BY id DESC LIMIT ?`,
     )
@@ -294,4 +298,20 @@ export function readComplaintViews(db: Db, repliedSince: number): ComplaintView[
        ORDER BY id`,
     )
     .all(repliedSince) as ComplaintView[];
+}
+
+/**
+ * The customers that came in at the door after `since` and have not placed their order yet: the ones
+ * still walking to the cashier. Read from the log, because that is where the arrival is written.
+ */
+export function readArrivalsInFlight(
+  db: Db,
+  since: number,
+): { customer_id: number; arrived_at_sim: number }[] {
+  return db
+    .prepare(
+      `SELECT json_extract(payload_json, '$.customer_id') AS customer_id, sim_time AS arrived_at_sim
+       FROM events WHERE type = 'customer_arrived' AND sim_time > ? ORDER BY id`,
+    )
+    .all(since) as { customer_id: number; arrived_at_sim: number }[];
 }
