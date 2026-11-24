@@ -12,7 +12,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "db:migrate": "tsx src/db/migrate-cli.ts",
-    "seed": "tsx src/db/seed-cli.ts"
+    "seed": "tsx src/db/seed-cli.ts",
+    "demo:stage1": "tsx src/demo/stage1-cli.ts"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^9.6.0"
