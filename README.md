@@ -36,7 +36,7 @@ Panduan mencoba sendiri langkah demi langkah (termasuk uji pemulihan setelah Ctr
 | [`PROJECT_BRIEF.md`](PROJECT_BRIEF.md) | Apa, kenapa, prinsip desain, scope |
 | [`docs/PLAN.md`](docs/PLAN.md) | Rencana kerja Tahap 0 sampai 8 |
 | [`docs/concept.md`](docs/concept.md) | Konsep satu halaman (mulai dari sini) |
-| [`docs/events.md`](docs/events.md) | Katalog 33 event (kontrak) |
+| [`docs/events.md`](docs/events.md) | Katalog 34 event (kontrak) |
 | [`docs/schema.md`](docs/schema.md) | Skema database |
 | [`docs/testing.md`](docs/testing.md) | Panduan uji manual tiap tahap |
 | [`docs/decisions/`](docs/decisions/) | Catatan keputusan arsitektur |

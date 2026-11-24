@@ -367,7 +367,7 @@ Sejak Tahap 4 lu **tidak perlu `curl`** lagi: semuanya bisa dilihat dan diklik d
 ### 9.1 Nyalakan (dua tab)
 
 ```
-rm -f data/cafe.db*     # dunia baru (wajib kalau masih ada dunia lama dari Tahap 2)
+rm -f data/cafe.db*     # dunia baru (wajib kalau masih ada dunia lama: event dan kolom pesanan berubah di revisi ini)
 npm run dev             # tab 1: server, biarkan jalan
 npm run web             # tab 2: halaman, biarkan jalan
 ```
@@ -376,16 +376,18 @@ Buka alamat yang dicetak tab 2 (biasanya `http://localhost:5173`; kalau port itu
 
 ### 9.2 Yang dicari
 
-- **Pojok atas:** titik hijau "Tersambung", jam virtual yang berjalan, tombol Jeda, kecepatan (1x sampai 3600x), dan majukan waktu. Klik **600x** supaya cepat.
+- **Pojok atas:** titik hijau "Tersambung" dan jam virtual yang berjalan. Tampilannya terang (krem, putih, hijau daun), tidak ikut mode gelap sistem.
+- **Sidebar kanan:** **Kontrol waktu** paling atas (Jeda, kecepatan 1x sampai 3600x, majukan waktu, dan tautan Panel saja; klik **600x** supaya cepat), lalu **Kejadian**, **Komplain**, dan **Stok**. Klik judul sebuah bagian untuk melipatnya (panah ▾ dan ▸); lipatan diingat di browser.
 - **Gambar besar di kiri:** kafe potong di atas alas. Dapur (kanan belakang) dan ruang bos (kiri belakang) dipisah sekat kaca dengan pintu. Pintu masuk kaca di depan, tujuh meja, kasir di tengah belakang dengan etalase dan papan menu, rak stok di belakang, bangku, lukisan, tanaman, lampu gantung.
 - **Karyawan** berbaju hijau dan bercelana putih (koki bertopi putih), bos berjas gelap di ruangnya. Label di atas kepala menyebut nama dan sedang apa. Ada cewek (kasir dan Rina: rambut panjang atau sanggul, bibir merah) dan cowok (admin stok, koki berjenggot, bos). Pelanggan juga campur: ada yang berambut panjang atau dikuncir, ada yang berjenggot.
 - **Rina (pelayan) diam.** Dia sudah ada di denah dan di panel Karakter, tapi perilakunya (ingatan, inisiatif, melayani meja) baru dikerjakan di Tahap 5, jadi untuk sekarang dia memang cuma menganggur di mejanya.
 - **Langkah kaki** mengikuti jarak yang ditempuh: ayunan kaki dan tangan sesuai panjang langkah, dan berhenti begitu karakter berhenti. Di kecepatan sangat tinggi ayunannya dibatasi supaya tidak berkedip.
-- **Pelanggan** masuk lewat pintu depan, berdiri di kasir, duduk atau berdiri menunggu, mengambil pesanan di **jendela dapur** (piringnya muncul di sana), lalu pulang. Gelembung `!` merah = komplain, "Menunggu bahan" = pesanan ditahan, "Siap!" hijau = masakan selesai. Lebih dari 20 orang jadi tulisan "+N antre". Pelanggan tiba di kasir tidak lama setelah log mencatat pesanannya, dan keramaian bawaan (`CROWD_PCT=150`) membuat pesanan masuk lebih rapat.
+- **Pelanggan** masuk lewat pintu depan (log: "Pelanggan masuk ke kafe"), berjalan ke kasir selama 200 detik virtual (sepelan karyawan), dan **sampai di kasir tepat saat log mencatat "Pesanan #N masuk"**. Saat itu label kasir jadi "bekerja: mencatat pesanan" dan pelanggan berdiri di depannya sampai kasir selesai (bukan semenit tetap). Lalu ia duduk atau berdiri menunggu, mengambil pesanan di **jendela dapur** (piringnya muncul di sana), dan pulang. Gelembung `!` merah = komplain, "Menunggu bahan" = pesanan ditahan, "Siap!" hijau = masakan selesai. Lebih dari 20 orang jadi tulisan "+N antre". Keramaian bawaan (`CROWD_PCT=150`) membuat pesanan masuk lebih rapat.
 - **Admin stok** jalan ke rak, ke ruang bos lewat pintunya, menaruh **kertas laporan** di meja bos, lalu pulang. Kotak di **rak stok** berkurang sesuai stok (merah-oranye = hampir habis).
-- **Kolom kanan:** Kejadian (log, bisa digulir) dan Stok. **Di bawah gambar:** Karakter, Pesanan, dan **Meja Bos** dengan tombol **Setujui/Tolak** (ganti `curl`).
+- **Komplain:** bagian sendiri di sidebar. Tiap komplain menunjukkan pesanannya, penyebabnya (layanan lambat, pesanan salah, kualitas), posisinya (**dicatat kasir**, **menunggu keputusan bos**, **dibalas**), berapa lama menunggu atau dibalas dalam berapa lama, dan kompensasinya (usulan kasir selagi menunggu bos, yang diberikan setelah dibalas). Yang menangani tetap kasir, sesuai brief. Untuk melihatnya cepat: `COMPLAINT_CHANCE_PCT=100 COMPLAINT_WAIT_MIN=10 npm run dev`, lalu **+1 jam** beberapa kali.
+- **Di bawah gambar:** Karakter, Pesanan, dan **Meja Bos** dengan tombol **Setujui/Tolak** (ganti `curl`).
 - **Geser** gambar dengan mouse: kiri-kanan memutar kamera sedikit, **atas-bawah** menurunkan atau mengangkat kamera (dari sejajar meja sampai hampir tegak lurus dari atas). Seluruh kafe tetap masuk gambar di semua sudut.
-- Di belakang kafe ada alas kayu bulat dengan latar gelap bercahaya hangat (bukan hitam polos lagi).
+- Di belakang kafe ada alas bulat berwarna pasir dengan latar krem-persik yang terang.
 
 ### 9.3 Uji ketahanan
 
@@ -400,6 +402,8 @@ Buka alamat yang dicetak tab 2 (biasanya `http://localhost:5173`; kalau port itu
 - Karakter bergaya game, bukan foto. Warna dan terang-gelap bisa disetel: kirim screenshot.
 - Empat dari tujuh meja hanya tempat duduk tambahan; domain baru punya tiga meja (untuk Rina di Tahap 5).
 - Kalau lu melihat pelanggan "melompat", cek dulu apakah waktu baru dimajukan: itu wajar.
+- Pesanan manual lewat `curl` (`POST /orders`) tidak punya pelanggan yang masuk lewat pintu: pelanggannya langsung muncul di kasir. Pesanan dari generator selalu didahului pelanggan yang masuk.
 - Karyawan bisa berjalan menembus pelanggan yang sedang berdiri (jalurnya hanya menghindari perabot, belum menghindari orang).
-- Gua sudah mengaudit gerak lawan log (`tools/scene-audit.test.ts`): pelanggan tiba di kasir sebelum kasir selesai mencatat, tidak ada dua pelanggan di titik yang sama, dan semua titik tunggu bebas dari meja. Itu bukan jaminan bebas bug: kalau lu lihat yang janggal, kirim screenshot dan jamnya.
+- Gua sudah mengaudit gerak lawan log selama satu hari penuh (`tools/scene-audit.test.ts`, di keramaian 100% dan 250%): kasir yang "mencatat" pesanan X selalu punya pelanggan X berdiri di depannya, kasir tidak pernah menganggur selagi ada yang menunggu dicatat, pelanggan masuk lewat pintu dan sampai tepat saat pesanan tercatat, tak ada yang berjalan menembus perabot atau melompat, dan tak ada dua pelanggan di titik yang sama. Itu bukan jaminan bebas bug: kalau lu lihat yang janggal, kirim screenshot dan jamnya.
+- Rina belum mengantar makanan: pelanggan mengambil sendiri di jendela dapur. Mengantar ke meja ikut Tahap 5 bersama Rina (butuh meja yang dikenal domain).
 
