@@ -1,19 +1,37 @@
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { OrderItemSchema } from '@cafe/core';
+import { OrderItemSchema, SECONDS_PER_DAY } from '@cafe/core';
 import { z } from 'zod';
 import { readMenu, readRecipe, readStock } from '../db/queries';
+import { MAX_SPEED, MIN_SPEED } from '../sim/pacer';
+import type { TimeControl } from '../sim/time-control';
 import { DomainError, type Context } from '../usecases/context';
 import { createOrder } from '../usecases/orders';
 
-// The cashier mock: a tiny HTTP API on top of the use cases, built on node:http (no framework).
+// The cashier mock plus time controls: a tiny HTTP API on top of the use cases (node:http, no framework).
 //   GET  /menu    menu items with their recipe
 //   GET  /stock   stock level per ingredient
 //   POST /orders  { items: [{ menu_item_id, qty }] } -> 201 { order_id }
+//   GET  /time    the virtual clock (only when time controls are given)
+//   POST /time    { speed?, paused?, advance_seconds? } -> the new clock
 
 const MAX_BODY_BYTES = 64 * 1024;
+/** A single jump may not be longer than a week of virtual time. */
+const MAX_ADVANCE_SEC = 7 * SECONDS_PER_DAY;
 
 const OrderBodySchema = z.object({ items: z.array(OrderItemSchema).min(1) });
+
+const TimeBodySchema = z
+  .object({
+    speed: z.number().int().min(MIN_SPEED).max(MAX_SPEED).optional(),
+    paused: z.boolean().optional(),
+    advance_seconds: z.number().int().positive().max(MAX_ADVANCE_SEC).optional(),
+  })
+  .refine(
+    (body) =>
+      body.speed !== undefined || body.paused !== undefined || body.advance_seconds !== undefined,
+    { message: 'send at least one of speed, paused, advance_seconds' },
+  );
 
 interface Reply {
   status: number;
@@ -21,13 +39,29 @@ interface Reply {
   headers?: Record<string, string>;
 }
 
-type Handler = (req: http.IncomingMessage, ctx: Context) => Promise<Reply> | Reply;
+type Handler = (req: http.IncomingMessage) => Promise<Reply> | Reply;
+type Routes = Record<string, Record<string, Handler>>;
 
-const ROUTES: Record<string, Record<string, Handler>> = {
-  '/menu': { GET: (_req, ctx) => ({ status: 200, body: menuView(ctx) }) },
-  '/stock': { GET: (_req, ctx) => ({ status: 200, body: stockView(ctx) }) },
-  '/orders': { POST: postOrder },
-};
+export interface ApiOptions {
+  /** Adds `GET /time` and `POST /time`. */
+  time?: TimeControl;
+}
+
+function buildRoutes(ctx: Context, options: ApiOptions): Routes {
+  const routes: Routes = {
+    '/menu': { GET: () => ({ status: 200, body: menuView(ctx) }) },
+    '/stock': { GET: () => ({ status: 200, body: stockView(ctx) }) },
+    '/orders': { POST: (req) => postOrder(req, ctx) },
+  };
+  const time = options.time;
+  if (time) {
+    routes['/time'] = {
+      GET: () => ({ status: 200, body: time.state() }),
+      POST: (req) => postTime(req, time),
+    };
+  }
+  return routes;
+}
 
 function menuView(ctx: Context) {
   const recipe = readRecipe(ctx.db);
@@ -47,32 +81,59 @@ function stockView(ctx: Context) {
   }));
 }
 
-async function postOrder(req: http.IncomingMessage, ctx: Context): Promise<Reply> {
+/** Reads and validates a JSON body. On failure `reply` is the answer to send back. */
+async function readJson<T>(
+  req: http.IncomingMessage,
+  schema: z.ZodType<T>,
+): Promise<{ ok: true; value: T } | { ok: false; reply: Reply }> {
   const body = await readBody(req);
   if ('tooLarge' in body) {
-    return { status: 413, body: { error: 'body_too_large', max_bytes: MAX_BODY_BYTES } };
+    return {
+      ok: false,
+      reply: { status: 413, body: { error: 'body_too_large', max_bytes: MAX_BODY_BYTES } },
+    };
   }
   let json: unknown;
   try {
     json = JSON.parse(body.text);
   } catch {
-    return { status: 400, body: { error: 'invalid_json' } };
+    return { ok: false, reply: { status: 400, body: { error: 'invalid_json' } } };
   }
-  const parsed = OrderBodySchema.safeParse(json);
+  const parsed = schema.safeParse(json);
   if (!parsed.success) {
     const issues = parsed.error.issues.map(
       (issue) => `${issue.path.join('.') || '(body)'}: ${issue.message}`,
     );
-    return { status: 400, body: { error: 'invalid_body', issues } };
+    return { ok: false, reply: { status: 400, body: { error: 'invalid_body', issues } } };
   }
+  return { ok: true, value: parsed.data };
+}
+
+async function postOrder(req: http.IncomingMessage, ctx: Context): Promise<Reply> {
+  const body = await readJson(req, OrderBodySchema);
+  if (!body.ok) return body.reply;
   try {
-    return { status: 201, body: createOrder(ctx, { items: parsed.data.items }) };
+    return { status: 201, body: createOrder(ctx, { items: body.value.items }) };
   } catch (error) {
     if (error instanceof DomainError) {
       return { status: 422, body: { error: error.code, message: error.message } };
     }
     throw error;
   }
+}
+
+/** Applies speed, then pause, then the jump, and answers with the clock as it is afterwards. */
+async function postTime(req: http.IncomingMessage, time: TimeControl): Promise<Reply> {
+  const body = await readJson(req, TimeBodySchema);
+  if (!body.ok) return body.reply;
+  const { speed, paused, advance_seconds } = body.value;
+  if (speed !== undefined) time.setSpeed(speed);
+  if (paused !== undefined) {
+    if (paused) time.pause();
+    else time.resume();
+  }
+  if (advance_seconds !== undefined) time.skip(advance_seconds);
+  return { status: 200, body: time.state() };
 }
 
 function readBody(req: http.IncomingMessage): Promise<{ text: string } | { tooLarge: true }> {
@@ -96,9 +157,9 @@ function readBody(req: http.IncomingMessage): Promise<{ text: string } | { tooLa
   });
 }
 
-async function handle(req: http.IncomingMessage, ctx: Context): Promise<Reply> {
+async function handle(req: http.IncomingMessage, routes: Routes): Promise<Reply> {
   const { pathname } = new URL(req.url ?? '/', 'http://localhost');
-  const route = ROUTES[pathname];
+  const route = routes[pathname];
   if (!route) return { status: 404, body: { error: 'not_found' } };
   const handler = route[req.method ?? ''];
   if (!handler) {
@@ -108,7 +169,7 @@ async function handle(req: http.IncomingMessage, ctx: Context): Promise<Reply> {
       body: { error: 'method_not_allowed' },
     };
   }
-  return handler(req, ctx);
+  return handler(req);
 }
 
 function send(res: http.ServerResponse, reply: Reply): void {
@@ -119,9 +180,10 @@ function send(res: http.ServerResponse, reply: Reply): void {
   res.end(JSON.stringify(reply.body));
 }
 
-export function createApiServer(ctx: Context): http.Server {
+export function createApiServer(ctx: Context, options: ApiOptions = {}): http.Server {
+  const routes = buildRoutes(ctx, options);
   return http.createServer((req, res) => {
-    handle(req, ctx)
+    handle(req, routes)
       .then((reply) => send(res, reply))
       .catch((error: unknown) => {
         console.error('API error:', error);
@@ -139,9 +201,9 @@ export interface RunningApi {
 /** Starts the API on localhost. Port 0 picks a free port (used by tests and the demo). */
 export async function startApiServer(
   ctx: Context,
-  options: { port?: number; host?: string } = {},
+  options: ApiOptions & { port?: number; host?: string } = {},
 ): Promise<RunningApi> {
-  const server = createApiServer(ctx);
+  const server = createApiServer(ctx, { time: options.time });
   await new Promise<void>((resolve, reject) => {
     server.once('error', reject);
     server.listen(options.port ?? 0, options.host ?? '127.0.0.1', () => resolve());
