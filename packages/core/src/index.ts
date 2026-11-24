@@ -9,4 +9,5 @@ export * from './schema-parts';
 export * from './seed-data';
 export * from './sim';
 export * from './stations';
+export * from './text';
 export * from './time';
