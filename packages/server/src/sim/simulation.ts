@@ -4,6 +4,7 @@ import {
   makeStaticSource,
   priorityOf,
   type DueItem,
+  type InstantLLM,
   type Scenario,
   type SimTime,
 } from '@cafe/core';
@@ -44,6 +45,8 @@ export interface BootOptions {
    * stages, which rely on "nobody cooks yet", switch them off. Default `true`.
    */
   agents?: boolean;
+  /** The model that helps the agents decide. Without one the rules decide (decision 034). */
+  llm?: InstantLLM;
 }
 
 /**
@@ -91,6 +94,7 @@ export function bootSimulation(options: BootOptions): Simulation {
     publish: bus?.publish,
     react: agents ? reactToEvent : undefined,
     scenario,
+    llm: options.llm,
   };
   holder.ctx = context;
 

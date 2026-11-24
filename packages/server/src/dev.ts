@@ -1,4 +1,4 @@
-import { WS_PATH, dayOf, formatClock } from '@cafe/core';
+import { DEFAULT_FAKE_SCRIPT, FakeLLM, WS_PATH, dayOf, formatClock } from '@cafe/core';
 import type { Config } from './config';
 import { openDatabase } from './db/database';
 import { loadMigrations, runMigrations } from './db/migrate';
@@ -57,7 +57,12 @@ export async function startDevServer(options: DevServerOptions): Promise<DevServ
     }
   });
 
-  const simulation = bootSimulation({ db, bus, scenario: config.scenario });
+  const simulation = bootSimulation({
+    db,
+    bus,
+    scenario: config.scenario,
+    llm: config.llmProvider === 'fake' ? new FakeLLM(DEFAULT_FAKE_SCRIPT) : undefined,
+  });
   const pacer = new Pacer(simulation.clock, { speed: config.speed, tickMs: options.tickMs });
   // Pages hear about a change of speed or pause right away, not at the next 250 ms tick.
   const baseTime = createTimeControl(simulation, pacer);

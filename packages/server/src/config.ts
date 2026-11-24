@@ -20,6 +20,8 @@ export interface Config {
    * the seed that is in its log (decision 020).
    */
   scenario: Scenario;
+  /** Who helps the agents decide: `fake` answers from a script, `off` leaves it to the rules (decision 034). */
+  llmProvider: 'fake' | 'off';
 }
 
 type Env = Readonly<Record<string, string | undefined>>;
@@ -39,7 +41,12 @@ function intSetting(env: Env, name: string, fallback: number, min: number, max: 
 
 /** Turns environment variables into a validated configuration. Pure, so it is easy to test. */
 export function parseConfig(env: Env, repoRoot: string): Config {
+  const provider = (env.LLM_PROVIDER ?? '').trim().toLowerCase();
+  if (provider !== '' && provider !== 'fake' && provider !== 'off') {
+    throw new Error(`LLM_PROVIDER must be fake or off, got "${env.LLM_PROVIDER}"`);
+  }
   return {
+    llmProvider: provider === 'off' ? 'off' : 'fake',
     repoRoot,
     databasePath: path.resolve(repoRoot, env.DATABASE_PATH?.trim() || 'data/cafe.db'),
     port: intSetting(env, 'PORT', 3000, 0, 65535),

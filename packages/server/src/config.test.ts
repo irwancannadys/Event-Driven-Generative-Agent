@@ -11,7 +11,17 @@ describe('parseConfig', () => {
       port: 3000,
       speed: 60,
       scenario: { seed: 42, crowdPct: 150, complaintChancePct: 15, complaintWaitSec: 1200 },
+      llmProvider: 'fake',
     });
+  });
+
+  it('lets the rules decide alone when the model is off, and refuses a provider it does not know', () => {
+    expect(parseConfig({ LLM_PROVIDER: 'off' }, root).llmProvider).toBe('off');
+    expect(parseConfig({ LLM_PROVIDER: ' FAKE ' }, root).llmProvider).toBe('fake');
+    expect(parseConfig({ LLM_PROVIDER: '' }, root).llmProvider).toBe('fake');
+    expect(() => parseConfig({ LLM_PROVIDER: 'ollama' }, root)).toThrow(
+      /LLM_PROVIDER must be fake or off/,
+    );
   });
 
   it('takes every setting from the environment', () => {

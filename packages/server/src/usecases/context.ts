@@ -1,4 +1,4 @@
-import type { Event, Scenario, SimClock, StoredEvent } from '@cafe/core';
+import type { Event, InstantLLM, Scenario, SimClock, StoredEvent } from '@cafe/core';
 import type { Db } from '../db/database';
 import { appendEvent } from '../events/store';
 
@@ -25,6 +25,11 @@ export interface Context {
   maxReactions?: number;
   /** The scenario of this world: the reactions need its seed for the supplier's behaviour. */
   scenario?: Scenario;
+  /**
+   * The model that helps the agents decide (decision 034). Without one the rules decide, as before. Replay
+   * never uses it: the decisions are in the log.
+   */
+  llm?: InstantLLM;
 }
 
 /** A rule of the cafe was broken by the request (unknown menu item, wrong order status, ...). */

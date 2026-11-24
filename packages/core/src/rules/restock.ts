@@ -29,6 +29,34 @@ function fit(text: string, max: number): string {
 }
 
 /**
+ * The title and the body of the report for the boss, for any items: the rule's own, or the ones a model
+ * proposed. A line that does not name a known ingredient is left out (the validator has refused those
+ * before this is called).
+ */
+export function restockReport(
+  candidates: readonly RestockCandidate[],
+  items: readonly StockLine[],
+  urgency: 'low' | 'normal' | 'high',
+  text: TextSet = DEFAULT_TEXT,
+): { title: string; body: string } {
+  const lines: RestockLine[] = [];
+  for (const item of items) {
+    const candidate = candidates.find((entry) => entry.ingredient_id === item.ingredient_id);
+    if (!candidate) continue;
+    lines.push({
+      name: candidate.name,
+      unit: candidate.unit,
+      qty: candidate.qty,
+      min_qty: candidate.min_qty,
+      capacity_qty: candidate.capacity_qty,
+      order_qty: item.qty,
+      out: candidate.out || candidate.qty <= 0,
+    });
+  }
+  return { title: text.restockTitle(lines), body: text.restockBody(lines, urgency) };
+}
+
+/**
  * The rule "fill up to full" (decision 024): one proposal for every ingredient that is low or out and
  * not already covered by an open proposal or a running order. Each line orders `capacity - stock`.
  * Urgency is `high` when something ran out, otherwise `normal`. Returns `null` when nothing is needed.
