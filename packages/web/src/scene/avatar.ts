@@ -83,8 +83,12 @@ function material(color: number, roughness = 0.8): MeshStandardMaterial {
 
 /** How far a person goes with one step, in layout units. The legs swing by the distance walked. */
 export const STEP_LENGTH = 0.5;
-/** The legs never swing faster than this (radians per second), however fast the clock runs. */
-const MAX_GAIT_RATE = 13;
+/**
+ * The legs never swing faster than this (radians per second), however fast the clock runs. High enough
+ * for the staff at the default clock (3 units per second: 6 steps, 19 radians, per second), so that at
+ * that speed the feet do not slide; only a much faster clock makes them.
+ */
+export const MAX_GAIT_RATE = 20;
 
 export interface Avatar {
   /** Put it in the scene and move it: `position` for where, `rotation.y` for which way it faces. */

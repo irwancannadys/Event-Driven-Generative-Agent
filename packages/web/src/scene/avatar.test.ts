@@ -4,6 +4,7 @@ import type { Mesh, MeshStandardMaterial, Object3D } from 'three';
 import {
   AVATAR_COLORS,
   CUSTOMER_COLORS,
+  MAX_GAIT_RATE,
   STEP_LENGTH,
   UNIFORM,
   createAvatar,
@@ -159,6 +160,19 @@ describe('createAvatar', () => {
     expect(Math.min(...cycle)).toBeLessThan(-0.45);
   });
 
+  it('keeps its feet on the ground at the pace of the staff at the default clock', () => {
+    // 3 units per real second is how fast staff walk at 60x: the legs must still make one step to every
+    // step length, or the feet slide over the floor and the person seems to float
+    const calm = createAvatar('cook');
+    const brisk = createAvatar('cook');
+    walkFor(calm, STEP_LENGTH * 4, 0.6);
+    walkFor(brisk, STEP_LENGTH * 4, 3);
+    expect(part(brisk, 'leg-left')?.rotation.x).toBeCloseTo(
+      part(calm, 'leg-left')?.rotation.x ?? 9,
+      1,
+    );
+  });
+
   it('stands still with its legs when it does not move forward', () => {
     const avatar = createAvatar('waiter');
     for (let index = 1; index <= 30; index += 1) avatar.play('walking', index / 60, 2); // always at 2 units
@@ -183,7 +197,7 @@ describe('createAvatar', () => {
       );
       last = now;
     }
-    expect(biggest).toBeLessThan(13 / 60 + 0.4); // the angle of the legs changes by about 13 rad/s at the most
+    expect(biggest).toBeLessThan(MAX_GAIT_RATE / 60 + 0.4); // the angle of the legs changes by MAX_GAIT_RATE rad/s at the most
   });
 
   it('holds the arms out in front and moves them while working', () => {
