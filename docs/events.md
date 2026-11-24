@@ -247,6 +247,8 @@ order_resumed          (jika ada pesanan tertahan)                 rule
 
 Kondisi di atas dicek dari atas ke bawah, label pertama yang cocok dipakai. Event infrastruktur tidak tampil di log secara default: `agent_task_assigned`, `agent_task_finished`, `agent_state_changed`.
 
+Di kode, label berupa kunci netral (`trigger`, `rule`, `llm`, `initiative`, `boss`) lewat `logLabel` di `packages/core/src/events/log-label.ts`. Teks yang tampil ("Trigger", "Aturan", dst.) diambil dari kamus bahasa (keputusan 015).
+
 ## 7. Perbedaan dari brief (mohon dikonfirmasi saat review)
 
 - **Bahan dikurangi saat `cooking_started`**, bukan saat masakan selesai (brief bagian 10). Alasan: pengecekan dan pengurangan atomik, tanpa risiko dua pesanan menghabiskan stok yang sama.
