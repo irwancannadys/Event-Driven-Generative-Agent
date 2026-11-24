@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  WALK_IN_SEC,
   CLOSE_TIME_SEC,
   OPEN_TIME_SEC,
   SECONDS_PER_DAY,
@@ -104,6 +105,22 @@ describe('a day that runs by itself', () => {
     ]);
     expect(scheduled.length).toBeGreaterThan(50);
     expect(created).toEqual(scheduled);
+    // every one came in at the door WALK_IN_SEC before it ordered, and the order carries the customer
+    const arrived = new Map(
+      ofType(log, 'customer_arrived').map((e) => [
+        (e.payload as { customer_id: number }).customer_id,
+        e.sim_time,
+      ]),
+    );
+    expect(arrived.size).toBe(created.length);
+    for (const event of ofType(log, 'order_created')) {
+      const { customer_id } = event.payload as { customer_id: number };
+      expect(event.sim_time - (arrived.get(customer_id) ?? 0)).toBe(WALK_IN_SEC);
+    }
+    for (const event of ofType(log, 'customer_arrived')) {
+      expect(event.actor).toBe('world');
+      expect(event.origin).toBe('generator');
+    }
     for (const event of ofType(log, 'order_created')) {
       expect(event.actor).toBe('world');
       expect(event.origin).toBe('generator');
@@ -140,6 +157,7 @@ describe('a day that runs by itself', () => {
     expect([...types].sort()).toEqual(
       [
         'complaint_received',
+        'customer_arrived',
         'day_closed',
         'day_opened',
         'order_created',

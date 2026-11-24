@@ -41,9 +41,11 @@ const FIXTURES: Record<EventType, Raw> = {
   day_opened: ev('day_opened', 'system', 'scheduler', { day: 0 }),
   day_closed: ev('day_closed', 'system', 'scheduler', { day: 0 }, 72000),
   sim_time_advanced: ev('sim_time_advanced', 'boss', 'boss', { from: 28800, to: 30600 }),
+  customer_arrived: ev('customer_arrived', 'world', 'generator', { customer_id: 48100 }),
   order_created: ev('order_created', 'world', 'generator', {
     order_id: 1,
     source: 'walk_in',
+    customer_id: 48100,
     items: [{ menu_item_id: 'kopi_susu', qty: 1 }],
   }),
   order_held: ev('order_held', 'cook', 'rule', {
@@ -185,8 +187,8 @@ function expectRejected(raw: unknown, path?: string) {
 }
 
 describe('event catalog', () => {
-  it('has 33 event types and a fixture for each', () => {
-    expect(EVENT_TYPES).toHaveLength(33);
+  it('has 34 event types and a fixture for each', () => {
+    expect(EVENT_TYPES).toHaveLength(34);
     expect(Object.keys(FIXTURES).sort()).toEqual([...EVENT_TYPES].sort());
   });
 

@@ -94,7 +94,7 @@ SQLite lewat `better-sqlite3`. Migrasi awal: `0001_init.sql` (Langkah 10). Dafta
 | `agent_task_assigned` | `agent_tasks` (queued) |
 | `agent_state_changed` | `agents.state`, `agents.station`, `agent_tasks` (active, `started_at_sim`, `ends_at_sim`) |
 | `agent_task_finished` | `agent_tasks` (done) |
-| `day_opened`, `day_closed`, `sim_time_advanced`, `regular_expected`, `regular_greeted`, `agent_think_requested`, `agent_decided` | Tidak mengubah proyeksi (hanya tercatat di log) |
+| `day_opened`, `day_closed`, `sim_time_advanced`, `customer_arrived`, `regular_expected`, `regular_greeted`, `agent_think_requested`, `agent_decided` | Tidak mengubah proyeksi (hanya tercatat di log) |
 
 ## 5. Operasional
 

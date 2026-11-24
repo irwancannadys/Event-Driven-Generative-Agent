@@ -76,6 +76,15 @@ export const DISTANCE_TENTHS: Record<StationId, Record<StationId, number>> = {
  */
 export const WALK_SEC_PER_UNIT = 20;
 
+/**
+ * How long a customer walks from the door to the cashier's counter, in virtual seconds. A customer
+ * arrives (`customer_arrived`) this long before it places its order (`order_created`), so that the
+ * cashier starts writing the order down when the customer is really in front of her. About 10 layout
+ * units at `WALK_SEC_PER_UNIT`; the web package has a test that keeps it near the length of the route
+ * in the layout.
+ */
+export const WALK_IN_SEC = 200;
+
 /** Walk time between two stations in whole virtual seconds (rounded up). */
 export function walkDurationSec(from: StationId, to: StationId): number {
   return Math.ceil((DISTANCE_TENTHS[from][to] * WALK_SEC_PER_UNIT) / 10);

@@ -38,6 +38,7 @@ const SENTENCES: [StoredEvent, string][] = [
     event('regular_expected', { regular_id: 'pak_budi', table_id: 1, expected_at: 30_600 }),
     'Pak Budi diperkirakan datang pukul 08:30 di meja 1',
   ],
+  [event('customer_arrived', { customer_id: 48_300 }), 'Pelanggan masuk ke kafe'],
   [
     event('order_created', { order_id: 7, items: [{ menu_item_id: 'kopi_susu', qty: 2 }] }),
     'Pesanan #7 masuk: kopi susu ×2',

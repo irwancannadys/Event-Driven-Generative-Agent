@@ -89,11 +89,13 @@ const baseEventSchema = z.discriminatedUnion('type', [
   defineEvent('sim_time_advanced', z.object({ from: SimTimeSchema, to: SimTimeSchema })),
 
   // --- Orders and kitchen ---
+  defineEvent('customer_arrived', z.object({ customer_id: id })),
   defineEvent(
     'order_created',
     z.object({
       order_id: id,
       source: z.enum(['walk_in', 'regular']),
+      customer_id: id.optional(),
       regular_id: nonEmpty.optional(),
       table_id: TableIdSchema.optional(),
       items: z.array(OrderItemSchema).min(1),
@@ -255,6 +257,7 @@ export const EVENT_META = {
   day_opened: { origins: ['scheduler'], actors: ['system'] },
   day_closed: { origins: ['scheduler'], actors: ['system'] },
   sim_time_advanced: { origins: ['boss'], actors: ['boss'] },
+  customer_arrived: { origins: ['generator'], actors: ['world'] },
   order_created: { origins: ['generator', 'rule'], actors: ['world', 'waiter'] },
   order_held: { origins: ['rule'], actors: ['cook'] },
   order_resumed: { origins: ['rule'], actors: ['system'] },

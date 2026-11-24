@@ -23,9 +23,12 @@ function detail(event: StoredEvent): string {
       return `day=${payload.day}`;
     case 'regular_expected':
       return `${payload.regular_id} table=${payload.table_id} expected_at=${formatClock(payload.expected_at as number)}`;
+    case 'customer_arrived':
+      return `customer=${payload.customer_id}`;
     case 'order_created': {
       const items = payload.items as { menu_item_id: string; qty: number }[];
-      return `#${payload.order_id} ${items.map((item) => `${item.menu_item_id}x${item.qty}`).join(',')}`;
+      const customer = payload.customer_id === undefined ? '' : ` customer=${payload.customer_id}`;
+      return `#${payload.order_id} ${items.map((item) => `${item.menu_item_id}x${item.qty}`).join(',')}${customer}`;
     }
     case 'complaint_received':
       return `#${payload.complaint_id} order=${payload.order_id} cause=${payload.cause}`;

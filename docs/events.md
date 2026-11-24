@@ -2,7 +2,7 @@
 
 Daftar event adalah **kontrak** antara `core`, `server`, `web`, dan LLM. Dokumen ini jadi acuan skema zod di `packages/core` (ada tes yang memastikan keduanya tidak berbeda). Latar belakang konsep: [`concept.md`](concept.md). Keputusan terkait: [`decisions/`](decisions/).
 
-Jumlah: **33 event** (21 dari brief, 12 baru, ditandai `*`).
+Jumlah: **34 event** (21 dari brief, 13 baru, ditandai `*`).
 
 ## 1. Konvensi
 
@@ -11,7 +11,7 @@ Setiap event adalah satu baris di tabel `events`:
 | Kolom | Isi |
 |---|---|
 | `id` | Integer autoincrement. Menentukan urutan global. Event dengan `sim_time` sama diurutkan menurut `id` |
-| `type` | Salah satu dari 33 tipe di bawah |
+| `type` | Salah satu dari 34 tipe di bawah |
 | `sim_time` | Integer detik virtual sejak hari 0 pukul 00:00 (`28800` = jam buka 08:00 hari 0) |
 | `actor` | Siapa pelakunya: `cashier`, `cook`, `stock_admin`, `waiter`, `boss`, `world` (pelanggan, pemasok), atau `system` |
 | `origin` | Apa yang menyebabkannya: `generator`, `scheduler`, `rule`, `llm`, `fallback`, `boss`, `system` |
@@ -50,7 +50,8 @@ Aturan umum:
 | `day_opened` * | scheduler | system | Jam 08:00 | Generator dunia, agent | Aturan |
 | `day_closed` * | scheduler | system | Jam 20:00 | Generator dunia berhenti | Aturan |
 | `sim_time_advanced` | boss | boss | Bos memajukan waktu | Semua jadwal terlewat diproses berurutan; `web` | Aturan |
-| `order_created` | generator atau rule | world atau waiter | Generator lewat `POST /orders` (walk_in), atau pelayan mencatat pesanan langganan | Kasir atau pelayan, lalu koki | Aturan |
+| `customer_arrived` * | generator | world | Pelanggan walk-in masuk lewat pintu; pesanannya tercatat `WALK_IN_SEC` (200 detik virtual, jalan dari pintu ke kasir) kemudian (keputusan 032) | Tampilan (pelanggan berjalan ke kasir) | Aturan |
+| `order_created` | generator atau rule | world atau waiter | Generator lewat `POST /orders` (walk_in) saat pelanggan sampai di kasir, atau pelayan mencatat pesanan langganan | Kasir atau pelayan, lalu koki | Aturan |
 | `order_held` * | rule | cook | Bahan tidak cukup saat mulai memasak | Admin stok | Aturan |
 | `order_resumed` * | rule | system | `restock_arrived` dan bahan kini cukup | Koki | Aturan |
 | `cooking_started` | rule | cook | Koki mulai memasak dan bahan cukup | Koki | Aturan |
@@ -94,9 +95,11 @@ sim_time_advanced: { from: SimTime; to: SimTime }
 ### Pesanan dan dapur
 
 ```ts
+customer_arrived: { customer_id: number }   // unik dan tetap: dari menit dan urutan kedatangan
 order_created: {
   order_id: number;
   source: 'walk_in' | 'regular';
+  customer_id?: number;  // pelanggan yang tadi masuk (customer_arrived); kosong untuk pesanan manual
   regular_id?: string;   // wajib jika source = regular
   table_id?: TableId;    // wajib jika source = regular
   items: OrderItem[];    // minimal 1

@@ -35,3 +35,4 @@ Satu file per keputusan, beberapa baris tiap file. Brief menang jika ada bentura
 | [029](029-customers-drawn-from-orders.md) | Pelanggan digambar dari event pesanan |
 | [030](030-cutaway-cafe-and-visual-direction.md) | Kafe potongan (diorama), arah visual, dan penyimpangan dari brief |
 | [031](031-video-page-layout-adaptive-camera-and-routes.md) | Layout halaman ala video, kamera adaptif, dan jalur jalan |
+| [032](032-customers-arrive-before-they-order.md) | Pelanggan masuk dulu, baru memesan (`customer_arrived`) |

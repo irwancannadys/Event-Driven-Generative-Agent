@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { WALK_IN_SEC } from '../stations';
 import { SEED_MENU_IDS, makeScenario } from './scenario';
-import { dueItems, makeStaticSource, priorityOf, type DueItem } from './schedule';
+import { customerIdOf, dueItems, makeStaticSource, priorityOf, type DueItem } from './schedule';
 import { CLOSE_TIME_SEC, OPEN_TIME_SEC, SECONDS_PER_DAY, formatClock, simTime } from '../time';
 
 const scenario = makeScenario(42);
@@ -8,6 +9,11 @@ const oneDay = (s = scenario) => dueItems(0, SECONDS_PER_DAY, s);
 const arrivals = (items: DueItem[]) =>
   items.filter(
     (item): item is Extract<DueItem, { kind: 'order_arrival' }> => item.kind === 'order_arrival',
+  );
+const walkers = (items: DueItem[]) =>
+  items.filter(
+    (item): item is Extract<DueItem, { kind: 'customer_arrival' }> =>
+      item.kind === 'customer_arrival',
   );
 
 describe('dueItems for one day', () => {
@@ -65,6 +71,26 @@ describe('dueItems for one day', () => {
     }
   });
 
+  it('lets every customer come in at the door and place the order at the counter WALK_IN_SEC later', () => {
+    const items = oneDay();
+    const orders = arrivals(items);
+    const customers = walkers(items);
+    expect(customers.length).toBe(orders.length);
+    expect(new Set(customers.map((item) => item.customer_id)).size).toBe(customers.length);
+    for (const customer of customers) {
+      const order = orders.find((item) => item.customer_id === customer.customer_id);
+      expect(order?.time, `customer ${customer.customer_id}`).toBe(customer.time + WALK_IN_SEC);
+      expect(customer.time).toBeGreaterThanOrEqual(OPEN_TIME_SEC);
+    }
+  });
+
+  it('lets the last customer in early enough to order before the cafe closes', () => {
+    expect(Math.max(...walkers(oneDay()).map((item) => item.time))).toBeLessThan(
+      CLOSE_TIME_SEC - WALK_IN_SEC,
+    );
+    expect(Math.max(...arrivals(oneDay()).map((item) => item.time))).toBeLessThan(CLOSE_TIME_SEC);
+  });
+
   it('is busier at lunch than in the afternoon, over several seeds', () => {
     let lunch = 0;
     let afternoon = 0;
@@ -98,6 +124,21 @@ describe('dueItems window rules', () => {
     expect(
       dueItems(OPEN_TIME_SEC, OPEN_TIME_SEC + 1, scenario).map((item) => item.kind),
     ).not.toContain('day_opened');
+  });
+
+  it('finds the order of a customer that came in in an earlier window, and not twice', () => {
+    const customer = walkers(oneDay())[10] as Extract<DueItem, { kind: 'customer_arrival' }>;
+    const atDoor = dueItems(customer.time - 1, customer.time, scenario);
+    expect(atDoor.map((item) => item.kind)).toEqual(['customer_arrival']);
+    const atCounter = dueItems(customer.time, customer.time + WALK_IN_SEC, scenario).filter(
+      (item) => item.kind === 'order_arrival' && item.customer_id === customer.customer_id,
+    );
+    expect(atCounter).toHaveLength(1);
+    // a window that starts after the arrival and ends before the order has neither of the two
+    const between = dueItems(customer.time, customer.time + WALK_IN_SEC - 1, scenario);
+    expect(
+      between.some((item) => 'customer_id' in item && item.customer_id === customer.customer_id),
+    ).toBe(false);
   });
 
   it('returns nothing for an empty or backwards window', () => {
@@ -221,17 +262,33 @@ describe('makeStaticSource', () => {
 });
 
 describe('priorityOf', () => {
-  it('puts a delivery before a task end, and both before new orders and the checks', () => {
+  it('puts a delivery before a task end, and both before new customers, orders and the checks', () => {
     const order: DueItem[] = [
       { kind: 'day_opened', time: 0, day: 0 },
       { kind: 'restock_arrival', time: 0, restock_id: 1 },
       { kind: 'task_end', time: 0, agent_id: 'cook', task_id: 1 },
-      { kind: 'order_arrival', time: 0, items: [] },
+      { kind: 'customer_arrival', time: 0, customer_id: 1 },
+      { kind: 'order_arrival', time: 0, customer_id: 1, items: [] },
       { kind: 'complaint_check', time: 0 },
       { kind: 'day_closed', time: 0, day: 0 },
     ];
     const priorities = order.map((item) => priorityOf(item));
     expect(priorities).toEqual([...priorities].sort((a, b) => a - b));
     expect(new Set(priorities).size).toBe(priorities.length);
+  });
+});
+
+describe('customerIdOf', () => {
+  it('is different for every place in every minute, and the same every time', () => {
+    const ids = new Set<number>();
+    for (let slot = OPEN_TIME_SEC; slot < OPEN_TIME_SEC + 6000; slot += 60) {
+      for (let n = 0; n < 3; n += 1) ids.add(customerIdOf(slot, n));
+    }
+    expect(ids.size).toBe(100 * 3);
+    expect(customerIdOf(OPEN_TIME_SEC, 1)).toBe(customerIdOf(OPEN_TIME_SEC, 1));
+  });
+
+  it('refuses a place in the minute that it cannot tell from the next minute', () => {
+    expect(() => customerIdOf(OPEN_TIME_SEC, 100)).toThrow(RangeError);
   });
 });

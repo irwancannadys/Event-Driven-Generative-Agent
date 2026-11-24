@@ -1,4 +1,5 @@
 import { REGULARS } from '../seed-data';
+import { WALK_IN_SEC } from '../stations';
 import type { AgentId, TableId } from '../ids';
 import type { OrderItem } from '../schema-parts';
 import {
@@ -33,7 +34,8 @@ export type StaticDueItem =
       table_id: TableId;
       expected_at: SimTime;
     }
-  | { kind: 'order_arrival'; time: SimTime; items: OrderItem[] }
+  | { kind: 'customer_arrival'; time: SimTime; customer_id: number }
+  | { kind: 'order_arrival'; time: SimTime; customer_id: number; items: OrderItem[] }
   | { kind: 'complaint_check'; time: SimTime };
 
 /**
@@ -52,9 +54,10 @@ const PRIORITY: Record<DueItem['kind'], number> = {
   regular_expected: 1,
   restock_arrival: 2,
   task_end: 3,
-  order_arrival: 4,
-  complaint_check: 5,
-  day_closed: 6,
+  customer_arrival: 4,
+  order_arrival: 5,
+  complaint_check: 6,
+  day_closed: 7,
 };
 
 export function priorityOf(item: DueItem): number {
@@ -108,14 +111,34 @@ function collectDay(
     out.push({ kind: 'complaint_check', time });
   }
 
-  // Orders: every one-minute slot of the opening hours gets its own draws. An arrival lands somewhere
-  // in the slot, so only slots that overlap the window can contribute.
-  const firstSlot = Math.max(opens, Math.floor((after - (SLOT_SEC - 1)) / SLOT_SEC) * SLOT_SEC);
-  const lastSlot = Math.min(closes - SLOT_SEC, Math.floor(upTo / SLOT_SEC) * SLOT_SEC);
+  // Customers: every one-minute slot of the opening hours gets its own draws. A customer arrives somewhere
+  // in the slot and places its order `WALK_IN_SEC` later, when it has walked to the cashier. Either of the
+  // two can fall in the window, so the slots are looked at from `WALK_IN_SEC` further back.
+  const firstSlot = Math.max(
+    opens,
+    Math.floor((after - WALK_IN_SEC - (SLOT_SEC - 1)) / SLOT_SEC) * SLOT_SEC,
+  );
+  // The last customer comes in early enough to place its order before the cafe closes.
+  const lastSlot = Math.min(
+    closes - SLOT_SEC - WALK_IN_SEC,
+    Math.floor(upTo / SLOT_SEC) * SLOT_SEC,
+  );
   for (let slot = firstSlot; slot <= lastSlot; slot += SLOT_SEC) {
     collectArrivals(slot, after, upTo, scenario, out);
   }
 }
+
+/**
+ * The number of a customer: unique and the same every time, from the slot and the place in the slot
+ * (decision 032). It is what ties the arrival at the door to the order at the counter.
+ */
+export function customerIdOf(slot: SimTime, n: number): number {
+  if (n >= CUSTOMERS_PER_SLOT_MAX) throw new RangeError(`customer ${n} in one slot is too many`);
+  return (slot / SLOT_SEC) * CUSTOMERS_PER_SLOT_MAX + n;
+}
+
+/** More customers than this in one minute of one day cannot be told apart by `customerIdOf`. */
+const CUSTOMERS_PER_SLOT_MAX = 100;
 
 function collectArrivals(
   slot: SimTime,
@@ -131,8 +154,15 @@ function collectArrivals(
   for (let n = 0; n < arrivals; n += 1) {
     const tag = `${slot}#${n}`;
     const time = slot + randInt(scenario.seed, `arrival_sec@${tag}`, SLOT_SEC);
-    if (inWindow(time, after, upTo)) {
-      out.push({ kind: 'order_arrival', time, items: chooseItems(scenario.seed, tag) });
+    const customer_id = customerIdOf(slot, n);
+    if (inWindow(time, after, upTo)) out.push({ kind: 'customer_arrival', time, customer_id });
+    if (inWindow(time + WALK_IN_SEC, after, upTo)) {
+      out.push({
+        kind: 'order_arrival',
+        time: time + WALK_IN_SEC,
+        customer_id,
+        items: chooseItems(scenario.seed, tag),
+      });
     }
   }
 }

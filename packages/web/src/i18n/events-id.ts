@@ -69,6 +69,9 @@ export function describeEventId(event: StoredEvent, names: Names = PLAIN_NAMES):
     case 'regular_expected':
       return `${titleCase(event.payload.regular_id)} diperkirakan datang pukul ${formatClock(event.payload.expected_at)} di meja ${event.payload.table_id}`;
 
+    case 'customer_arrived':
+      return 'Pelanggan masuk ke kafe';
+
     case 'order_created': {
       const items = event.payload.items
         .map((item) => `${humanize(item.menu_item_id)} ×${item.qty}`)

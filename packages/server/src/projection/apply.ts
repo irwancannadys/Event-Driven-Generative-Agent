@@ -18,6 +18,7 @@ const LOG_ONLY: ReadonlySet<EventType> = new Set<EventType>([
   'day_opened',
   'day_closed',
   'sim_time_advanced',
+  'customer_arrived',
   'regular_expected',
   'regular_greeted',
   'agent_think_requested',

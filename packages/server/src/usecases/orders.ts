@@ -7,9 +7,13 @@ const OrderItemsSchema = z.array(OrderItemSchema).min(1);
 
 /**
  * Puts a walk-in order on the books (the cashier mock). Rejects unknown menu items, merges lines of the
- * same menu item (an order holds one line per menu item) and writes `order_created`.
+ * same menu item (an order holds one line per menu item) and writes `order_created`. `customer_id` ties
+ * the order to the customer that arrived at the door; an order made by hand has none.
  */
-export function createOrder(ctx: Context, input: { items: OrderItem[] }): { order_id: number } {
+export function createOrder(
+  ctx: Context,
+  input: { items: OrderItem[]; customer_id?: number },
+): { order_id: number } {
   const parsed = OrderItemsSchema.safeParse(input.items);
   if (!parsed.success) {
     throw new DomainError(
@@ -36,7 +40,12 @@ export function createOrder(ctx: Context, input: { items: OrderItem[] }): { orde
       type: 'order_created',
       actor: 'world',
       origin: 'generator',
-      payload: { order_id, source: 'walk_in', items },
+      payload: {
+        order_id,
+        source: 'walk_in',
+        ...(input.customer_id !== undefined && { customer_id: input.customer_id }),
+        items,
+      },
     });
     return { order_id };
   });

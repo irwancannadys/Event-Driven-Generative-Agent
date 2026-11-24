@@ -33,9 +33,21 @@ export function handleDueItem(ctx: Context, item: DueItem, scenario: Scenario): 
       });
       return;
 
+    case 'customer_arrival':
+      // A customer comes in at the door; it places its order when it has walked to the cashier.
+      transact(ctx, (emit) => {
+        emit({
+          type: 'customer_arrived',
+          actor: 'world',
+          origin: 'generator',
+          payload: { customer_id: item.customer_id },
+        });
+      });
+      return;
+
     case 'order_arrival':
       // The generator uses the same door as POST /orders (decision 020).
-      createOrder(ctx, { items: item.items });
+      createOrder(ctx, { items: item.items, customer_id: item.customer_id });
       return;
 
     case 'complaint_check':
