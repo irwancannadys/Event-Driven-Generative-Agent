@@ -1,4 +1,4 @@
-import type { RecipeLine } from '@cafe/core';
+import type { OrderItem, RecipeLine } from '@cafe/core';
 import type { Db } from './database';
 
 // Read-only queries shared by the use cases and the HTTP API.
@@ -54,4 +54,20 @@ export function readStock(db: Db): StockRow[] {
     low_flagged: row.low_flagged === 1,
     out_flagged: row.out_flagged === 1,
   }));
+}
+
+export interface OrderRow {
+  id: number;
+  status: 'placed' | 'held' | 'cooking' | 'done';
+}
+
+export function readOrder(db: Db, orderId: number): OrderRow | undefined {
+  return db.prepare('SELECT id, status FROM orders WHERE id = ?').get(orderId) as
+    OrderRow | undefined;
+}
+
+export function readOrderItems(db: Db, orderId: number): OrderItem[] {
+  return db
+    .prepare('SELECT menu_item_id, qty FROM order_items WHERE order_id = ? ORDER BY menu_item_id')
+    .all(orderId) as OrderItem[];
 }
