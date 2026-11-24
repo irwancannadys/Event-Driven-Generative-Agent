@@ -7,11 +7,14 @@ import {
   OFFICE,
   ORDER_SPOT,
   PICKUP_SPOT,
+  orderSpot,
+  pickupSpot,
   STATION_SPOTS,
   TABLES,
   WAITING_SPOTS,
   WALLS,
   standingPoint,
+  waitingSpot,
   type Point,
 } from './registry';
 
@@ -169,5 +172,25 @@ describe('pointAlong', () => {
   it('stays inside the path for a fraction outside 0 to 1', () => {
     expect(pointAlong(path, -1)).toMatchObject({ x: 0, z: 0 });
     expect(pointAlong(path, 9)).toMatchObject({ x: 4, z: 3 });
+  });
+});
+
+describe('straightened routes', () => {
+  it('keep clear of the corners of walls, tables and counters on every route a customer takes', () => {
+    // The grid says a cell is free when its middle is, so a straight line can cut a corner that a cell
+    // only touches. Customer 0 and 20 once walked through the corner of the office wall that way.
+    for (let id = 0; id < 40; id += 1) {
+      const routes: [Point, Point][] = [
+        [DOOR, orderSpot(id)],
+        [orderSpot(id), waitingSpot(id)],
+        [waitingSpot(id), pickupSpot(id)],
+        [orderSpot(id), pickupSpot(id)],
+        [pickupSpot(id), DOOR],
+      ];
+      for (const [from, to] of routes) {
+        const inside = sample(findPath(from, to)).filter((point) => isBlocked(point));
+        expect(inside, `customer ${id} from ${JSON.stringify(from)}`).toEqual([]);
+      }
+    }
   });
 });

@@ -30,15 +30,26 @@ function distanceToSegment(point: Point, wall: Wall): number {
   return Math.hypot(point.x - (wall.from.x + t * dx), point.z - (wall.from.z + t * dz));
 }
 
-/** Whether a person cannot stand at this point of the floor. */
-export function isBlocked(point: Point): boolean {
+/**
+ * Whether a person cannot stand at this point of the floor. `margin` makes every obstacle a little
+ * bigger: the straight lines of a route keep that much further away, so that checking them point by
+ * point cannot miss a sliver of an obstacle between two points.
+ */
+export function isBlocked(point: Point, margin = 0): boolean {
   if (point.x < ROOM.xMin + EDGE || point.x > ROOM.xMax - EDGE) return true;
   if (point.z < ROOM.zMin + EDGE || point.z > ROOM.zMax - EDGE) return true;
-  if (TABLES.some((table) => Math.hypot(point.x - table.x, point.z - table.z) < TABLE_CLEARANCE))
+  if (
+    TABLES.some(
+      (table) => Math.hypot(point.x - table.x, point.z - table.z) < TABLE_CLEARANCE + margin,
+    )
+  )
     return true;
-  if (WALLS.some((wall) => distanceToSegment(point, wall) < WALL_CLEARANCE)) return true;
-  return COUNTERS.some((counter) => distanceToSegment(point, counter) < COUNTER_CLEARANCE);
+  if (WALLS.some((wall) => distanceToSegment(point, wall) < WALL_CLEARANCE + margin)) return true;
+  return COUNTERS.some((counter) => distanceToSegment(point, counter) < COUNTER_CLEARANCE + margin);
 }
+
+/** How much further from the obstacles the straight parts of a route stay than a person must. */
+const ROUTE_MARGIN = 0.05;
 
 const cellCenter = (column: number, row: number): Point => ({
   x: ROOM.xMin + (column + 0.5) * CELL,
@@ -56,13 +67,17 @@ for (let row = 0; row < ROWS; row += 1) {
   }
 }
 
-/** Whether the straight line between two points is free of obstacles. */
+/**
+ * Whether the straight line between two points is free of obstacles. It looks at the points themselves
+ * and not at the grid cells they fall in: a cell is free when its middle is, so a line that cuts the
+ * corner of a wall could still pass through one.
+ */
 function clear(a: Point, b: Point): boolean {
   const steps = Math.max(1, Math.ceil(Math.hypot(a.x - b.x, a.z - b.z) / 0.1));
   for (let step = 0; step <= steps; step += 1) {
     const t = step / steps;
-    const { column, row } = cellOf({ x: a.x + (b.x - a.x) * t, z: a.z + (b.z - a.z) * t });
-    if (blocked[row * COLUMNS + column]) return false;
+    if (isBlocked({ x: a.x + (b.x - a.x) * t, z: a.z + (b.z - a.z) * t }, ROUTE_MARGIN))
+      return false;
   }
   return true;
 }
