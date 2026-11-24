@@ -1,16 +1,18 @@
 :root {
   color-scheme: light;
-  --bg: #f5efe3;
-  --bg-glow: #fffaf0;
-  --fg: #2b2a27;
-  --muted: #6c685c;
+  --bg: #eff6f6;
+  --bg-glow: #ffffff;
+  --bg-tint: #d6ebea;
+  --fg: #16292b;
+  --muted: #4a6366;
   --card: #ffffff;
-  --line: #e7dfce;
-  --ok: #2a9d6a;
-  --warn: #c27a12;
-  --bad: #cf4437;
-  --accent: #2a7f52;
-  --brand: #5c3d27;
+  --line: #d3e3e2;
+  --ok: #0d9488;
+  --warn: #b45309;
+  --bad: #c0392b;
+  --accent: #0f766e;
+  --accent-soft: #d5efec;
+  --brand: #0b4f4a;
 }
 
 * {
@@ -22,7 +24,7 @@ body {
   margin: 0;
   background:
     radial-gradient(ellipse at 20% -10%, var(--bg-glow), transparent 55%),
-    radial-gradient(ellipse at 100% 100%, #e9f1e4, transparent 50%), var(--bg);
+    radial-gradient(ellipse at 100% 100%, var(--bg-tint), transparent 55%), var(--bg);
   background-attachment: fixed;
   color: var(--fg);
   font:
@@ -229,8 +231,8 @@ button.reject {
   color: #3c3489;
 }
 .tag-boss {
-  background: #cdeede;
-  color: #0e5a3d;
+  background: var(--accent-soft);
+  color: var(--brand);
 }
 
 .report {
@@ -260,9 +262,9 @@ button.reject {
   border: 1px solid var(--line);
   border-radius: 12px;
   background:
-    radial-gradient(ellipse at 12% 0%, rgba(150, 205, 190, 0.45), transparent 55%),
-    radial-gradient(ellipse at 90% 100%, rgba(244, 190, 140, 0.4), transparent 55%),
-    radial-gradient(ellipse at 50% 35%, #fffaf0 0%, #f6e8cf 55%, #ecd6b4 100%);
+    radial-gradient(ellipse at 10% 0%, rgba(94, 196, 188, 0.4), transparent 55%),
+    radial-gradient(ellipse at 92% 100%, rgba(255, 207, 160, 0.22), transparent 50%),
+    radial-gradient(ellipse at 50% 35%, #fbffff 0%, #dff0ef 55%, #c6e2e0 100%);
   color: #2c2c2a;
   cursor: grab;
   touch-action: none;
@@ -305,7 +307,7 @@ button.reject {
   border-color: #ef9f27;
 }
 .scene-label.boss {
-  background: #2c2c2a;
+  background: var(--fg);
   color: #fff;
 }
 
@@ -430,21 +432,6 @@ button.reject {
 .panel.folded h2 {
   margin-bottom: 0;
 }
-.side .controls {
-  flex-direction: column;
-  align-items: flex-start;
-  margin-left: 0;
-  gap: 8px;
-}
-.side .group {
-  flex-wrap: wrap;
-  gap: 4px 6px;
-}
-.side .view-control {
-  display: block;
-  margin-top: 10px;
-}
-
 .side .complaints .panel-body {
   max-height: 260px;
   overflow-y: auto;
@@ -474,6 +461,57 @@ button.reject {
   color: #3c3489;
 }
 .tag-complaint-replied {
-  background: #cdeede;
-  color: #0e5a3d;
+  background: var(--accent-soft);
+  color: var(--brand);
+}
+
+/* The time controls: a button in the strip at the top opens them as a menu. */
+.status-strip .menu {
+  position: relative;
+  margin-left: auto;
+}
+.menu-button {
+  position: relative;
+  z-index: 12;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+.menu-button[aria-expanded='true'] {
+  background: var(--accent);
+  color: #fff;
+}
+.menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+}
+.menu-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 11;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: max-content;
+  max-width: min(420px, 92vw);
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  box-shadow: 0 10px 30px rgba(11, 79, 74, 0.18);
+}
+.menu-panel .controls {
+  flex-direction: column;
+  align-items: flex-start;
+  margin-left: 0;
+  gap: 8px;
+}
+.menu-panel .group {
+  flex-wrap: wrap;
+  gap: 4px 6px;
 }

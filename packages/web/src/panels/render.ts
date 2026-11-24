@@ -19,8 +19,9 @@ import {
   type ReportRowView,
 } from './view-models';
 
-// The panels of the page: status, characters, orders, the boss desk, and in the sidebar the time
-// controls, the event log and the stock (each can be folded away). What each shows comes from `view-models.ts`; this file only puts it on the screen and passes
+// The panels of the page: status, characters, orders, the boss desk, the time controls in a menu that
+// opens from the top of the page, and in the sidebar the event log, the complaints and the stock (each can
+// be folded away). What each shows comes from `view-models.ts`; this file only puts it on the screen and passes
 // the boss's clicks on. It makes no decisions.
 
 export interface PanelActions {
@@ -80,7 +81,32 @@ export function createPanels(
     link.href = view.mode === 'scene' ? '?view=panel' : '?view=3d';
     viewControl.append(link);
   }
-  const strip = el('header', 'status-strip', dot, connection, clock, pace);
+  // The time controls are only needed now and then: a button in the strip opens them as a menu, and a click
+  // anywhere else (or Escape) puts them away again.
+  const menuMark = el('span', 'fold-mark');
+  const menuButton = el('button', 'menu-button', t('panel.time'), menuMark);
+  menuButton.type = 'button';
+  const menuPanel = el('div', 'menu-panel', controls, viewControl);
+  const menuBackdrop = el('div', 'menu-backdrop');
+  const menu = el('div', 'menu', menuBackdrop, menuButton, menuPanel);
+  let menuOpen = false;
+  const showMenu = (): void => {
+    menuMark.textContent = menuOpen ? OPEN_MARK : FOLDED_MARK;
+    menuButton.setAttribute('aria-expanded', String(menuOpen));
+    menuPanel.style.display = menuOpen ? '' : 'none';
+    menuBackdrop.style.display = menuOpen ? '' : 'none';
+  };
+  const setMenu = (open: boolean): void => {
+    menuOpen = open;
+    showMenu();
+  };
+  menuButton.addEventListener('click', () => setMenu(!menuOpen));
+  menuBackdrop.addEventListener('click', () => setMenu(false));
+  root.addEventListener('keydown', (event) => {
+    if ((event as KeyboardEvent).key === 'Escape') setMenu(false);
+  });
+  showMenu();
+  const strip = el('header', 'status-strip', dot, connection, clock, pace, menu);
 
   const showNotice = (message: string): void => {
     notice.textContent = message;
@@ -119,11 +145,9 @@ export function createPanels(
   const agents = section('panel.agents', 'agents');
   const orders = section('panel.orders', 'orders');
   const boss = section('panel.boss', 'boss');
-  const controlsPanel = foldable('time', 'panel.time', 'time');
   const log = foldable('log', 'panel.log', 'log');
   const complaints = foldable('complaints', 'panel.complaints', 'complaints');
   const stock = foldable('stock', 'panel.stock', 'stock');
-  controlsPanel.body.append(controls, viewControl);
   const sceneSlot = el('section', 'scene-slot');
   const banner = el('div', 'scene-banner', t('status.closed'));
   banner.style.display = 'none';
@@ -133,7 +157,7 @@ export function createPanels(
   // it, and a column on the right with the log (it scrolls) and the stock below it.
   const topbar = el('header', 'topbar', el('h1', '', t('app.title')), strip);
   const main = el('div', 'main', sceneSlot, el('div', 'info', agents.root, orders.root, boss.root));
-  const side = el('aside', 'side', controlsPanel.root, log.root, complaints.root, stock.root);
+  const side = el('aside', 'side', log.root, complaints.root, stock.root);
   root.replaceChildren(topbar, notice, el('main', 'watch', main, side));
 
   const drawControls = (paused: boolean, speed: number, enabled: boolean): void => {

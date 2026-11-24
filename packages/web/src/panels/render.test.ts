@@ -59,9 +59,11 @@ describe('the panels', () => {
     panels.update({ state: undefined, status: 'connecting', nowMs: 0 });
     expect(root.textContent).toContain('Menunggu data dunia dari server');
     expect(root.textContent).toContain('Menyambung ke server');
-    // only the titles that fold a section are left, no time control
+    // only the titles that fold a section and the button of the menu are left, no time control
     const buttons = root.findAll((node) => node.tag === 'button');
-    expect(buttons.every((node) => node.className === 'panel-toggle')).toBe(true);
+    expect(buttons.every((node) => ['panel-toggle', 'menu-button'].includes(node.className))).toBe(
+      true,
+    );
   });
 
   it('show the connection, the time, the characters, the orders, the stock, the log and the boss desk', () => {
@@ -232,24 +234,13 @@ describe('the sidebar', () => {
     return store;
   };
 
-  it('holds the time controls, the log and the stock, and the top of the page only the status', () => {
+  it('holds the log, the complaints and the stock, and none of the time controls', () => {
     const { root, panels } = setup();
     panels.update({ state: world(), status: 'open', nowMs: 1000 });
     const sidebar = side(root).textContent;
-    for (const text of [
-      'Kontrol waktu',
-      'Jeda',
-      '600x',
-      '+1 jam',
-      'Kejadian',
-      'Stok',
-      'Panel saja',
-    ])
-      expect(sidebar).toContain(text);
-    const topbar = root.findAll((node) => node.tag === 'header' && node.className === 'topbar')[0];
-    expect(topbar?.textContent).toContain('Hari 0, 08:20');
-    expect(topbar?.textContent).not.toContain('Jeda');
-    expect(topbar?.textContent).not.toContain('Panel saja');
+    for (const text of ['Kejadian', 'Komplain', 'Stok']) expect(sidebar).toContain(text);
+    for (const text of ['Jeda', '600x', '+1 jam', 'Panel saja', 'Kontrol waktu'])
+      expect(sidebar).not.toContain(text);
   });
 
   it('folds a section away and opens it again, with the title as the button', () => {
@@ -260,23 +251,13 @@ describe('the sidebar', () => {
       'true',
       'true',
       'true',
-      'true',
     ]);
-    root.button('Kontrol waktu\u25be').click();
-    expect(body(root, 'Kontrol waktu').style.display).toBe('none');
+    root.button('Kejadian\u25be').click();
+    expect(body(root, 'Kejadian').style.display).toBe('none');
+    expect(body(root, 'Stok').style.display).toBe('');
+    expect(root.button('Kejadian\u25b8').attributes['aria-expanded']).toBe('false');
+    root.button('Kejadian\u25b8').click();
     expect(body(root, 'Kejadian').style.display).toBe('');
-    expect(root.button('Kontrol waktu\u25b8').attributes['aria-expanded']).toBe('false');
-    root.button('Kontrol waktu\u25b8').click();
-    expect(body(root, 'Kontrol waktu').style.display).toBe('');
-  });
-
-  it('keeps the time controls working inside a section that was folded and opened again', () => {
-    const { root, panels, calls } = setup();
-    panels.update({ state: world(), status: 'open', nowMs: 1000 });
-    root.button('Kontrol waktu\u25be').click();
-    root.button('Kontrol waktu\u25b8').click();
-    root.button('600x').click();
-    expect(calls.time).toEqual([{ speed: 600 }]);
   });
 
   it('remembers what was folded, for the next visit', () => {
@@ -335,5 +316,58 @@ describe('the complaints panel', () => {
       '1 terbuka',
     ])
       expect(text).toContain(part);
+  });
+});
+
+describe('the time menu', () => {
+  const part = (root: FakeNode, className: string) =>
+    root.findAll((node) => node.className === className)[0] as FakeNode;
+  const topbar = (root: FakeNode) =>
+    root.findAll((node) => node.tag === 'header' && node.className === 'topbar')[0] as FakeNode;
+  const shown = (root: FakeNode) => part(root, 'menu-panel').style.display === '';
+
+  it('is a button at the top of the page that shows only the status and the clock besides', () => {
+    const { root, panels } = setup();
+    panels.update({ state: world(), status: 'open', nowMs: 1000 });
+    expect(topbar(root).textContent).toContain('Hari 0, 08:20');
+    expect(topbar(root).textContent).toContain('Kontrol waktu');
+    expect(shown(root)).toBe(false); // the controls are not on the page until they are asked for
+    expect(part(root, 'menu-backdrop').style.display).toBe('none');
+  });
+
+  it('opens with the button, with the controls and the link to the panels in it, and closes with it', () => {
+    const { root, panels } = setup();
+    panels.update({ state: world(), status: 'open', nowMs: 1000 });
+    root.button('Kontrol waktu\u25b8').click();
+    expect(shown(root)).toBe(true);
+    expect(root.button('Kontrol waktu\u25be').attributes['aria-expanded']).toBe('true');
+    const menu = part(root, 'menu-panel').textContent;
+    for (const text of ['Jeda', '1x', '600x', '+10 menit', '+1 jam', 'Panel saja'])
+      expect(menu).toContain(text);
+    root.button('Kontrol waktu\u25be').click();
+    expect(shown(root)).toBe(false);
+  });
+
+  it('stays open while the controls are used, so that several can be pressed one after another', () => {
+    const { root, panels, calls } = setup();
+    panels.update({ state: world(), status: 'open', nowMs: 1000 });
+    root.button('Kontrol waktu\u25b8').click();
+    root.button('600x').click();
+    root.button('+30 menit').click();
+    expect(calls.time).toEqual([{ speed: 600 }, { advance_seconds: 1800 }]);
+    expect(shown(root)).toBe(true);
+  });
+
+  it('is put away by a click anywhere else on the page, and by Escape', () => {
+    const { root, panels } = setup();
+    panels.update({ state: world(), status: 'open', nowMs: 1000 });
+    root.button('Kontrol waktu\u25b8').click();
+    part(root, 'menu-backdrop').click();
+    expect(shown(root)).toBe(false);
+    root.button('Kontrol waktu\u25b8').click();
+    root.fire('keydown', { key: 'Enter' });
+    expect(shown(root)).toBe(true);
+    root.fire('keydown', { key: 'Escape' });
+    expect(shown(root)).toBe(false);
   });
 });
