@@ -86,8 +86,8 @@ describe('a free agent', () => {
     expect(walk).toBe(132);
     sim.clock.advance(walk + 60);
     expect(agentLog(db)).toEqual([
-      { type: 'agent_task_assigned', time: START },
-      { type: 'agent_task_assigned', time: START },
+      { type: 'agent_task_assigned', time: START, station: 'boss_desk' }, // the walk
+      { type: 'agent_task_assigned', time: START }, // the work
       {
         type: 'agent_state_changed',
         time: START,
