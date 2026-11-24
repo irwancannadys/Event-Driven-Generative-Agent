@@ -39,3 +39,4 @@ Satu file per keputusan, beberapa baris tiap file. Brief menang jika ada bentura
 | [033](033-light-theme-sidebar-and-complaints-panel.md) | Tema terang, sidebar yang bisa dilipat, dan panel Komplain |
 | [034](034-stock-admin-is-the-generative-agent.md) | Admin Stok menjadi agent generatif (menggantikan Rina di Tahap 5) |
 | [035](035-decision-pipeline-with-fake-llm.md) | Pipa keputusan agent: FakeLLM instan, validasi, ulang, fallback aturan |
+| [036](036-what-the-learning-admin-achieves.md) | Apa yang dicapai Admin Stok yang belajar (hasil eksperimen) |

@@ -17,7 +17,7 @@ npm install      # pasang dependency
 npm test
 ```
 
-**Yang diharapkan:** baris terakhir seperti `Tests  588 passed (588)` (angkanya naik tiap tahap) dan tidak ada tulisan `failed`. Kalau ada yang merah, nama tesnya menunjukkan bagian mana yang rusak.
+**Yang diharapkan:** baris terakhir seperti `Tests  1054 passed (1054)` (angkanya naik tiap tahap) dan tidak ada tulisan `failed`. Kalau ada yang merah, nama tesnya menunjukkan bagian mana yang rusak.
 
 Pemeriksaan lain yang cepat: `npm run lint`, `npm run typecheck`, `npm run format:check`. Ketiganya tidak boleh mencetak error.
 
@@ -191,6 +191,8 @@ Semua lewat variabel lingkungan atau file `.env` (salin dari `.env.example`):
 | `CROWD_PCT` | keramaian, 100 = hari biasa, 200 = dua kali lipat (server mulai di 150 supaya sering ada kejadian; di atas 250 satu koki tertinggal berjam-jam) | 150 |
 | `COMPLAINT_CHANCE_PCT` | peluang pesanan yang menunggu sampai batas waktu komplain jadi komplain | 15 |
 | `COMPLAINT_WAIT_MIN` | menit virtual menunggu sebelum pesanan bisa dikomplain (1 sampai 1440) | 20 |
+| `LLM_PROVIDER` | `fake` (FakeLLM, skrip) atau `off` (aturan saja); lihat bagian 10 | fake |
+| `STOCK_FORECAST` | `on` atau `off`: Admin Stok memperkirakan dan memesan jam 10:00 dan 15:00 | on |
 
 Nilai yang salah (mis. `SPEED=abc`) membuat server menolak nyala dengan pesan yang menyebut nama variabelnya.
 
@@ -339,8 +341,8 @@ Gua uji keempatnya di server sungguhan (45 menit disetujui, 45 menit ditolak, 65
 
 - **Koki kewalahan di jam makan siang.** Ada satu koki dan pesanan sekitar 14 per jam, jadi antrean menumpuk dan komplain "layanan lambat" muncul. Itu perilaku yang wajar dan bahan pelajaran tentang bottleneck, bukan bug. Kasir menjawab komplain sendiri dengan template permohonan maaf.
 - **Komplain ringan dijawab kasir sendiri.** Di pengaturan bawaan komplain muncul di menit ke-20 menunggu, dan kasir (kurang dari 40 menit) langsung membalas dengan permintaan maaf tanpa menyusahkan bos. Mau lihat komplain yang sampai ke meja bos? Lihat bagian 6.9.
-- Teks laporan dan balasan komplain masih **template** (bukan LLM). LLM baru di Tahap 5 dan 6.
-- Rina (pelayan) ada di papan di Meja 2 tapi belum melakukan apa pun (Tahap 5). Status `berpikir` juga belum dipakai (Tahap 6).
+- Teks laporan dan balasan komplain masih **template**. Sejak Tahap 5 Admin Stok memakai `FakeLLM` (skrip, bukan model sungguhan) untuk belanja dan review malam (bagian 10); kasir dan koki tetap aturan. Model sungguhan baru di Tahap 6.
+- Rina (pelayan) ada di papan di Meja 2 dan memang tetap diam: perannya dibuang dari Tahap 5 (keputusan 034). Status `berpikir` belum dipakai (Tahap 6).
 - Tampilan 3D ada sejak Tahap 4 (lihat bagian 9).
 - Setelah `day_closed` (20:00) sampai `day_opened` hari berikutnya tidak ada pesanan baru, tapi karakter menyelesaikan sisa tugasnya. Percepat dengan `{"speed":3600}` atau `{"advance_seconds":...}`.
 
@@ -382,7 +384,7 @@ Buka alamat yang dicetak tab 2 (biasanya `http://localhost:5173`; kalau port itu
 - **Kartu di bawah gambar:** **Pesanan** (angka besar yang menunggu, bar, tiga kotak Menunggu / Dimasak / Ditahan, jumlah selesai di pojok), **Komplain**, **Karakter** (lingkaran huruf, nama, tempat dan sampai jam berapa, pil Idle atau tugasnya; "N dari 4 bekerja" di pojok) dan **Admin Stok** (lihat bagian 10). Kartu setinggi isinya sendiri.
 - **Gambar besar di kiri:** kafe potong di atas alas. Dapur (kanan belakang) dan ruang bos (kiri belakang) dipisah sekat kaca dengan pintu. Pintu masuk kaca di depan, tujuh meja, kasir di tengah belakang dengan etalase dan papan menu, rak stok di belakang, bangku, lukisan, tanaman, lampu gantung.
 - **Karyawan** berbaju hijau dan bercelana putih (koki bertopi putih), bos berjas gelap di ruangnya. Label di atas kepala menyebut nama dan sedang apa. Ada cewek (kasir dan Rina: rambut panjang atau sanggul, bibir merah) dan cowok (admin stok, koki berjenggot, bos). Pelanggan juga campur: ada yang berambut panjang atau dikuncir, ada yang berjenggot.
-- **Rina (pelayan) diam.** Dia sudah ada di denah dan di panel Karakter, tapi perilakunya (ingatan, inisiatif, melayani meja) baru dikerjakan di Tahap 5, jadi untuk sekarang dia memang cuma idle di mejanya.
+- **Rina (pelayan) diam.** Dia ada di denah dan di panel Karakter sebagai dekor dan cuma idle di mejanya: ingatan, inisiatif, dan refleksi dikerjakan Admin Stok (keputusan 034).
 - **Langkah kaki** mengikuti jarak yang ditempuh: ayunan kaki dan tangan sesuai panjang langkah, dan berhenti begitu karakter berhenti. Di kecepatan sangat tinggi ayunannya dibatasi supaya tidak berkedip.
 - **Pelanggan** masuk lewat pintu depan (log: "Pelanggan masuk ke kafe"), berjalan ke kasir selama 200 detik virtual (sepelan karyawan), dan **sampai di kasir tepat saat log mencatat "Pesanan #N masuk"**. Saat itu label kasir jadi "bekerja: mencatat pesanan" dan pelanggan berdiri di depannya sampai kasir selesai (bukan semenit tetap). Lalu ia duduk atau berdiri menunggu, mengambil pesanan di **jendela dapur** (piringnya muncul di sana), dan pulang. Gelembung `!` merah = komplain, "Menunggu bahan" = pesanan ditahan, "Siap!" hijau = masakan selesai. Lebih dari 20 orang jadi tulisan "+N antre". Keramaian bawaan (`CROWD_PCT=150`) membuat pesanan masuk lebih rapat.
 - **Admin stok** jalan ke rak, ke ruang bos lewat pintunya, menaruh **kertas laporan** di meja bos, lalu pulang. Kotak di **rak stok** berkurang sesuai stok (merah-oranye = hampir habis).
@@ -402,10 +404,74 @@ Buka alamat yang dicetak tab 2 (biasanya `http://localhost:5173`; kalau port itu
 ### 9.4 Yang wajar
 
 - Karakter bergaya game, bukan foto. Warna dan terang-gelap bisa disetel: kirim screenshot.
-- Empat dari tujuh meja hanya tempat duduk tambahan; domain baru punya tiga meja (untuk Rina di Tahap 5).
+- Empat dari tujuh meja hanya tempat duduk tambahan; domain hanya mengenal tiga meja.
 - Kalau lu melihat pelanggan "melompat", cek dulu apakah waktu baru dimajukan: itu wajar.
 - Pesanan manual lewat `curl` (`POST /orders`) tidak punya pelanggan yang masuk lewat pintu: pelanggannya langsung muncul di kasir. Pesanan dari generator selalu didahului pelanggan yang masuk.
 - Karyawan bisa berjalan menembus pelanggan yang sedang berdiri (jalurnya hanya menghindari perabot, belum menghindari orang).
 - Gua sudah mengaudit gerak lawan log selama satu hari penuh (`tools/scene-audit.test.ts`, di keramaian 100% dan 250%): kasir yang "mencatat" pesanan X selalu punya pelanggan X berdiri di depannya, kasir tidak pernah idle selagi ada yang menunggu dicatat, pelanggan masuk lewat pintu dan sampai tepat saat pesanan tercatat, tak ada yang berjalan menembus perabot atau melompat, dan tak ada dua pelanggan di titik yang sama. Itu bukan jaminan bebas bug: kalau lu lihat yang janggal, kirim screenshot dan jamnya.
-- Rina belum mengantar makanan: pelanggan mengambil sendiri di jendela dapur. Mengantar ke meja ikut Tahap 5 bersama Rina (butuh meja yang dikenal domain).
+- Rina tidak mengantar makanan (keputusan 034): pelanggan mengambil sendiri di jendela dapur.
 
+## 10. Tahap 5: Admin Stok yang merencanakan dan belajar
+
+Admin Stok sekarang punya tiga kebiasaan baru, semuanya lewat `FakeLLM`: **memperkirakan** pemakaian bahan dan memesan sebelum habis (jam 10:00 dan 15:00, hanya kalau sedang idle), **mereview** hari itu tiap malam dan mengusulkan **paling banyak satu** perubahan batas minimum bahan ke Meja bos, dan **belajar**: malam berikutnya dia menilai apakah perubahan yang lu setujui membantu, lalu menulis catatan. Usulan yang ditolak atau tidak membantu tidak diulang.
+
+Penting: `FakeLLM` adalah skrip yang jawabannya tetap dan punya pendapat sendiri (pesan 10% lebih banyak, batas minimum 2x), bukan model. Yang dites di sini adalah **rangkaiannya** (data, usulan, persetujuan, perubahan, hasil); kualitas model baru di Tahap 6.
+
+### 10.1 Demo satu perintah
+
+```
+npm run demo:stage5            # 4 hari, Admin Stok belajar, bos otomatis menyetujui
+npm run demo:stage5 -- --off   # pembanding: tanpa prakiraan, bos menolak semua usulan kebijakan
+```
+
+**Yang diharapkan** (seed 42):
+
+- Baris berlabel `[LLM]`: `restock_proposed` (prakiraan jam 10:00 dan 15:00 maupun saat stok tipis), `daily_review_created` dan `policy_proposed` jam 20:03, lalu `policy_changed` (bos otomatis menyetujui) dan `memory_created` jenis `reflection` malam berikutnya.
+- Bagian "Per hari" dan "Kebijakan yang berlaku" (Susu 1000 jadi 2000 ml, Gula 300 jadi 600 g) dan "Catatan Admin Stok".
+- Dengan belajar: jumlah **9 kali ditahan, 27 komplain, stok habis 8 menit**. Dengan `-- --off`: **16 kali ditahan, 27 komplain, stok habis 126 menit**, dan catatan "Bos menolak usul ... Jangan diulang".
+- Dua baris terakhir `Replay check: OK` dan `Restart check: OK`.
+
+### 10.2 Eksperimen: apakah benar membaik?
+
+```
+npm run experiment:stage5                # keramaian 100%, 7 hari, 12 seed (±30 detik)
+npm run experiment:stage5 -- 150 7 12    # keramaian, jumlah hari, jumlah seed
+```
+
+Mencetak empat varian (tanpa belajar, hanya prakiraan, hanya kebijakan, keduanya). Hasil gua ada di [keputusan 036](decisions/036-what-the-learning-admin-achieves.md): pesanan ditahan turun ±35% (keramaian 100%) dan ±49% (150%), stok habis turun ±79% dan ±64%, **komplain tidak berubah** (kemacetan ada di satu koki, bukan di bahan). Di 2 dari 12 seed kafe yang belajar justru menahan lebih banyak pesanan. Itu hasil simulasi, bukan prediksi bisnis sungguhan.
+
+### 10.3 Lihat di halaman web dan jadi bos
+
+```
+rm -f data/cafe.db*     # dunia baru (migrasi 0003 membangun ulang tabel laporan)
+npm run dev             # tab 1
+npm run web             # tab 2
+```
+
+1. Buka halaman, pilih **3600x** di menu waktu (satu hari ±24 detik asli).
+2. Kartu **Admin Stok** (di bawah gambar) awalnya bilang "Belum ada review". Setelah ±20:00 hari 0 isinya berubah: **Review hari** (ringkasan, ada label LLM), **Kebijakan berlaku**, dan **Catatan** (pengamatan malam itu).
+3. Di log (filter **LLM**) terlihat `restock_proposed` dari prakiraan jam 10:00 dan 15:00, lalu `daily_review_created` dan `policy_proposed` sekitar 20:03.
+4. Di **Meja bos** muncul laporan **Usul kebijakan: batas minimum Susu 1000 jadi 2000 ml** (di server bawaan, seed 42, malam pertama). Klik **Setujui**: log mencatat `policy_changed`, kartu Admin Stok menulis di **Kebijakan berlaku** bahwa batas Susu berubah dari 1000 ke 2000 ml, dan Susu sekarang ditandai **Rendah** lebih awal di kartu Stok. Klik **Tolak** pada usulan lain: tidak ada yang berubah, dan langsung muncul catatan "Bos menolak usul ... Jangan diulang".
+5. Biarkan sampai malam berikutnya: ada catatan **Refleksi** yang menilai perubahan tadi ("membantu" atau "tidak membantu", dengan angka sebelum dan sesudah).
+
+Cara lain tanpa halaman: `curl -s 'localhost:3000/reports?status=submitted'`, lalu `curl -s -X POST localhost:3000/reports/<id>/decision -H 'content-type: application/json' -d '{"decision":"approved"}'` dan `curl -s localhost:3000/stock` (`min_qty` berlaku, `base_min_qty` nilai awal).
+
+Tidak setiap malam ada usulan: Admin Stok hanya mengusulkan kalau ada bahan yang jelas bermasalah, dan hanya satu bahan per malam.
+
+### 10.4 Uji pemulihan
+
+Ctrl+C di tab 1, nyalakan lagi dengan `npm run dev`. Server mencetak `Dunia dipulihkan dari log ...`, dan kebijakan yang sudah lu setujui tetap berlaku (batas Susu tetap 2000). Gua uji persis begini di server sungguhan (di database scratchpad, kecepatan 3600x): laporan kebijakan muncul, disetujui lewat API, snapshot WebSocket membawa batas baru dan ingatan, lalu mati dan nyala lagi.
+
+### 10.5 Mematikan bagian-bagiannya
+
+- `LLM_PROVIDER=off npm run dev`: semua keputusan label `[Aturan]`, tidak ada panggilan model.
+- `STOCK_FORECAST=off npm run dev`: Admin Stok tidak berpikir jam 10:00 dan 15:00; review malam tetap jalan.
+
+Pakai dunia baru (`rm -f data/cafe.db*`) supaya perbandingannya bersih.
+
+### 10.6 Yang wajar
+
+- `FakeLLM` selalu menjawab dengan pola yang sama, jadi usulannya terasa "kaku". Itu bukan bug.
+- Hari 0 belum punya riwayat, jadi prakiraan baru bermakna dari hari 1 (rata-rata jam yang sama dari maksimal 3 hari terakhir).
+- Kartu Admin Stok kosong sebelum hari 0 tutup, itu normal.
+- Rina tetap diam (keputusan 034).

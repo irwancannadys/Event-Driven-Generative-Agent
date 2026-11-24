@@ -41,8 +41,8 @@ Daftar lengkapnya ada di brief bagian 4. Yang paling sering tergoda dilanggar:
 
 ## Peta repo
 
-- `packages/core`: domain murni (event, aturan masak dan ambang stok, usulan belanja dan triase komplain, rencana tugas agent, teks template dan kamus kata Indonesia, label log, RNG tanpa state, jadwal dan generator dunia, `VirtualClock` dengan item dinamis).
-- `packages/server`: Node, SQLite, migrasi, seed, event store dan proyeksi (`applyEvent`), use case (pesanan, memasak, keputusan bos), simulasi (`bootSimulation`: jam virtual, generator, pemulihan saat boot), mesin agent dan reaksi karakter (`agents/`: kasir, koki, admin stok), `Pacer`, API (kasir mock, kontrol waktu, bos: `/agents` `/orders` `/reports`, `node:http`), event bus, log terminal, papan pantau (`watch/`), `npm run dev`. WebSocket menyusul.
+- `packages/core`: domain murni (event, aturan masak dan ambang stok, usulan belanja dan triase komplain, rencana tugas agent, teks template dan kamus kata Indonesia, label log, RNG tanpa state, jadwal dan generator dunia, `VirtualClock` dengan item dinamis, kerangka LLM: `LLMClient`, `FakeLLM`, `validateDecision`, dan aturan prakiraan, metrik hari, dan review kebijakan).
+- `packages/server`: Node, SQLite, migrasi, seed, event store dan proyeksi (`applyEvent`), use case (pesanan, memasak, keputusan bos), simulasi (`bootSimulation`: jam virtual, generator, pemulihan saat boot), mesin agent dan reaksi karakter (`agents/`: kasir, koki, admin stok; `decide.ts` = pipa keputusan LLM dengan validasi, ulang, dan fallback aturan; `forecast-flow.ts` dan `review-flow.ts` = prakiraan belanja dan review malam Admin Stok), `Pacer`, API (kasir mock, kontrol waktu, bos: `/agents` `/orders` `/reports`, `node:http`), event bus, log terminal, papan pantau (`watch/`), `npm run dev`, WebSocket (`ws/`).
 - `packages/web`: Vite + Three.js + TypeScript, DOM tanpa framework. `net/` (WebSocket), `state/` (state klien murni), `panels/` (view model dan DOM), `scene/` (registry denah, pencari jalur, ruangan, avatar, pelanggan, cahaya), `i18n/`. Logika dites di Node; DOM dites dengan DOM palsu kecil.
 - `tools/`: tes untuk tooling (aturan lint, tes drift `docs/events.md` terhadap kode).
 - `docs/`: plan, konsep, katalog event, skema, keputusan, referensi.
@@ -62,12 +62,14 @@ npm run seed          # isi tabel referensi (menu, bahan, resep, langganan, pema
 npm run demo:stage1   # demo Tahap 1 di database memori (pesanan lewat API, log, replay check)
 npm run demo:stage2   # demo Tahap 2: satu hari penuh, replay check dan restart check
 npm run demo:stage3   # demo Tahap 3: satu hari dengan karakter dan bos otomatis, replay check dan restart check
+npm run demo:stage5   # demo Tahap 5: 4 hari, Admin Stok belajar (FakeLLM); `-- --off` = pembanding tanpa belajar
+npm run experiment:stage5   # eksperimen 4 varian x 12 seed (lihat keputusan 036); `-- 150 7 12` = keramaian, hari, seed
 npm run dev           # server hidup: dunia, karakter, jam virtual, API di :3000 (lihat docs/testing.md)
 npm run web           # halaman web (Vite, http://localhost:5173), jalankan bersama npm run dev
 npm run watch         # papan pantau live (karakter, pesanan, stok, laporan di meja bos); `-- --once` cetak sekali
 ```
 
-Golden test satu hari ada di `packages/server/src/sim/__golden__/`: `day-seed-42.json` (dunia tanpa karakter, `agents: false`) dan `day-seed-42-agents.json` (dunia dengan karakter dan `AutoBoss`, waktu sampai detik). Kalau hasilnya memang sengaja berubah, tinjau diff-nya lalu regenerasi dengan `UPDATE_GOLDEN=1 npm test`.
+Golden test satu hari ada di `packages/server/src/sim/__golden__/`: `day-seed-42.json` (dunia tanpa karakter, `agents: false`) dan `day-seed-42-agents.json` (dunia dengan karakter dan `AutoBoss`, waktu sampai detik), dan `days-seed-42-learning.json` (empat hari dengan `FakeLLM` dan prakiraan, Tahap 5). Kalau hasilnya memang sengaja berubah, tinjau diff-nya lalu regenerasi dengan `UPDATE_GOLDEN=1 npm test`.
 
 `bootSimulation` menjalankan karakter secara bawaan. Tes yang mengandalkan "belum ada yang memasak" (Tahap 2) memakai `agents: false`. `AutoBoss` dan `playDay` (`test-support/`) hanya untuk tes dan demo, bukan fitur produk.
 

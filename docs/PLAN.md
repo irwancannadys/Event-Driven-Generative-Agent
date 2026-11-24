@@ -248,18 +248,18 @@ Menggantikan "Pelayan dengan memori dan inisiatif" atas permintaan pemilik (kepu
 **Tujuan:** Admin Stok bertindak atas inisiatif sendiri, mengingat apa yang terjadi, dan belajar dari hasil usulannya, tanpa model sungguhan. Dampaknya terukur di kafe: stok, pesanan ditahan, komplain.
 
 **Tugas:**
-- [ ] Antarmuka `LLMClient` dan `FakeLLM` (jawaban dari tabel skenario, deterministik, jalur instan), `facts` terstruktur di `LLMRequest`
-- [ ] Schema `policy_review` dan `validateDecision` (skema dan pemeriksaan dunia), kirim ulang dengan umpan balik galat (maks 2), fallback aturan, catat `fallback_reason` dan `attempts`
-- [ ] Tabel `llm_calls` diisi tiap panggilan (tidak dipakai replay); saklar `LLM_PROVIDER=fake|off`
-- [ ] Fungsi murni: `dayMetrics`, `forecastConsumption`, aturan belanja berbasis prakiraan, `reviewPolicyRule`, `evaluatePolicy`, pembuat konteks
-- [ ] Item jatuh tempo `stock_forecast` (10:00 dan 15:00); Admin Stok berpikir hanya saat idle (bukan polling model)
-- [ ] Prakiraan belanja: keputusan `stock_proposal` lewat FakeLLM dengan fallback aturan, memakai alur laporan belanja yang ada
-- [ ] Review malam saat `day_closed`: ringkasan hari dan paling banyak satu usulan batas minimum bahan; laporan `policy` ke Meja Bos
-- [ ] Kebijakan sebagai event: `policy_changed`, proyeksi `stock_policy`, batas minimum efektif
-- [ ] Ingatan dan refleksi: `memories` (dengan `ingredient_id`), event `memory_created`, evaluasi hasil usulan di malam berikutnya, pelajaran masuk konteks dan mencegah pengulangan
-- [ ] Event baru `daily_review_created`, `policy_proposed`, `policy_changed`, `memory_created` dan migrasi 0003
-- [ ] Kartu "Admin Stok" di tampilan (review terakhir, kebijakan yang berlaku, ingatan)
-- [ ] `npm run demo:stage5` dan eksperimen beberapa hari dengan dan tanpa pembelajaran, hasilnya dicatat apa adanya
+- [x] Antarmuka `LLMClient` dan `FakeLLM` (jawaban dari tabel skenario, deterministik, jalur instan), `facts` terstruktur di `LLMRequest`
+- [x] Schema `policy_review` dan `validateDecision` (skema dan pemeriksaan dunia), kirim ulang dengan umpan balik galat (maks 2), fallback aturan, catat `fallback_reason` dan `attempts`
+- [x] Tabel `llm_calls` diisi tiap panggilan (tidak dipakai replay); saklar `LLM_PROVIDER=fake|off`
+- [x] Fungsi murni: `dayMetrics`, `forecastConsumption`, aturan belanja berbasis prakiraan, `reviewPolicyRule`, `evaluatePolicy`, pembuat konteks
+- [x] Item jatuh tempo `stock_forecast` (10:00 dan 15:00); Admin Stok berpikir hanya saat idle (bukan polling model)
+- [x] Prakiraan belanja: keputusan `stock_proposal` lewat FakeLLM dengan fallback aturan, memakai alur laporan belanja yang ada
+- [x] Review malam saat `day_closed`: ringkasan hari dan paling banyak satu usulan batas minimum bahan; laporan `policy` ke Meja Bos
+- [x] Kebijakan sebagai event: `policy_changed`, proyeksi `stock_policy`, batas minimum efektif
+- [x] Ingatan dan refleksi: `memories` (dengan `ingredient_id`), event `memory_created`, evaluasi hasil usulan di malam berikutnya, pelajaran masuk konteks dan mencegah pengulangan
+- [x] Event baru `daily_review_created`, `policy_proposed`, `policy_changed`, `memory_created` dan migrasi 0003
+- [x] Kartu "Admin Stok" di tampilan (review terakhir, kebijakan yang berlaku, ingatan)
+- [x] `npm run demo:stage5` dan eksperimen beberapa hari dengan dan tanpa pembelajaran, hasilnya dicatat apa adanya
 
 **Tes:** prakiraan dari riwayat sesuai hitungan tangan; Admin Stok tidak berpikir saat sibuk; output FakeLLM tidak valid memicu fallback (JSON rusak, enum salah, id tak dikenal, di luar rentang, terlalu panjang, basi); replay tidak memanggil model dan hasilnya sama dengan live; Setujui mengubah batas minimum dan stok dianggap tipis lebih awal; Tolak tidak mengubah apa pun dan dicatat; satu refleksi per usulan; usulan yang gagal tidak diulang.
 

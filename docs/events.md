@@ -175,7 +175,7 @@ memory_created: {
 
 ### Langganan dan Rina (tidak dipakai di v1, keputusan 034)
 
-Event di bawah ini tetap ada di katalog tetapi tidak pernah ditulis di v1: peran pelayan dan pelanggan langganan dibuang dari Tahap 5.
+Event di bawah ini tetap ada di katalog, tetapi peran pelayan dan pelanggan langganan dibuang dari Tahap 5. Hanya `regular_expected` yang masih ditulis (oleh generator dunia, jadi log lama tetap sama) dan tidak ada karakter yang bereaksi padanya; sisanya tidak pernah ditulis.
 
 ```ts
 regular_expected: { regular_id: string; table_id: TableId; expected_at: SimTime }
@@ -291,5 +291,5 @@ Di kode, label berupa kunci netral (`trigger`, `rule`, `llm`, `initiative`, `bos
 - **Keputusan dan hasil dipisah.** `agent_decided` adalah keputusannya, `restock_proposed` dan sejenisnya adalah efeknya.
 - **`agent_think_requested` bisa dipicu aturan**, tidak hanya scheduler (mis. admin stok berpikir setelah `stock_low`).
 - **Jenis tugas hanya `goto` dan `work`.** `do` di PLAN Tahap 3 dihapus karena efek samping tugas lewat penangan event.
-- **Memori `observation` tidak dipakai di v1.** Hanya `reflection` yang dibuat (lewat `reflection_created`). Kolom `kind` tetap menampung `observation` bila dibutuhkan nanti.
+- **Memori ditulis lewat `memory_created` sejak Tahap 5** (Admin Stok: `observation` tiap malam dan `reflection` atas hasil usulan). `reflection_created` milik Rina tidak dipakai.
 - **Teks dari template atau LLM disimpan sebagai string final**, bukan kunci i18n, kecuali `label` tugas.
