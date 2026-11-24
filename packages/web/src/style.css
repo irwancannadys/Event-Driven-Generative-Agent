@@ -165,7 +165,7 @@ a {
   letter-spacing: 0.01em;
 }
 .brand-accent {
-  color: var(--warn-600);
+  color: var(--boss-bg);
   font-style: italic;
   font-weight: 400;
 }
