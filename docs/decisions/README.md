@@ -37,3 +37,4 @@ Satu file per keputusan, beberapa baris tiap file. Brief menang jika ada bentura
 | [031](031-video-page-layout-adaptive-camera-and-routes.md) | Layout halaman ala video, kamera adaptif, dan jalur jalan |
 | [032](032-customers-arrive-before-they-order.md) | Pelanggan masuk dulu, baru memesan (`customer_arrived`) |
 | [033](033-light-theme-sidebar-and-complaints-panel.md) | Tema terang, sidebar yang bisa dilipat, dan panel Komplain |
+| [034](034-stock-admin-is-the-generative-agent.md) | Admin Stok menjadi agent generatif (menggantikan Rina di Tahap 5) |

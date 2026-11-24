@@ -241,45 +241,48 @@ Hasil Tahap 4, bahan untuk materi:
 
 ---
 
-### Tahap 5: Pelayan dengan memori dan inisiatif (FakeLLM)
+### Tahap 5: Admin Stok yang merencanakan dan belajar (FakeLLM)
 
-**Tujuan:** Rina bertindak atas inisiatif sendiri dan mengingat pelanggan, tanpa model sungguhan.
+Menggantikan "Pelayan dengan memori dan inisiatif" atas permintaan pemilik (keputusan 034): tiga pilar generative agent (ingatan, inisiatif, refleksi) pindah ke Admin Stok, yang keputusannya berdampak ke bisnis kafe.
+
+**Tujuan:** Admin Stok bertindak atas inisiatif sendiri, mengingat apa yang terjadi, dan belajar dari hasil usulannya, tanpa model sungguhan. Dampaknya terukur di kafe: stok, pesanan ditahan, komplain.
 
 **Tugas:**
-- [ ] Tabel `regulars` dan `memories` serta repositori
-- [ ] Pemikiran pelayan dipicu event `agent_think_requested` dari scheduler, hanya saat pelayan menganggur (bukan polling)
-- [ ] Pembuat konteks: ringkasan beberapa baris (jam sekarang, pelanggan yang dekat jadwalnya, kebiasaan, kondisi kafe)
-- [ ] Antarmuka `LLMClient` dan `FakeLLM` yang jawabannya berasal dari tabel skenario (deterministik)
-- [ ] Schema `waiter_initiative` dan validator (zod atau setara)
-- [ ] Pelaksana aksi: `prepare_table`, `tidy_table`, `idle` menjadi tugas agent
-- [ ] Event: `regular_expected`, `table_prepared`, `table_tidied`, `regular_arrived`, `regular_greeted`, `regular_left`, `reflection_created`
-- [ ] Aturan refleksi: kunjungan >= 4 dan belum ada catatan, buat refleksi dan simpan
-- [ ] Sapaan: pakai templat berisi nama dan pesanan biasa
-- [ ] Fallback aturan jika output tidak valid
-- [ ] Panel "Ingatan Rina" di tampilan
+- [ ] Antarmuka `LLMClient` dan `FakeLLM` (jawaban dari tabel skenario, deterministik, jalur instan), `facts` terstruktur di `LLMRequest`
+- [ ] Schema `policy_review` dan `validateDecision` (skema dan pemeriksaan dunia), kirim ulang dengan umpan balik galat (maks 2), fallback aturan, catat `fallback_reason` dan `attempts`
+- [ ] Tabel `llm_calls` diisi tiap panggilan (tidak dipakai replay); saklar `LLM_PROVIDER=fake|off`
+- [ ] Fungsi murni: `dayMetrics`, `forecastConsumption`, aturan belanja berbasis prakiraan, `reviewPolicyRule`, `evaluatePolicy`, pembuat konteks
+- [ ] Item jatuh tempo `stock_forecast` (10:00 dan 15:00); Admin Stok berpikir hanya saat idle (bukan polling model)
+- [ ] Prakiraan belanja: keputusan `stock_proposal` lewat FakeLLM dengan fallback aturan, memakai alur laporan belanja yang ada
+- [ ] Review malam saat `day_closed`: ringkasan hari dan paling banyak satu usulan batas minimum bahan; laporan `policy` ke Meja Bos
+- [ ] Kebijakan sebagai event: `policy_changed`, proyeksi `stock_policy`, batas minimum efektif
+- [ ] Ingatan dan refleksi: `memories` (dengan `ingredient_id`), event `memory_created`, evaluasi hasil usulan di malam berikutnya, pelajaran masuk konteks dan mencegah pengulangan
+- [ ] Event baru `daily_review_created`, `policy_proposed`, `policy_changed`, `memory_created` dan migrasi 0003
+- [ ] Kartu "Admin Stok" di tampilan (review terakhir, kebijakan yang berlaku, ingatan)
+- [ ] `npm run demo:stage5` dan eksperimen beberapa hari dengan dan tanpa pembelajaran, hasilnya dicatat apa adanya
 
-**Tes:** sekitar 25 menit sebelum jam biasa, meja disiapkan; kedatangan disapa dengan pesanan benar; refleksi muncul pada kunjungan ke-4; output FakeLLM tidak valid memicu fallback; tidak ada panggilan berpikir saat pelayan sibuk.
+**Tes:** prakiraan dari riwayat sesuai hitungan tangan; Admin Stok tidak berpikir saat sibuk; output FakeLLM tidak valid memicu fallback (JSON rusak, enum salah, id tak dikenal, di luar rentang, terlalu panjang, basi); replay tidak memanggil model dan hasilnya sama dengan live; Setujui mengubah batas minimum dan stok dianggap tipis lebih awal; Tolak tidak mengubah apa pun dan dicatat; satu refleksi per usulan; usulan yang gagal tidak diulang.
 
-**Selesai jika:** perilaku inisiatif, sapaan, dan refleksi terlihat jelas di log dan tampilan.
+**Selesai jika:** perilaku inisiatif, review malam, persetujuan bos, dan refleksi terlihat jelas di log dan tampilan, dan metrik hari-hari berikutnya dilaporkan jujur.
 
-**Catatan pelajaran:** memori, inisiatif, refleksi; kenapa memori ada di DB.
+**Catatan pelajaran:** ingatan, inisiatif, refleksi; kenapa memori ada di DB; "AI mengusulkan, manusia memutuskan"; mengukur dampak keputusan agent. Dibuang dari v1: pelayan dan pelanggan langganan (keputusan 034).
 
 ---
 
 ### Tahap 6: LLM lokal di dua titik
 
-**Tujuan:** ganti `FakeLLM` dengan model lokal untuk **inisiatif pelayan** dan **usulan belanja**, dengan pengaman lengkap.
+**Tujuan:** ganti `FakeLLM` dengan model lokal untuk **usulan belanja** dan **review kebijakan** (inisiatif pelayan jatuh, keputusan 034), dengan pengaman lengkap.
 
 **Tugas:**
 - [ ] Pasang Ollama, uji model kandidat
-- [ ] `eval/llm-situations.json` (sekitar 20 situasi) dan skrip evaluasi yang mencetak: persentase JSON valid, persentase aksi benar, latensi. "Aksi benar" untuk `waiter_initiative` = cocok dengan jawaban yang diharapkan; untuk `stock_proposal` = lolos pemeriksaan berbasis aturan (semua bahan yang tipis masuk, qty <= kapasitas, tidak ada bahan nyasar), bukan mencocokkan angka persis
+- [ ] `eval/llm-situations.json` (sekitar 20 situasi) dan skrip evaluasi yang mencetak: persentase JSON valid, persentase aksi benar, latensi. "Aksi benar" untuk `policy_review` = lolos pemeriksaan berbasis aturan (bahan dikenal, batas dalam rentang yang diizinkan); untuk `stock_proposal` = lolos pemeriksaan berbasis aturan (semua bahan yang tipis masuk, qty <= kapasitas, tidak ada bahan nyasar), bukan mencocokkan angka persis
 - [ ] Bandingkan 2 sampai 3 model (mulai 4B sampai 9B), pilih yang **terkecil dan masih benar**
 - [ ] `OllamaLLM`: parameter `format` (JSON schema), temperature 0, timeout, antrean satu panggilan sekaligus
 - [ ] Retry maksimal 2 dengan umpan balik galat validasi, lalu **fallback aturan** dan catat
 - [ ] Tabel `llm_calls` (tujuan, ringkasan input, output, valid, latensi, model, fallback)
 - [ ] Saklar lewat `.env` (`LLM_PROVIDER=fake|ollama`)
 - [ ] Status "mikir..." di tampilan selama menunggu; jam virtual tetap jalan, dan jawaban dicek ulang saat diterapkan (keputusan #10)
-- [ ] Terapkan ke `waiter_initiative` dan `stock_proposal`
+- [ ] Terapkan ke `stock_proposal` dan `policy_review`
 
 **Tes:** mock Ollama (JSON rusak, timeout, ID tidak dikenal, enum salah) memicu fallback yang benar; jawaban basi (kondisi berubah saat menunggu) ditolak lalu fallback; tes kontrak schema.
 

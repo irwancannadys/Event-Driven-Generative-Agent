@@ -100,6 +100,8 @@ Keduanya **bukan lawan**. Rancangan proyek ini: **event-driven menjadi tulang pu
 | Pelayan (Rina) | Area meja pelanggan | Menyapa, mencatat, menyiapkan meja. **Punya memori, inisiatif, refleksi** |
 | Bos (pemilik) | Meja bos | Memantau, menyetujui atau menolak laporan. Tidak dikendalikan AI |
 
+> Catatan 2026-11-24: atas permintaan pemilik, peran Pelayan (Rina) dan pelanggan langganan tidak dipakai di v1; perilaku generatif (ingatan, inisiatif, refleksi) dipindah ke Admin Stok. Lihat `docs/decisions/034-stock-admin-is-the-generative-agent.md`.
+
 **Menu:** 5 sampai 6 item sederhana, masing-masing punya resep (bahan dan jumlah per porsi) dan waktu masak.
 
 **Stok:** tabel bahan dengan jumlah, satuan, batas minimum, dan lead time pemesanan. Pemasok tiruan yang responsnya diundi seeded dari bobot peluang (tepat waktu, telat, kosong), dan bobotnya bisa diatur lewat konfigurasi skenario.
@@ -120,6 +122,8 @@ Keduanya **bukan lawan**. Rancangan proyek ini: **event-driven menjadi tulang pu
 
 Ini bagian yang membedakan dari agent berbasis aturan biasa.
 
+> Catatan 2026-11-24: bagian ini dipindah ke Admin Stok (prakiraan belanja, review malam, ingatan, refleksi). Lihat keputusan 034.
+
 - **Memori:** per pelanggan langganan, tersimpan jam datang yang biasa, meja favorit, pesanan biasa, jumlah kunjungan, dan catatan refleksi.
 - **Inisiatif (tanpa trigger):**
   - Sekitar 25 menit sebelum jam datang biasa pelanggan langganan, jika pelayan sedang menganggur, ia memutuskan untuk **menyiapkan meja**.
@@ -129,6 +133,8 @@ Ini bagian yang membedakan dari agent berbasis aturan biasa.
 - **Keputusan inisiatif dibuat oleh LLM** (dengan `FakeLLM` pada awal). Aksi yang diizinkan: `prepare_table`, `tidy_table`, `idle`.
 
 ## 7. Titik keputusan: aturan vs LLM
+
+> Catatan 2026-11-24: titik LLM menjadi usulan belanja, review kebijakan malam (`policy_review`), dan kategori komplain. Inisiatif pelayan jatuh (keputusan 034).
 
 | Keputusan | Pembuat | Catatan |
 |---|---|---|
