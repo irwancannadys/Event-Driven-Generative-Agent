@@ -6,7 +6,8 @@
   "description": "Server Node: SQLite, migrasi, seed. WebSocket dan API menyusul di tahap berikutnya.",
   "dependencies": {
     "@cafe/core": "*",
-    "better-sqlite3": "^13.2.0"
+    "better-sqlite3": "^13.2.0",
+    "zod": "^4.6.7"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
