@@ -1,0 +1,11 @@
+node_modules
+package-lock.json
+coverage
+dist
+data
+
+# prose docs are hand-written, keep their table layout
+docs
+PROJECT_BRIEF.md
+README.md
+packages/*/README.md
