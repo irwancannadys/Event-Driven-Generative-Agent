@@ -217,6 +217,7 @@
 **Tugas:**
 - [ ] Triase komplain lewat LLM (schema `complaint_triage`) dengan fallback templat
 - [ ] Panel kontrol lengkap (pause, kecepatan, majukan waktu) dan **konfigurasi skenario** (seed, keramaian, peluang komplain, stok awal, bobot perilaku pemasok). Tanpa tombol pemicu kejadian manual
+- [ ] Halaman tambahan di aplikasi web yang sama, semuanya read-only dari proyeksi yang sudah ada: **Stok** (level, batas, status pesanan belanja; stok hanya berubah lewat alur Setujui laporan), **Menu** (daftar, harga, resep; tanpa bisa memesan), **Laporan** (riwayat semua laporan, plus Setujui/Tolak untuk yang menunggu). Tanpa event baru
 - [ ] Tombol reset hari dan muat ulang data seed
 - [ ] README quickstart (instal, jalankan, ubah skenario)
 - [ ] Uji coba dengan satu orang lain, catat titik bingung

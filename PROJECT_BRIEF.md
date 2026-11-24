@@ -253,6 +253,7 @@ Setiap event minimal punya: id, tipe, waktu virtual, pelaku, dan payload.
 - Kamera dari atas-depan, bisa digeser terbatas.
 - Panel di bawah scene: **log kejadian** (dengan label Trigger, Aturan, LLM, Inisiatif, Bos), **ingatan Rina**, **laporan di meja bos** (tombol Setujui/Tolak), **bar stok**, dan **panel kontrol waktu** (pause, kecepatan, majukan waktu).
 - Rak stok di scene menampilkan jumlah kotak sesuai stok sebenarnya (visual dari state nyata, bukan dekorasi).
+- Halaman tambahan (Tahap 7) di aplikasi web yang sama: **Stok**, **Menu**, dan **Laporan**. Semuanya read-only dari proyeksi yang ada, kecuali Setujui/Tolak di Laporan. Tidak ada tombol edit stok manual dan tidak ada halaman pemesanan.
 
 **Tata letak referensi** (satuan Three.js, dari prototipe awal): meja kasir kiri belakang, dapur kanan belakang, rak stok kanan depan, meja bos kiri depan, tiga meja pelanggan di tengah, antrean pelanggan di sisi kiri. Koordinat lengkap dan prototipe yang bisa dibuka ada di `docs/reference/` (lihat `README.md` di sana, termasuk daftar apa yang **jangan** ditiru). Pemilik akan menyesuaikan animasinya nanti, jadi anggap ini gambaran, bukan spesifikasi final.
 
