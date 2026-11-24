@@ -1,7 +1,6 @@
-import { WALK_SEC_PER_UNIT } from '@cafe/core';
 import type { CustomerState } from '../state/world';
 import { findPath, pathLength, pointAlong } from './navigation';
-import { DOOR, ORDER_SPOT, PICKUP_SPOT, waitingSpot, type Spot } from './registry';
+import { DOOR, orderSpot, pickupSpot, waitingSpot, type Spot } from './registry';
 
 // What a customer does and where it is, worked out from its order and the virtual time (decisions 027
 // and 029). A customer comes in when the order comes in, goes to the cashier, waits where it is told
@@ -9,12 +8,18 @@ import { DOOR, ORDER_SPOT, PICKUP_SPOT, waitingSpot, type Spot } from './registr
 // the staff. Nothing is remembered between calls: after a jump in time, or a refresh, the answer is
 // right again.
 
-/** How long a customer stands at the cashier after arriving, while the order is written down. */
-export const ORDER_HOLD_SEC = 60;
+/**
+ * How long a customer takes for one layout unit. Faster than the staff (20 s): the order comes in when
+ * the customer is at the door, and the cashier is done writing it down after 45 s, so a customer that
+ * walked as slowly as the staff would reach the counter minutes after the log says it ordered.
+ */
+export const CUSTOMER_SEC_PER_UNIT = 8;
+/** How long a customer stands at the cashier after arriving. */
+export const ORDER_HOLD_SEC = 40;
 /** How long it stands at the kitchen counter, taking the food. */
 export const PICKUP_HOLD_SEC = 40;
-/** The most customers drawn at once; the rest are only counted (decision 029). */
-export const MAX_VISIBLE_CUSTOMERS = 14;
+/** The most customers drawn at once (one for every place to wait); the rest are only counted (decision 029). */
+export const MAX_VISIBLE_CUSTOMERS = 20;
 
 export type Bubble = 'upset' | 'held' | 'ready';
 
@@ -26,6 +31,8 @@ export interface CustomerPose {
   /** `rotation.y`. */
   facing: number;
   moving: boolean;
+  /** How far it has walked along the leg it is on, in layout units (the legs swing by it). */
+  walked: number;
   /** Sitting at a table while it waits for the food. */
   seated: boolean;
   /** Has the food in its hand. */
@@ -53,7 +60,7 @@ interface Stage {
 
 const walk = (from: Point, to: Point, start: number, facing: number): Stage => {
   const path = findPath(from, to);
-  return { from, to, path, start, end: start + pathLength(path) * WALK_SEC_PER_UNIT, facing };
+  return { from, to, path, start, end: start + pathLength(path) * CUSTOMER_SEC_PER_UNIT, facing };
 };
 
 const stay = (at: Point, start: number, end: number, facing: number): Stage => ({
@@ -72,9 +79,10 @@ function stagesToWaiting(customer: CustomerState): {
   waitingFrom: number;
 } {
   const spot = waitingSpot(customer.orderId);
-  const arrive = walk(DOOR, ORDER_SPOT, customer.createdAt, ORDER_SPOT.facing);
-  const order = stay(ORDER_SPOT, arrive.end, arrive.end + ORDER_HOLD_SEC, ORDER_SPOT.facing);
-  const toSpot = walk(ORDER_SPOT, spot, order.end, spot.facing);
+  const counter = orderSpot(customer.orderId);
+  const arrive = walk(DOOR, counter, customer.createdAt, counter.facing);
+  const order = stay(counter, arrive.end, arrive.end + ORDER_HOLD_SEC, counter.facing);
+  const toSpot = walk(counter, spot, order.end, spot.facing);
   return {
     stages: [arrive, order, toSpot, stay(spot, toSpot.end, Number.POSITIVE_INFINITY, spot.facing)],
     seated: spot.seat,
@@ -85,14 +93,20 @@ function stagesToWaiting(customer: CustomerState): {
 function at(
   stages: Stage[],
   time: number,
-): { x: number; z: number; facing: number; moving: boolean } {
+): { x: number; z: number; facing: number; moving: boolean; walked: number } {
   const stage = stages.find((entry) => time < entry.end) ?? (stages.at(-1) as Stage);
   if (stage.path.length < 2 || pathLength(stage.path) === 0) {
-    return { x: stage.from.x, z: stage.from.z, facing: stage.facing, moving: false };
+    return { x: stage.from.x, z: stage.from.z, facing: stage.facing, moving: false, walked: 0 };
   }
   const progress = Math.max(0, Math.min(1, (time - stage.start) / (stage.end - stage.start)));
   const here = pointAlong(stage.path, progress);
-  return { x: here.x, z: here.z, facing: here.heading, moving: progress < 1 };
+  return {
+    x: here.x,
+    z: here.z,
+    facing: here.heading,
+    moving: progress < 1,
+    walked: progress * pathLength(stage.path),
+  };
 }
 
 const HIDDEN: CustomerPose = {
@@ -101,6 +115,7 @@ const HIDDEN: CustomerPose = {
   z: DOOR.z,
   facing: DOOR.facing,
   moving: false,
+  walked: 0,
   seated: false,
   carrying: false,
   bubble: null,
@@ -108,9 +123,10 @@ const HIDDEN: CustomerPose = {
 
 /** Where the food of a done order is picked up and when: the plan once the order is done. */
 function afterDone(customer: CustomerState, from: Point, doneAt: number) {
-  const toPickup = walk(from, PICKUP_SPOT, doneAt, PICKUP_SPOT.facing);
-  const take = stay(PICKUP_SPOT, toPickup.end, toPickup.end + PICKUP_HOLD_SEC, PICKUP_SPOT.facing);
-  const leave = walk(PICKUP_SPOT, DOOR, take.end, DOOR.facing);
+  const hatch = pickupSpot(customer.orderId);
+  const toPickup = walk(from, hatch, doneAt, hatch.facing);
+  const take = stay(hatch, toPickup.end, toPickup.end + PICKUP_HOLD_SEC, hatch.facing);
+  const leave = walk(hatch, DOOR, take.end, DOOR.facing);
   return { stages: [toPickup, take, leave], toPickup, take, leave, customer };
 }
 
@@ -170,7 +186,11 @@ export interface ShownCustomer {
   pose: CustomerPose;
 }
 
-/** The customers to draw: the newest ones, at most the limit, and how many more there would be. */
+/**
+ * The customers to draw, at most the limit, and how many more there would be. The ones that are leaving
+ * are always drawn, then the ones with a complaint, then the ones that have waited longest (they are the
+ * next to be served); the newest arrivals are counted until there is room.
+ */
 export function visibleCustomers(
   customers: Record<number, CustomerState>,
   now: number,
@@ -181,9 +201,18 @@ export function visibleCustomers(
     const pose = customerPose(customer, now);
     if (pose.visible) all.push({ customer, pose });
   }
+  // leaving first, then the ones who complain, then the ones who have waited longest
+  const rank = (entry: ShownCustomer): number =>
+    entry.customer.doneAt !== null && now >= entry.customer.doneAt
+      ? 0
+      : entry.customer.complaint === 'open'
+        ? 1
+        : 2;
   all.sort(
     (a, b) =>
-      b.customer.createdAt - a.customer.createdAt || b.customer.orderId - a.customer.orderId,
+      rank(a) - rank(b) ||
+      a.customer.createdAt - b.customer.createdAt ||
+      a.customer.orderId - b.customer.orderId,
   );
   return {
     shown: all.slice(0, MAX_VISIBLE_CUSTOMERS),

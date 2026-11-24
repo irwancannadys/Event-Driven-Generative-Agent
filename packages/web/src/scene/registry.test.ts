@@ -101,10 +101,12 @@ describe('the places of the customers', () => {
     expect(first.size).toBe(20);
   });
 
-  it('let the customers beyond the twenty places stand a little apart from the first ones', () => {
-    const standing = 14; // an order that lands on a standing place
-    expect(waitingSpot(standing).z).not.toBe(waitingSpot(standing + 20).z);
-    expect(waitingSpot(standing + 20).x).toBe(waitingSpot(standing).x);
-    expect(waitingSpot(0)).toEqual(waitingSpot(20)); // seats do not move
+  it('let the customers beyond the twenty places share a spot, standing a little to the side', () => {
+    for (const id of [0, 14]) {
+      expect(waitingSpot(id + 20).z).not.toBe(waitingSpot(id).z);
+      expect(waitingSpot(id + 40).z).not.toBe(waitingSpot(id + 20).z);
+    }
+    expect(waitingSpot(5)).toEqual({ ...waitingSpot(5) }); // the first twenty stand exactly on their spot
+    expect(waitingSpot(5).z).toBe(WAITING_SPOTS[5]?.z);
   });
 });

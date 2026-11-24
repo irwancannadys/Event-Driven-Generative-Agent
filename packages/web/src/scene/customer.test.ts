@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { WALK_SEC_PER_UNIT } from '@cafe/core';
 import type { CustomerState } from '../state/world';
 import {
+  CUSTOMER_SEC_PER_UNIT,
   MAX_VISIBLE_CUSTOMERS,
   ORDER_HOLD_SEC,
   PICKUP_HOLD_SEC,
@@ -10,7 +10,10 @@ import {
   pickupTime,
   visibleCustomers,
 } from './customer';
-import { DOOR, ORDER_SPOT, PICKUP_SPOT, waitingSpot } from './registry';
+import { DOOR, orderSpot, pickupSpot, waitingSpot } from './registry';
+
+const ORDER_SPOT = orderSpot(3);
+const PICKUP_SPOT = pickupSpot(3);
 
 const T0 = 10_000;
 const customer = (overrides: Partial<CustomerState> = {}): CustomerState => ({
@@ -24,7 +27,7 @@ const customer = (overrides: Partial<CustomerState> = {}): CustomerState => ({
 });
 
 const secondsBetween = (a: { x: number; z: number }, b: { x: number; z: number }) =>
-  Math.hypot(a.x - b.x, a.z - b.z) * WALK_SEC_PER_UNIT;
+  Math.hypot(a.x - b.x, a.z - b.z) * CUSTOMER_SEC_PER_UNIT;
 
 // The times of the story of one order: in at the door, a minute at the cashier, off to a waiting place.
 const ARRIVES = T0 + secondsBetween(DOOR, ORDER_SPOT);
@@ -212,12 +215,35 @@ describe('visibleCustomers', () => {
     ]);
   });
 
-  it('draws at most the limit, the newest ones, and counts the others', () => {
-    const { shown, hidden } = visibleCustomers(crowd(20), T0 + 1000);
+  it('draws at most the limit, and counts the others', () => {
+    const { shown, hidden } = visibleCustomers(crowd(30), T0 + 1000);
     expect(shown).toHaveLength(MAX_VISIBLE_CUSTOMERS);
-    expect(hidden).toBe(20 - MAX_VISIBLE_CUSTOMERS);
-    expect(shown[0]?.customer.orderId).toBe(20);
-    expect(shown.at(-1)?.customer.orderId).toBe(20 - MAX_VISIBLE_CUSTOMERS + 1);
+    expect(hidden).toBe(30 - MAX_VISIBLE_CUSTOMERS);
+  });
+
+  it('keeps the customers that have waited longest, and counts the newest arrivals instead', () => {
+    const { shown } = visibleCustomers(crowd(30), T0 + 1000);
+    const ids = shown.map((entry) => entry.customer.orderId).sort((a, b) => a - b);
+    expect(ids).toEqual(Array.from({ length: MAX_VISIBLE_CUSTOMERS }, (_, index) => index + 1));
+  });
+
+  it('always draws the customers that are leaving, even when the cafe is full', () => {
+    const table = {
+      ...crowd(30),
+      31: customer({ orderId: 31, status: 'done', createdAt: T0 + 500, doneAt: T0 + 900 }),
+    };
+    const { shown } = visibleCustomers(table, T0 + 1000);
+    expect(shown.some((entry) => entry.customer.orderId === 31)).toBe(true);
+    expect(shown).toHaveLength(MAX_VISIBLE_CUSTOMERS);
+  });
+
+  it('draws a customer with a complaint even when many that waited longer fill the cafe', () => {
+    const table = {
+      ...crowd(30),
+      31: customer({ orderId: 31, createdAt: T0 + 100, complaint: 'open' as const }),
+    };
+    const { shown } = visibleCustomers(table, T0 + 1000);
+    expect(shown.some((entry) => entry.customer.orderId === 31)).toBe(true);
   });
 
   it('leaves out the regulars: they are for stage 5', () => {

@@ -152,6 +152,16 @@ export const ORDER_SPOT: Spot = { x: -2.8, z: -2.8, facing: Math.PI };
 /** Where food is picked up: at the hatch of the kitchen, facing it. */
 export const PICKUP_SPOT: Spot = { x: 2.2, z: KITCHEN.hatchZ, facing: Math.PI / 2 };
 
+/** Three places along the counter to order, so that customers who arrive together do not stand inside each other. */
+export function orderSpot(orderId: number): Spot {
+  return { ...ORDER_SPOT, x: ORDER_SPOT.x + ((orderId % 3) - 1) * 0.9 };
+}
+
+/** Three places along the hatch to take the food. */
+export function pickupSpot(orderId: number): Spot {
+  return { ...PICKUP_SPOT, z: PICKUP_SPOT.z + ((orderId % 3) - 1) * 0.5 };
+}
+
 export interface WaitingSpot extends Spot {
   /** A seat at a table, as opposed to a place to stand. */
   seat: boolean;
@@ -174,7 +184,11 @@ export const WAITING_SPOTS: WaitingSpot[] = [
 /** The place where the customer of an order waits: the same one every time, whoever else is waiting. */
 export function waitingSpot(orderId: number): WaitingSpot {
   const base = WAITING_SPOTS[orderId % WAITING_SPOTS.length] as WaitingSpot;
-  // Customers beyond the number of places share one, standing a little apart.
-  const round = Math.floor(orderId / WAITING_SPOTS.length) % 3;
-  return base.seat ? base : { ...base, z: base.z + (round - 1) * 0.35 };
+  // A customer beyond the number of places shares one with an earlier customer, a little to the side (and
+  // a customer sixty orders later a little to the other side again)
+  const aside = (round: number): number => (round === 0 ? 0 : round === 1 ? 0.35 : -0.35);
+  const rounds = Math.floor(orderId / WAITING_SPOTS.length);
+  // (a seat only moves along the table: further out it would be inside it)
+  const sideways = base.seat ? 0 : aside(Math.floor(rounds / 3) % 3);
+  return { ...base, z: base.z + aside(rounds % 3), x: base.x + sideways };
 }
