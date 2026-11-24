@@ -66,6 +66,22 @@ export function readOpenTasks(db: Db, agentId: AgentId): TaskRow[] {
   }));
 }
 
+/** One task, wherever it is in its life. Used by reactions to find out what has just finished. */
+export function readTask(db: Db, taskId: number): TaskRow | undefined {
+  const row = db
+    .prepare(
+      `SELECT id, agent_id, kind, status, duration_sim_sec, params_json
+       FROM agent_tasks WHERE id = ?`,
+    )
+    .get(taskId) as (Omit<RawTask, 'status'> & { status: string }) | undefined;
+  if (!row) return undefined;
+  const { params_json, ...rest } = row;
+  return {
+    ...(rest as Omit<TaskRow, 'station' | 'label' | 'ref'>),
+    ...(JSON.parse(params_json) as Pick<TaskRow, 'station' | 'label' | 'ref'>),
+  };
+}
+
 /** Puts tasks at the end of an agent's queue. Starting them is `kick`'s job. */
 export function enqueueTasks(
   ctx: Context,
