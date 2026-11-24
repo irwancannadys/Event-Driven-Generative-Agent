@@ -376,7 +376,7 @@ Buka alamat yang dicetak tab 2 (biasanya `http://localhost:5173`; kalau port itu
 
 ### 9.2 Yang dicari
 
-- **Pojok atas:** logo hitam-putih (kotak bulat dengan cincin, cangkir dilihat dari atas) dan nama **Cand's Coffee** di kiri, dan di kanan satu tombol berisi titik koneksi dan jam virtual (tanpa kartu status). Tampilannya terang berwarna teal, tidak ikut mode gelap sistem.
+- **Pojok atas:** logo hitam-putih (cangkir kopi dengan uap dalam kotak bulat) dan nama **Cand's Coffee** di kiri, dan di kanan satu tombol berisi titik koneksi dan jam virtual (tanpa kartu status). Tampilannya terang berwarna teal, tidak ikut mode gelap sistem.
 - **Tombol jam** membuka menu **Kontrol waktu**: status koneksi dan kecepatan, Jeda, kecepatan (1x sampai 3600x), majukan waktu, dan tautan Panel saja. Menu tetap terbuka selagi lu menekan beberapa kontrol; klik di mana saja di luar menu atau tekan Escape untuk menutupnya. Klik **600x** supaya cepat.
 - **Sidebar kanan:** **Kejadian** dan **Stok**. Klik judul sebuah bagian untuk melipatnya (panah ▾ dan ▸); lipatan diingat di browser.
 - **Kartu** putih polos dengan bayangan tipis dan garis di bawah judulnya. Kartu di bawah gambar setinggi isinya sendiri: kalau Meja Bos panjang, hanya kartu itu yang memanjang.

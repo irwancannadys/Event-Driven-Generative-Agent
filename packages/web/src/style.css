@@ -52,32 +52,12 @@ h1 {
   gap: 10px;
 }
 .brand-mark {
-  position: relative;
-  display: inline-block;
   flex: none;
-  width: 34px;
-  height: 34px;
-  border: 2.5px solid #111;
-  border-radius: 10px;
-  background: #fff;
-}
-/* the cup seen from above: a ring, and a dot for the steam */
-.brand-mark::before {
-  content: '';
-  position: absolute;
-  inset: 6px;
-  border: 2.5px solid #111;
-  border-radius: 50%;
-}
-.brand-mark::after {
-  content: '';
-  position: absolute;
-  top: 3px;
-  right: 3px;
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: #111;
+  width: 36px;
+  height: 36px;
+  /* a cup of coffee with steam in a rounded frame, black and white: a drawing, so no DOM is needed */
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='2.5' y='2.5' width='59' height='59' rx='17' fill='white' stroke='%23111' stroke-width='5'/%3E%3Cg fill='none' stroke='%23111' stroke-width='4.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 30h25v6a12.5 12.5 0 0 1-12.5 12.5h0A12.5 12.5 0 0 1 18 36z'/%3E%3Cpath d='M43 33h2.5a5.5 5.5 0 0 1 0 11H41'/%3E%3Cpath d='M25 24c-3-3 3-5 0-9M35 24c-3-3 3-5 0-9'/%3E%3Cpath d='M16 53h29'/%3E%3C/g%3E%3C/svg%3E")
+    center / contain no-repeat;
 }
 .brand-name {
   color: #111;
