@@ -7,6 +7,8 @@ export * from './llm/contracts';
 export * from './llm/context';
 export * from './llm/fake-llm';
 export * from './llm/fake-script';
+export * from './llm/json-schema';
+export * from './llm/prompt';
 export * from './llm/validate';
 export * from './rules';
 export * from './schema-parts';
