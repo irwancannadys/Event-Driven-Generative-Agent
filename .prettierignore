@@ -9,3 +9,5 @@ docs
 PROJECT_BRIEF.md
 README.md
 packages/*/README.md
+# made by `npm run eval:situations`
+eval/llm-situations.json

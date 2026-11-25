@@ -1,12 +1,16 @@
 import {
+  MAX_ATTEMPTS,
+  askUntilValid,
   isInstant,
   validateDecision,
   type AgentId,
+  type Attempt,
   type BuiltContext,
   type DecisionOf,
   type FallbackReason,
   type InstantLLM,
   type LLMClient,
+  type Outcome,
   type Purpose,
   type ValidationWorld,
 } from '@cafe/core';
@@ -33,8 +37,7 @@ import type { Thinker } from './thinker';
 // writes the question and the agent starts to think; when the answer comes, a step of its own checks it
 // against the world as it is by then, writes the decision, and does what follows from it (`then`).
 
-/** The first try and two retries (PROJECT_BRIEF principle 7). */
-export const MAX_ATTEMPTS = 3;
+export { MAX_ATTEMPTS };
 const INPUT_SUMMARY_MAX = 500;
 
 export interface DecideInput<P extends Purpose> {
@@ -220,17 +223,6 @@ function decideNow<P extends Purpose>(
   });
 }
 
-/** One call of the model, kept for `llm_calls` when the decision is written. */
-interface Attempt {
-  output: unknown;
-  valid: boolean;
-  latencyMs: number;
-  model: string;
-}
-
-type Outcome<P extends Purpose> =
-  { kind: 'llm'; decision: DecisionOf<P> } | { kind: 'fallback'; reason: FallbackReason };
-
 /** Step A: the agent starts to think. The question goes to the model once this step has committed. */
 function startThinking<P extends Purpose>(
   ctx: Context,
@@ -266,48 +258,15 @@ async function askUntilDecided<P extends Purpose>(
   thinkEventId: number,
   then: (decided: Decided<P>, emit: Emit) => void,
 ): Promise<void> {
-  const attempts: Attempt[] = [];
-  let feedback: string | undefined;
-  let lastReason: FallbackReason = 'timeout';
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
-    const started = thinker.now();
-    let response;
-    try {
-      response = await llm.complete({
-        purpose: input.purpose,
-        context: input.built.context,
-        facts: input.built.facts,
-        ...(feedback !== undefined && { feedback }),
-      });
-    } catch {
-      if (thinker.closed) return; // the server is stopping: the next boot finishes this thought
-      attempts.push({
-        output: undefined,
-        valid: false,
-        latencyMs: thinker.now() - started,
-        model: 'unavailable',
-      });
-      lastReason = 'timeout';
-      feedback = 'no answer';
-      continue;
-    }
-    if (thinker.closed) return;
-    // From here to `settle` nothing is awaited, so the world cannot change between the check and the step.
-    const checked = validateDecision(input.purpose, response.output, input.world());
-    attempts.push({
-      output: response.output,
-      valid: checked.ok,
-      latencyMs: response.latencyMs,
-      model: response.model,
-    });
-    if (checked.ok) {
-      settle(ctx, input, thinkEventId, attempts, { kind: 'llm', decision: checked.decision }, then);
-      return;
-    }
-    lastReason = checked.reason;
-    feedback = checked.message;
-  }
-  settle(ctx, input, thinkEventId, attempts, { kind: 'fallback', reason: lastReason }, then);
+  const result = await askUntilValid({
+    client: llm,
+    request: { purpose: input.purpose, context: input.built.context, facts: input.built.facts },
+    world: input.world,
+    now: thinker.now,
+    // The server is stopping: the next boot finishes this thought (decision 037).
+    stopped: () => thinker.closed,
+  });
+  if (result) settle(ctx, input, thinkEventId, result.attempts, result.outcome, then);
 }
 
 /** The agent stops thinking and is free for the tasks that wait. `kick` starts them. */

@@ -39,7 +39,7 @@ function reviewWritten(ctx: Context, day: number): boolean {
 }
 
 /** Ingredients that must not be proposed: a proposal for them waits at the boss, or a note says not to try again. */
-function blockedIngredients(ctx: Context): Set<string> {
+export function blockedIngredients(ctx: Context): Set<string> {
   return new Set([
     ...readOpenPolicyIngredients(ctx.db),
     ...readMemories(ctx.db, 'stock_admin')

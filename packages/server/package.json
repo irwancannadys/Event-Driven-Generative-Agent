@@ -20,7 +20,9 @@
     "watch": "tsx src/watch/watch-cli.ts",
     "demo:stage3": "tsx src/demo/stage3-cli.ts",
     "demo:stage5": "tsx src/demo/stage5-cli.ts",
-    "experiment:stage5": "tsx src/demo/stage5-experiment-cli.ts"
+    "experiment:stage5": "tsx src/demo/stage5-experiment-cli.ts",
+    "eval:situations": "tsx src/eval/make-situations-cli.ts",
+    "eval:llm": "tsx src/eval/llm-eval-cli.ts"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^9.6.0",

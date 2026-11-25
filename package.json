@@ -24,6 +24,8 @@
     "demo:stage3": "npm run demo:stage3 -w @cafe/server",
     "demo:stage5": "npm run demo:stage5 -w @cafe/server --",
     "experiment:stage5": "npm run experiment:stage5 -w @cafe/server --",
+    "eval:situations": "npm run eval:situations -w @cafe/server --",
+    "eval:llm": "npm run eval:llm -w @cafe/server --",
     "web": "npm run dev -w @cafe/web --"
   },
   "devDependencies": {

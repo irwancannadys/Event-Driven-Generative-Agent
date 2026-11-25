@@ -1,0 +1,2458 @@
+{
+  "version": 1,
+  "generated_by": "npm run eval:situations (packages/server/src/eval/make-situations.ts)",
+  "situations": [
+    {
+      "id": "stock-s11-01",
+      "purpose": "stock_proposal",
+      "note": "seed 11, low stock 09:59",
+      "request": {
+        "purpose": "stock_proposal",
+        "context": "Pukul 09:59. Ada bahan yang tipis: apa yang perlu dipesan?\n- Susu: stok 1000 ml, batas 1000, kapasitas 6000, kurang 5000",
+        "facts": {
+          "kind": "low_stock",
+          "now": 35961,
+          "lines": [
+            {
+              "ingredient_id": "susu",
+              "name": "Susu",
+              "unit": "ml",
+              "qty": 1000,
+              "min_qty": 1000,
+              "capacity_qty": 6000,
+              "expected": null,
+              "shortfall": 5000
+            }
+          ]
+        }
+      },
+      "world": {
+        "ingredients": {
+          "gula": {
+            "qty": 950,
+            "capacity_qty": 2000,
+            "base_min_qty": 300
+          },
+          "kopi": {
+            "qty": 1002,
+            "capacity_qty": 2000,
+            "base_min_qty": 300
+          },
+          "mie": {
+            "qty": 1700,
+            "capacity_qty": 4000,
+            "base_min_qty": 500
+          },
+          "nasi": {
+            "qty": 3200,
+            "capacity_qty": 8000,
+            "base_min_qty": 1000
+          },
+          "roti": {
+            "qty": 32,
+            "capacity_qty": 60,
+            "base_min_qty": 10
+          },
+          "susu": {
+            "qty": 1000,
+            "capacity_qty": 6000,
+            "base_min_qty": 1000
+          },
+          "teh": {
+            "qty": 325,
+            "capacity_qty": 500,
+            "base_min_qty": 100
+          },
+          "telur": {
+            "qty": 23,
+            "capacity_qty": 60,
+            "base_min_qty": 10
+          }
+        },
+        "covered": [],
+        "blocked": []
+      }
+    },
+    {
+      "id": "stock-s12-16",
+      "purpose": "stock_proposal",
+      "note": "seed 12, low stock 18:38",
+      "request": {
+        "purpose": "stock_proposal",
+        "context": "Pukul 18:38. Ada bahan yang tipis: apa yang perlu dipesan?\n- Kopi: stok 290 g, batas 300, kapasitas 2000, kurang 1710",
+        "facts": {
+          "kind": "low_stock",
+          "now": 153531,
+          "lines": [
+            {
+              "ingredient_id": "kopi",
+              "name": "Kopi",
+              "unit": "g",
+              "qty": 290,
+              "min_qty": 300,
+              "capacity_qty": 2000,
+              "expected": null,
+              "shortfall": 1710
+            }
+          ]
+        }
+      },
+      "world": {
+        "ingredients": {
+          "gula": {
+            "qty": 494,
+            "capacity_qty": 2000,
+            "base_min_qty": 300
+          },
+          "kopi": {
+            "qty": 290,
+            "capacity_qty": 2000,
+            "base_min_qty": 300
+          },
+          "mie": {
+            "qty": 2300,
+            "capacity_qty": 4000,
+            "base_min_qty": 500
+          },
+          "nasi": {
+            "qty": 6800,
+            "capacity_qty": 8000,
+            "base_min_qty": 1000
+          },
+          "roti": {
+            "qty": 48,
+            "capacity_qty": 60,
+            "base_min_qty": 10
+          },
+          "susu": {
+            "qty": 500,
+            "capacity_qty": 6000,
+            "base_min_qty": 1000
+          },
+          "teh": {
+            "qty": 60,
+            "capacity_qty": 500,
+            "base_min_qty": 100
+          },
+          "telur": {
+            "qty": 49,
+            "capacity_qty": 60,
+            "base_min_qty": 10
+          }
+        },
+        "covered": [
+          "gula",
+          "susu",
+          "teh"
+        ],
+        "blocked": []
+      }
+    },
+    {
+      "id": "stock-s13-27",
+      "purpose": "stock_proposal",
+      "note": "seed 13, low stock 18:50",
+      "request": {
+        "purpose": "stock_proposal",
+        "context": "Pukul 18:50. Ada bahan yang tipis: apa yang perlu dipesan?\n- Gula: stok 300 g, batas 300, kapasitas 2000, kurang 1700",
+        "facts": {
+          "kind": "low_stock",
+          "now": 240613,
+          "lines": [
+            {
+              "ingredient_id": "gula",
+              "name": "Gula",
+              "unit": "g",
+              "qty": 300,
+              "min_qty": 300,
+              "capacity_qty": 2000,
+              "expected": null,
+              "shortfall": 1700
+            }
+          ]
+        }
+      },
+      "world": {
+        "ingredients": {
+          "gula": {
+            "qty": 300,
+            "capacity_qty": 2000,
+            "base_min_qty": 300
+          },
+          "kopi": {
+            "qty": 722,
+            "capacity_qty": 2000,
+            "base_min_qty": 300
+          },
+          "mie": {
+            "qty": 485,
+            "capacity_qty": 4000,
+            "base_min_qty": 500
+          },
+          "nasi": {
+            "qty": 1010,
+            "capacity_qty": 8000,
+            "base_min_qty": 1000
+          },
+          "roti": {
+            "qty": 24,
+            "capacity_qty": 60,
+            "base_min_qty": 10
+          },
+          "susu": {
+            "qty": 450,
+            "capacity_qty": 6000,
+            "base_min_qty": 1000
+          },
+          "teh": {
+            "qty": 270,
+            "capacity_qty": 500,
+            "base_min_qty": 100
+          },
+          "telur": {
+            "qty": 17,
+            "capacity_qty": 60,
+            "base_min_qty": 10
+          }
+        },
+        "covered": [
+          "mie",
+          "susu",
+          "telur"
+        ],
+        "blocked": []
+      }
+    },
+    {
+      "id": "stock-s15-02",
+      "purpose": "stock_proposal",
+      "note": "seed 15, low stock 11:34",
+      "request": {
+        "purpose": "stock_proposal",
+        "context": "Pukul 11:34. Ada bahan yang tipis: apa yang perlu dipesan?\n- Susu: stok 850 ml, batas 1000, kapasitas 6000, kurang 5150",
+        "facts": {
+          "kind": "low_stock",
+          "now": 41670,
+          "lines": [
+            {
+              "ingredient_id": "susu",
+              "name": "Susu",
+              "unit": "ml",
+              "qty": 850,
+              "min_qty": 1000,
+              "capacity_qty": 6000,
+              "expected": null,
+              "shortfall": 5150
+            }
+          ]
+        }
+      },
+      "world": {
+        "ingredients": {
+          "gula": {
+            "qty": 820,
+            "capacity_qty": 2000,
+            "base_min_qty": 300
+          },
+          "kopi": {
+            "qty": 912,
+            "capacity_qty": 2000,
+            "base_min_qty": 300
+          },
+          "mie": {
+            "qty": 1900,
+            "capacity_qty": 4000,
+            "base_min_qty": 500
+          },
+          "nasi": {
+            "qty": 1800,
+            "capacity_qty": 8000,
+            "base_min_qty": 1000
+          },
+          "roti": {
+            "qty": 16,
+            "capacity_qty": 60,
+            "base_min_qty": 10
+          },
+          "susu": {
+            "qty": 850,
+            "capacity_qty": 6000,
+            "base_min_qty": 1000
+          },
+          "teh": {
+            "qty": 325,
+            "capacity_qty": 500,
+            "base_min_qty": 100
+          },
+          "telur": {
+            "qty": 18,
+            "capacity_qty": 60,
+            "base_min_qty": 10
+          }
+        },
+        "covered": [],
+        "blocked": []
+      }
+    },
+    {
+      "id": "stock-s16-18",
+      "purpose": "stock_proposal",
+      "note": "seed 16, low stock 21:43",
+      "request": {
+        "purpose": "stock_proposal",
+        "context": "Pukul 21:43. Ada bahan yang tipis: apa yang perlu dipesan?\n- Kopi: stok 300 g, batas 300, kapasitas 2000, kurang 1700",
+        "facts": {
+          "kind": "low_stock",
+          "now": 164613,
+          "lines": [
+            {
+              "ingredient_id": "kopi",
+              "name": "Kopi",
+              "unit": "g",
+              "qty": 300,
+              "min_qty": 300,
+              "capacity_qty": 2000,
+              "expected": null,
+              "shortfall": 1700
+            }
+          ]
+        }
+      },
+      "world": {
+        "ingredients": {
+          "gula": {
+            "qty": 166,
+            "capacity_qty": 2000,
+            "base_min_qty": 300
+          },
+          "kopi": {
+            "qty": 300,
+            "capacity_qty": 2000,
+            "base_min_qty": 300
+          },
+          "mie": {
+            "qty": 1700,
+            "capacity_qty": 4000,
+            "base_min_qty": 500
+          },
+          "nasi": {
+            "qty": 6200,
+            "capacity_qty": 8000,
+            "base_min_qty": 1000
+          },
+          "roti": {
+            "qty": 16,
+            "capacity_qty": 60,
+            "base_min_qty": 10
+          },
+          "susu": {
+            "qty": 1200,
+            "capacity_qty": 6000,
+            "base_min_qty": 1000
+          },
+          "teh": {
+            "qty": 410,
+            "capacity_qty": 500,
+            "base_min_qty": 100
+          },
+          "telur": {
+            "qty": 14,
+            "capacity_qty": 60,
+            "base_min_qty": 10
+          }
+        },
+        "covered": [
+          "gula"
+        ],
+        "blocked": []
+      }
+    },
+    {
+      "id": "stock-s17-31",
+      "purpose": "stock_proposal",
+      "note": "seed 17, low stock 17:00",
+      "request": {
+        "purpose": "stock_proposal",
+        "context": "Pukul 17:00. Ada bahan yang tipis: apa yang perlu dipesan?\n- Mie: stok 388 g, batas 500, kapasitas 4000, kurang 3612\n- Nasi: stok 694 g, batas 1000, kapasitas 8000, kurang 7306",
+        "facts": {
+          "kind": "low_stock",
+          "now": 320405,
+          "lines": [
+            {
+              "ingredient_id": "mie",
+              "name": "Mie",
+              "unit": "g",
+              "qty": 388,
+              "min_qty": 500,
+              "capacity_qty": 4000,
+              "expected": null,
+              "shortfall": 3612
+            },
+            {
+              "ingredient_id": "nasi",
+              "name": "Nasi",
+              "unit": "g",
+              "qty": 694,
+              "min_qty": 1000,
+              "capacity_qty": 8000,
+              "expected": null,
+              "shortfall": 7306
+            }
+          ]
+        }
+      },
+      "world": {
+        "ingredients": {
+          "gula": {
+            "qty": 320,
+            "capacity_qty": 2000,
+            "base_min_qty": 300
+          },
+          "kopi": {
+            "qty": 375,
+            "capacity_qty": 2000,
+            "base_min_qty": 300
+          },
+          "mie": {
+            "qty": 388,
+            "capacity_qty": 4000,
+            "base_min_qty": 500
+          },
+          "nasi": {
+            "qty": 694,
+            "capacity_qty": 8000,
+            "base_min_qty": 1000
+          },
+          "roti": {
+            "qty": 38,
+            "capacity_qty": 60,
+            "base_min_qty": 10
+          },
+          "susu": {
+            "qty": 1650,
+            "capacity_qty": 6000,
+            "base_min_qty": 1000
+          },
+          "teh": {
+            "qty": 45,
+            "capacity_qty": 500,
+            "base_min_qty": 100
+          },
+          "telur": {
+            "qty": 13,
+            "capacity_qty": 60,
+            "base_min_qty": 10
+          }
+        },
+        "covered": [
+          "gula",
+          "kopi",
+          "susu",
+          "teh"
+        ],
+        "blocked": []
+      }
+    },
+    {
+      "id": "stock-s11-10",
+      "purpose": "stock_proposal",
+      "note": "seed 11, forecast 10:02",
+      "request": {
+        "purpose": "stock_proposal",
+        "context": "Pukul 10:02. Cek sebelum jam sibuk: apa yang perlu dipesan sebelum habis?\n- Gula: stok 980 g, batas 300, kapasitas 2000, perkiraan pakai 980, kurang 300\n- Susu: stok 2700 ml, batas 2000, kapasitas 6000, perkiraan pakai 4950, kurang 4250\n- Teh: stok 125 g, batas 100, kapasitas 500, perkiraan pakai 120, kurang 95\n- Telur: stok 22 pcs, batas 10, kapasitas 60, perkiraan pakai 21, kurang 9",
+        "facts": {
+          "kind": "forecast",
+          "now": 122520,
+          "lines": [
+            {
+              "ingredient_id": "gula",
+              "name": "Gula",
+              "unit": "g",
+              "qty": 980,
+              "min_qty": 300,
+              "capacity_qty": 2000,
+              "expected": 980,
+              "shortfall": 300
+            },
+            {
+              "ingredient_id": "susu",
+              "name": "Susu",
+              "unit": "ml",
+              "qty": 2700,
+              "min_qty": 2000,
+              "capacity_qty": 6000,
+              "expected": 4950,
+              "shortfall": 4250
+            },
+            {
+              "ingredient_id": "teh",
+              "name": "Teh",
+              "unit": "g",
+              "qty": 125,
+              "min_qty": 100,
+              "capacity_qty": 500,
+              "expected": 120,
+              "shortfall": 95
+            },
+            {
+              "ingredient_id": "telur",
+              "name": "Telur",
+              "unit": "pcs",
+              "qty": 22,
+              "min_qty": 10,
+              "capacity_qty": 60,
+              "expected": 21,
+              "shortfall": 9
+            }
+          ]
+        }
+      },
+      "world": {
+        "ingredients": {
+          "gula": {
+            "qty": 980,
+            "capacity_qty": 2000,
+            "base_min_qty": 300
+          },
+          "kopi": {
+            "qty": 1334,
+            "capacity_qty": 2000,
+            "base_min_qty": 300
+          },
+          "mie": {
+            "qty": 3100,
+            "capacity_qty": 4000,
+            "base_min_qty": 500
+          },
+          "nasi": {
+            "qty": 4000,
+            "capacity_qty": 8000,
+            "base_min_qty": 1000
+          },
+          "roti": {
+            "qty": 10,
+            "capacity_qty": 60,
+            "base_min_qty": 10
+          },
+          "susu": {
+            "qty": 2700,
+            "capacity_qty": 6000,
+            "base_min_qty": 1000
+          },
+          "teh": {
+            "qty": 125,
+            "capacity_qty": 500,
+            "base_min_qty": 100
+          },
+          "telur": {
+            "qty": 22,
+            "capacity_qty": 60,
+            "base_min_qty": 10
+          }
+        },
+        "covered": [
+          "roti"
+        ],
+        "blocked": []
+      }
+    },
+    {
+      "id": "stock-s12-14",
+      "purpose": "stock_proposal",
+      "note": "seed 12, forecast 15:02",
+      "request": {
+        "purpose": "stock_proposal",
+        "context": "Pukul 15:02. Cek sebelum jam sibuk: apa yang perlu dipesan sebelum habis?\n- Gula: stok 895 g, batas 600, kapasitas 2000, perkiraan pakai 530, kurang 235\n- Susu: stok 2855 ml, batas 1000, kapasitas 6000, perkiraan pakai 2850, kurang 995\n- Teh: stok 135 g, batas 100, kapasitas 500, perkiraan pakai 55, kurang 20",
+        "facts": {
+          "kind": "forecast",
+          "now": 140520,
+          "lines": [
+            {
+              "ingredient_id": "gula",
+              "name": "Gula",
+              "unit": "g",
+              "qty": 895,
+              "min_qty": 600,
+              "capacity_qty": 2000,
+              "expected": 530,
+              "shortfall": 235
+            },
+            {
+              "ingredient_id": "susu",
+              "name": "Susu",
+              "unit": "ml",
+              "qty": 2855,
+              "min_qty": 1000,
+              "capacity_qty": 6000,
+              "expected": 2850,
+              "shortfall": 995
+            },
+            {
+              "ingredient_id": "teh",
+              "name": "Teh",
+              "unit": "g",
+              "qty": 135,
+              "min_qty": 100,
+              "capacity_qty": 500,
+              "expected": 55,
+              "shortfall": 20
+            }
+          ]
+        }
+      },
+      "world": {
+        "ingredients": {
+          "gula": {
+            "qty": 895,
+            "capacity_qty": 2000,
+            "base_min_qty": 300
+          },
+          "kopi": {
+            "qty": 848,
+            "capacity_qty": 2000,
+            "base_min_qty": 300
+          },
+          "mie": {
+            "qty": 2700,
+            "capacity_qty": 4000,
+            "base_min_qty": 500
+          },
+          "nasi": {
+            "qty": 760,
+            "capacity_qty": 8000,
+            "base_min_qty": 1000
+          },
+          "roti": {
+            "qty": 58,
+            "capacity_qty": 60,
+            "base_min_qty": 10
+          },
+          "susu": {
+            "qty": 2855,
+            "capacity_qty": 6000,
+            "base_min_qty": 1000
+          },
+          "teh": {
+            "qty": 135,
+            "capacity_qty": 500,
+            "base_min_qty": 100
+          },
+          "telur": {
+            "qty": 8,
+            "capacity_qty": 60,
+            "base_min_qty": 10
+          }
+        },
+        "covered": [
+          "nasi",
+          "telur"
+        ],
+        "blocked": []
+      }
+    },
+    {
+      "id": "stock-s13-21",
+      "purpose": "stock_proposal",
+      "note": "seed 13, forecast 10:02",
+      "request": {
+        "purpose": "stock_proposal",
+        "context": "Pukul 10:02. Cek sebelum jam sibuk: apa yang perlu dipesan sebelum habis?\n- Gula: stok 810 g, batas 300, kapasitas 2000, perkiraan pakai 790, kurang 280\n- Mie: stok 1100 g, batas 500, kapasitas 4000, perkiraan pakai 950, kurang 350\n- Susu: stok 2850 ml, batas 2000, kapasitas 6000, perkiraan pakai 3825, kurang 2975\n- Telur: stok 31 pcs, batas 20, kapasitas 60, perkiraan pakai 24, kurang 13",
+        "facts": {
+          "kind": "forecast",
+          "now": 208920,
+          "lines": [
+            {
+              "ingredient_id": "gula",
+              "name": "Gula",
+              "unit": "g",
+              "qty": 810,
+              "min_qty": 300,
+              "capacity_qty": 2000,
+              "expected": 790,
+              "shortfall": 280
+            },
+            {
+              "ingredient_id": "mie",
+              "name": "Mie",
+              "unit": "g",
+              "qty": 1100,
+              "min_qty": 500,
+              "capacity_qty": 4000,
+              "expected": 950,
+              "shortfall": 350
+            },
+            {
+              "ingredient_id": "susu",
+              "name": "Susu",
+              "unit": "ml",
+              "qty": 2850,
+              "min_qty": 2000,
+              "capacity_qty": 6000,
+              "expected": 3825,
+              "shortfall": 2975
+            },
+            {
+              "ingredient_id": "telur",
+              "name": "Telur",
+              "unit": "pcs",
+              "qty": 31,
+              "min_qty": 20,
+              "capacity_qty": 60,
+              "expected": 24,
+              "shortfall": 13
+            }
+          ]
+        }
+      },
+      "world": {
+        "ingredients": {
+          "gula": {
+            "qty": 810,
+            "capacity_qty": 2000,
+            "base_min_qty": 300
+          },
+          "kopi": {
+            "qty": 1766,
+            "capacity_qty": 2000,
+            "base_min_qty": 300
+          },
+          "mie": {
+            "qty": 1100,
+            "capacity_qty": 4000,
+            "base_min_qty": 500
+          },
+          "nasi": {
+            "qty": 4400,
+            "capacity_qty": 8000,
+            "base_min_qty": 1000
+          },
+          "roti": {
+            "qty": 44,
+            "capacity_qty": 60,
+            "base_min_qty": 10
+          },
+          "susu": {
+            "qty": 2850,
+            "capacity_qty": 6000,
+            "base_min_qty": 1000
+          },
+          "teh": {
+            "qty": 400,
+            "capacity_qty": 500,
+            "base_min_qty": 100
+          },
+          "telur": {
+            "qty": 31,
+            "capacity_qty": 60,
+            "base_min_qty": 10
+          }
+        },
+        "covered": [],
+        "blocked": []
+      }
+    },
+    {
+      "id": "stock-s14-29",
+      "purpose": "stock_proposal",
+      "note": "seed 14, forecast 10:02",
+      "request": {
+        "purpose": "stock_proposal",
+        "context": "Pukul 10:02. Cek sebelum jam sibuk: apa yang perlu dipesan sebelum habis?\n- Susu: stok 2550 ml, batas 2000, kapasitas 6000, perkiraan pakai 2800, kurang 2250\n- Telur: stok 35 pcs, batas 20, kapasitas 60, perkiraan pakai 26, kurang 11",
+        "facts": {
+          "kind": "forecast",
+          "now": 295320,
+          "lines": [
+            {
+              "ingredient_id": "susu",
+              "name": "Susu",
+              "unit": "ml",
+              "qty": 2550,
+              "min_qty": 2000,
+              "capacity_qty": 6000,
+              "expected": 2800,
+              "shortfall": 2250
+            },
+            {
+              "ingredient_id": "telur",
+              "name": "Telur",
+              "unit": "pcs",
+              "qty": 35,
+              "min_qty": 20,
+              "capacity_qty": 60,
+              "expected": 26,
+              "shortfall": 11
+            }
+          ]
+        }
+      },
+      "world": {
+        "ingredients": {
+          "gula": {
+            "qty": 1350,
+            "capacity_qty": 2000,
+            "base_min_qty": 300
+          },
+          "kopi": {
+            "qty": 1208,
+            "capacity_qty": 2000,
+            "base_min_qty": 300
+          },
+          "mie": {
+            "qty": 3400,
+            "capacity_qty": 4000,
+            "base_min_qty": 500
+          },
+          "nasi": {
+            "qty": 5000,
+            "capacity_qty": 8000,
+            "base_min_qty": 1000
+          },
+          "roti": {
+            "qty": 42,
+            "capacity_qty": 60,
+            "base_min_qty": 10
+          },
+          "susu": {
+            "qty": 2550,
+            "capacity_qty": 6000,
+            "base_min_qty": 1000
+          },
+          "teh": {
+            "qty": 240,
+            "capacity_qty": 500,
+            "base_min_qty": 100
+          },
+          "telur": {
+            "qty": 35,
+            "capacity_qty": 60,
+            "base_min_qty": 10
+          }
+        },
+        "covered": [],
+        "blocked": []
+      }
+    },
+    {
+      "id": "stock-s15-31",
+      "purpose": "stock_proposal",
+      "note": "seed 15, forecast 15:02",
+      "request": {
+        "purpose": "stock_proposal",
+        "context": "Pukul 15:02. Cek sebelum jam sibuk: apa yang perlu dipesan sebelum habis?\n- Gula: stok 714 g, batas 600, kapasitas 2000, perkiraan pakai 564, kurang 450\n- Kopi: stok 528 g, batas 300, kapasitas 2000, perkiraan pakai 444, kurang 216\n- Nasi: stok 3260 g, batas 2000, kapasitas 8000, perkiraan pakai 2000, kurang 740\n- Susu: stok 2415 ml, batas 1000, kapasitas 6000, perkiraan pakai 2550, kurang 1135\n- Telur: stok 27 pcs, batas 20, kapasitas 60, perkiraan pakai 14, kurang 7",
+        "facts": {
+          "kind": "forecast",
+          "now": 313320,
+          "lines": [
+            {
+              "ingredient_id": "gula",
+              "name": "Gula",
+              "unit": "g",
+              "qty": 714,
+              "min_qty": 600,
+              "capacity_qty": 2000,
+              "expected": 564,
+              "shortfall": 450
+            },
+            {
+              "ingredient_id": "kopi",
+              "name": "Kopi",
+              "unit": "g",
+              "qty": 528,
+              "min_qty": 300,
+              "capacity_qty": 2000,
+              "expected": 444,
+              "shortfall": 216
+            },
+            {
+              "ingredient_id": "nasi",
+              "name": "Nasi",
+              "unit": "g",
+              "qty": 3260,
+              "min_qty": 2000,
+              "capacity_qty": 8000,
+              "expected": 2000,
+              "shortfall": 740
+            },
+            {
+              "ingredient_id": "susu",
+              "name": "Susu",
+              "unit": "ml",
+              "qty": 2415,
+              "min_qty": 1000,
+              "capacity_qty": 6000,
+              "expected": 2550,
+              "shortfall": 1135
+            },
+            {
+              "ingredient_id": "telur",
+              "name": "Telur",
+              "unit": "pcs",
+              "qty": 27,
+              "min_qty": 20,
+              "capacity_qty": 60,
+              "expected": 14,
+              "shortfall": 7
+            }
+          ]
+        }
+      },
+      "world": {
+        "ingredients": {
+          "gula": {
+            "qty": 714,
+            "capacity_qty": 2000,
+            "base_min_qty": 300
+          },
+          "kopi": {
+            "qty": 528,
+            "capacity_qty": 2000,
+            "base_min_qty": 300
+          },
+          "mie": {
+            "qty": 3300,
+            "capacity_qty": 4000,
+            "base_min_qty": 500
+          },
+          "nasi": {
+            "qty": 3260,
+            "capacity_qty": 8000,
+            "base_min_qty": 1000
+          },
+          "roti": {
+            "qty": 28,
+            "capacity_qty": 60,
+            "base_min_qty": 10
+          },
+          "susu": {
+            "qty": 2415,
+            "capacity_qty": 6000,
+            "base_min_qty": 1000
+          },
+          "teh": {
+            "qty": 175,
+            "capacity_qty": 500,
+            "base_min_qty": 100
+          },
+          "telur": {
+            "qty": 27,
+            "capacity_qty": 60,
+            "base_min_qty": 10
+          }
+        },
+        "covered": [],
+        "blocked": []
+      }
+    },
+    {
+      "id": "stock-s17-20",
+      "purpose": "stock_proposal",
+      "note": "seed 17, forecast 10:02",
+      "request": {
+        "purpose": "stock_proposal",
+        "context": "Pukul 10:02. Cek sebelum jam sibuk: apa yang perlu dipesan sebelum habis?\n- Gula: stok 1100 g, batas 600, kapasitas 2000, perkiraan pakai 820, kurang 320\n- Susu: stok 2850 ml, batas 2000, kapasitas 6000, perkiraan pakai 4425, kurang 3575\n- Telur: stok 26 pcs, batas 10, kapasitas 60, perkiraan pakai 19, kurang 3",
+        "facts": {
+          "kind": "forecast",
+          "now": 208920,
+          "lines": [
+            {
+              "ingredient_id": "gula",
+              "name": "Gula",
+              "unit": "g",
+              "qty": 1100,
+              "min_qty": 600,
+              "capacity_qty": 2000,
+              "expected": 820,
+              "shortfall": 320
+            },
+            {
+              "ingredient_id": "susu",
+              "name": "Susu",
+              "unit": "ml",
+              "qty": 2850,
+              "min_qty": 2000,
+              "capacity_qty": 6000,
+              "expected": 4425,
+              "shortfall": 3575
+            },
+            {
+              "ingredient_id": "telur",
+              "name": "Telur",
+              "unit": "pcs",
+              "qty": 26,
+              "min_qty": 10,
+              "capacity_qty": 60,
+              "expected": 19,
+              "shortfall": 3
+            }
+          ]
+        }
+      },
+      "world": {
+        "ingredients": {
+          "gula": {
+            "qty": 1100,
+            "capacity_qty": 2000,
+            "base_min_qty": 300
+          },
+          "kopi": {
+            "qty": 1640,
+            "capacity_qty": 2000,
+            "base_min_qty": 300
+          },
+          "mie": {
+            "qty": 1700,
+            "capacity_qty": 4000,
+            "base_min_qty": 500
+          },
+          "nasi": {
+            "qty": 4200,
+            "capacity_qty": 8000,
+            "base_min_qty": 1000
+          },
+          "roti": {
+            "qty": 44,
+            "capacity_qty": 60,
+            "base_min_qty": 10
+          },
+          "susu": {
+            "qty": 2850,
+            "capacity_qty": 6000,
+            "base_min_qty": 1000
+          },
+          "teh": {
+            "qty": 395,
+            "capacity_qty": 500,
+            "base_min_qty": 100
+          },
+          "telur": {
+            "qty": 26,
+            "capacity_qty": 60,
+            "base_min_qty": 10
+          }
+        },
+        "covered": [],
+        "blocked": []
+      }
+    },
+    {
+      "id": "review-s11-08",
+      "purpose": "policy_review",
+      "note": "seed 11, review of day 0",
+      "request": {
+        "purpose": "policy_review",
+        "context": "Hari 0: 116 pesanan, 101 selesai, 40 kali ditahan, 12 komplain. Paling bermasalah: Susu (26x menahan pesanan, habis 304 menit); Telur (9x menahan pesanan, habis 77 menit); Gula (7x menahan pesanan, habis 47 menit).\n- Gula: batas 300 (awal 300), menahan 7 pesanan, habis 47 menit\n- Kopi: batas 300 (awal 300), menahan 0 pesanan, habis 0 menit\n- Mie: batas 500 (awal 500), menahan 0 pesanan, habis 0 menit\n- Nasi: batas 1000 (awal 1000), menahan 0 pesanan, habis 0 menit\n- Roti: batas 10 (awal 10), menahan 0 pesanan, habis 0 menit\n- Susu: batas 1000 (awal 1000), menahan 26 pesanan, habis 304 menit\n- Teh: batas 100 (awal 100), menahan 0 pesanan, habis 0 menit\n- Telur: batas 10 (awal 10), menahan 9 pesanan, habis 77 menit\nUsulkan paling banyak satu perubahan batas minimum, atau tidak ada.",
+        "facts": {
+          "kind": "review",
+          "day": 0,
+          "summary": "Hari 0: 116 pesanan, 101 selesai, 40 kali ditahan, 12 komplain. Paling bermasalah: Susu (26x menahan pesanan, habis 304 menit); Telur (9x menahan pesanan, habis 77 menit); Gula (7x menahan pesanan, habis 47 menit).",
+          "ingredients": [
+            {
+              "ingredient_id": "gula",
+              "name": "Gula",
+              "unit": "g",
+              "base_min_qty": 300,
+              "min_qty": 300,
+              "capacity_qty": 2000,
+              "held": 7,
+              "stockout_sec": 2834,
+              "bounds": {
+                "min": 150,
+                "max": 900
+              }
+            },
+            {
+              "ingredient_id": "kopi",
+              "name": "Kopi",
+              "unit": "g",
+              "base_min_qty": 300,
+              "min_qty": 300,
+              "capacity_qty": 2000,
+              "held": 0,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 150,
+                "max": 900
+              }
+            },
+            {
+              "ingredient_id": "mie",
+              "name": "Mie",
+              "unit": "g",
+              "base_min_qty": 500,
+              "min_qty": 500,
+              "capacity_qty": 4000,
+              "held": 0,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 250,
+                "max": 1500
+              }
+            },
+            {
+              "ingredient_id": "nasi",
+              "name": "Nasi",
+              "unit": "g",
+              "base_min_qty": 1000,
+              "min_qty": 1000,
+              "capacity_qty": 8000,
+              "held": 0,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 500,
+                "max": 3000
+              }
+            },
+            {
+              "ingredient_id": "roti",
+              "name": "Roti",
+              "unit": "pcs",
+              "base_min_qty": 10,
+              "min_qty": 10,
+              "capacity_qty": 60,
+              "held": 0,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 5,
+                "max": 30
+              }
+            },
+            {
+              "ingredient_id": "susu",
+              "name": "Susu",
+              "unit": "ml",
+              "base_min_qty": 1000,
+              "min_qty": 1000,
+              "capacity_qty": 6000,
+              "held": 26,
+              "stockout_sec": 18240,
+              "bounds": {
+                "min": 500,
+                "max": 3000
+              }
+            },
+            {
+              "ingredient_id": "teh",
+              "name": "Teh",
+              "unit": "g",
+              "base_min_qty": 100,
+              "min_qty": 100,
+              "capacity_qty": 500,
+              "held": 0,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 50,
+                "max": 300
+              }
+            },
+            {
+              "ingredient_id": "telur",
+              "name": "Telur",
+              "unit": "pcs",
+              "base_min_qty": 10,
+              "min_qty": 10,
+              "capacity_qty": 60,
+              "held": 9,
+              "stockout_sec": 4634,
+              "bounds": {
+                "min": 5,
+                "max": 30
+              }
+            }
+          ],
+          "blocked": []
+        }
+      },
+      "world": {
+        "ingredients": {
+          "gula": {
+            "qty": 1420,
+            "capacity_qty": 2000,
+            "base_min_qty": 300
+          },
+          "kopi": {
+            "qty": 1676,
+            "capacity_qty": 2000,
+            "base_min_qty": 300
+          },
+          "mie": {
+            "qty": 3600,
+            "capacity_qty": 4000,
+            "base_min_qty": 500
+          },
+          "nasi": {
+            "qty": 5600,
+            "capacity_qty": 8000,
+            "base_min_qty": 1000
+          },
+          "roti": {
+            "qty": 16,
+            "capacity_qty": 60,
+            "base_min_qty": 10
+          },
+          "susu": {
+            "qty": 0,
+            "capacity_qty": 6000,
+            "base_min_qty": 1000
+          },
+          "teh": {
+            "qty": 180,
+            "capacity_qty": 500,
+            "base_min_qty": 100
+          },
+          "telur": {
+            "qty": 35,
+            "capacity_qty": 60,
+            "base_min_qty": 10
+          }
+        },
+        "covered": [
+          "susu"
+        ],
+        "blocked": []
+      }
+    },
+    {
+      "id": "review-s12-09",
+      "purpose": "policy_review",
+      "note": "seed 12, review of day 0",
+      "request": {
+        "purpose": "policy_review",
+        "context": "Hari 0: 133 pesanan, 91 selesai, 63 kali ditahan, 13 komplain. Paling bermasalah: Gula (39x menahan pesanan, habis 349 menit); Susu (21x menahan pesanan); Nasi (7x menahan pesanan, habis 324 menit).\n- Gula: batas 300 (awal 300), menahan 39 pesanan, habis 349 menit\n- Kopi: batas 300 (awal 300), menahan 0 pesanan, habis 0 menit\n- Mie: batas 500 (awal 500), menahan 0 pesanan, habis 0 menit\n- Nasi: batas 1000 (awal 1000), menahan 7 pesanan, habis 324 menit\n- Roti: batas 10 (awal 10), menahan 0 pesanan, habis 0 menit\n- Susu: batas 1000 (awal 1000), menahan 21 pesanan, habis 0 menit\n- Teh: batas 100 (awal 100), menahan 0 pesanan, habis 0 menit\n- Telur: batas 10 (awal 10), menahan 0 pesanan, habis 0 menit\nUsulkan paling banyak satu perubahan batas minimum, atau tidak ada.",
+        "facts": {
+          "kind": "review",
+          "day": 0,
+          "summary": "Hari 0: 133 pesanan, 91 selesai, 63 kali ditahan, 13 komplain. Paling bermasalah: Gula (39x menahan pesanan, habis 349 menit); Susu (21x menahan pesanan); Nasi (7x menahan pesanan, habis 324 menit).",
+          "ingredients": [
+            {
+              "ingredient_id": "gula",
+              "name": "Gula",
+              "unit": "g",
+              "base_min_qty": 300,
+              "min_qty": 300,
+              "capacity_qty": 2000,
+              "held": 39,
+              "stockout_sec": 20924,
+              "bounds": {
+                "min": 150,
+                "max": 900
+              }
+            },
+            {
+              "ingredient_id": "kopi",
+              "name": "Kopi",
+              "unit": "g",
+              "base_min_qty": 300,
+              "min_qty": 300,
+              "capacity_qty": 2000,
+              "held": 0,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 150,
+                "max": 900
+              }
+            },
+            {
+              "ingredient_id": "mie",
+              "name": "Mie",
+              "unit": "g",
+              "base_min_qty": 500,
+              "min_qty": 500,
+              "capacity_qty": 4000,
+              "held": 0,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 250,
+                "max": 1500
+              }
+            },
+            {
+              "ingredient_id": "nasi",
+              "name": "Nasi",
+              "unit": "g",
+              "base_min_qty": 1000,
+              "min_qty": 1000,
+              "capacity_qty": 8000,
+              "held": 7,
+              "stockout_sec": 19424,
+              "bounds": {
+                "min": 500,
+                "max": 3000
+              }
+            },
+            {
+              "ingredient_id": "roti",
+              "name": "Roti",
+              "unit": "pcs",
+              "base_min_qty": 10,
+              "min_qty": 10,
+              "capacity_qty": 60,
+              "held": 0,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 5,
+                "max": 30
+              }
+            },
+            {
+              "ingredient_id": "susu",
+              "name": "Susu",
+              "unit": "ml",
+              "base_min_qty": 1000,
+              "min_qty": 1000,
+              "capacity_qty": 6000,
+              "held": 21,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 500,
+                "max": 3000
+              }
+            },
+            {
+              "ingredient_id": "teh",
+              "name": "Teh",
+              "unit": "g",
+              "base_min_qty": 100,
+              "min_qty": 100,
+              "capacity_qty": 500,
+              "held": 0,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 50,
+                "max": 300
+              }
+            },
+            {
+              "ingredient_id": "telur",
+              "name": "Telur",
+              "unit": "pcs",
+              "base_min_qty": 10,
+              "min_qty": 10,
+              "capacity_qty": 60,
+              "held": 0,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 5,
+                "max": 30
+              }
+            }
+          ],
+          "blocked": []
+        }
+      },
+      "world": {
+        "ingredients": {
+          "gula": {
+            "qty": 0,
+            "capacity_qty": 2000,
+            "base_min_qty": 300
+          },
+          "kopi": {
+            "qty": 1892,
+            "capacity_qty": 2000,
+            "base_min_qty": 300
+          },
+          "mie": {
+            "qty": 3900,
+            "capacity_qty": 4000,
+            "base_min_qty": 500
+          },
+          "nasi": {
+            "qty": 0,
+            "capacity_qty": 8000,
+            "base_min_qty": 1000
+          },
+          "roti": {
+            "qty": 58,
+            "capacity_qty": 60,
+            "base_min_qty": 10
+          },
+          "susu": {
+            "qty": 5850,
+            "capacity_qty": 6000,
+            "base_min_qty": 1000
+          },
+          "teh": {
+            "qty": 230,
+            "capacity_qty": 500,
+            "base_min_qty": 100
+          },
+          "telur": {
+            "qty": 45,
+            "capacity_qty": 60,
+            "base_min_qty": 10
+          }
+        },
+        "covered": [
+          "gula",
+          "nasi"
+        ],
+        "blocked": []
+      }
+    },
+    {
+      "id": "review-s13-09",
+      "purpose": "policy_review",
+      "note": "seed 13, review of day 0",
+      "request": {
+        "purpose": "policy_review",
+        "context": "Hari 0: 116 pesanan, 97 selesai, 22 kali ditahan, 15 komplain. Paling bermasalah: Telur (12x menahan pesanan, habis 54 menit); Nasi (6x menahan pesanan, habis 52 menit); Gula (4x menahan pesanan, habis 9 menit).\n- Gula: batas 300 (awal 300), menahan 4 pesanan, habis 9 menit\n- Kopi: batas 300 (awal 300), menahan 0 pesanan, habis 0 menit\n- Mie: batas 500 (awal 500), menahan 0 pesanan, habis 0 menit\n- Nasi: batas 1000 (awal 1000), menahan 6 pesanan, habis 52 menit\n- Roti: batas 10 (awal 10), menahan 0 pesanan, habis 0 menit\n- Susu: batas 1000 (awal 1000), menahan 0 pesanan, habis 0 menit\n- Teh: batas 100 (awal 100), menahan 0 pesanan, habis 0 menit\n- Telur: batas 10 (awal 10), menahan 12 pesanan, habis 54 menit\nUsulkan paling banyak satu perubahan batas minimum, atau tidak ada.",
+        "facts": {
+          "kind": "review",
+          "day": 0,
+          "summary": "Hari 0: 116 pesanan, 97 selesai, 22 kali ditahan, 15 komplain. Paling bermasalah: Telur (12x menahan pesanan, habis 54 menit); Nasi (6x menahan pesanan, habis 52 menit); Gula (4x menahan pesanan, habis 9 menit).",
+          "ingredients": [
+            {
+              "ingredient_id": "gula",
+              "name": "Gula",
+              "unit": "g",
+              "base_min_qty": 300,
+              "min_qty": 300,
+              "capacity_qty": 2000,
+              "held": 4,
+              "stockout_sec": 522,
+              "bounds": {
+                "min": 150,
+                "max": 900
+              }
+            },
+            {
+              "ingredient_id": "kopi",
+              "name": "Kopi",
+              "unit": "g",
+              "base_min_qty": 300,
+              "min_qty": 300,
+              "capacity_qty": 2000,
+              "held": 0,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 150,
+                "max": 900
+              }
+            },
+            {
+              "ingredient_id": "mie",
+              "name": "Mie",
+              "unit": "g",
+              "base_min_qty": 500,
+              "min_qty": 500,
+              "capacity_qty": 4000,
+              "held": 0,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 250,
+                "max": 1500
+              }
+            },
+            {
+              "ingredient_id": "nasi",
+              "name": "Nasi",
+              "unit": "g",
+              "base_min_qty": 1000,
+              "min_qty": 1000,
+              "capacity_qty": 8000,
+              "held": 6,
+              "stockout_sec": 3102,
+              "bounds": {
+                "min": 500,
+                "max": 3000
+              }
+            },
+            {
+              "ingredient_id": "roti",
+              "name": "Roti",
+              "unit": "pcs",
+              "base_min_qty": 10,
+              "min_qty": 10,
+              "capacity_qty": 60,
+              "held": 0,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 5,
+                "max": 30
+              }
+            },
+            {
+              "ingredient_id": "susu",
+              "name": "Susu",
+              "unit": "ml",
+              "base_min_qty": 1000,
+              "min_qty": 1000,
+              "capacity_qty": 6000,
+              "held": 0,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 500,
+                "max": 3000
+              }
+            },
+            {
+              "ingredient_id": "teh",
+              "name": "Teh",
+              "unit": "g",
+              "base_min_qty": 100,
+              "min_qty": 100,
+              "capacity_qty": 500,
+              "held": 0,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 50,
+                "max": 300
+              }
+            },
+            {
+              "ingredient_id": "telur",
+              "name": "Telur",
+              "unit": "pcs",
+              "base_min_qty": 10,
+              "min_qty": 10,
+              "capacity_qty": 60,
+              "held": 12,
+              "stockout_sec": 3252,
+              "bounds": {
+                "min": 5,
+                "max": 30
+              }
+            }
+          ],
+          "blocked": []
+        }
+      },
+      "world": {
+        "ingredients": {
+          "gula": {
+            "qty": 1560,
+            "capacity_qty": 2000,
+            "base_min_qty": 300
+          },
+          "kopi": {
+            "qty": 1712,
+            "capacity_qty": 2000,
+            "base_min_qty": 300
+          },
+          "mie": {
+            "qty": 3600,
+            "capacity_qty": 4000,
+            "base_min_qty": 500
+          },
+          "nasi": {
+            "qty": 4400,
+            "capacity_qty": 8000,
+            "base_min_qty": 1000
+          },
+          "roti": {
+            "qty": 56,
+            "capacity_qty": 60,
+            "base_min_qty": 10
+          },
+          "susu": {
+            "qty": 450,
+            "capacity_qty": 6000,
+            "base_min_qty": 1000
+          },
+          "teh": {
+            "qty": 220,
+            "capacity_qty": 500,
+            "base_min_qty": 100
+          },
+          "telur": {
+            "qty": 28,
+            "capacity_qty": 60,
+            "base_min_qty": 10
+          }
+        },
+        "covered": [
+          "susu"
+        ],
+        "blocked": []
+      }
+    },
+    {
+      "id": "review-s14-08",
+      "purpose": "policy_review",
+      "note": "seed 14, review of day 0",
+      "request": {
+        "purpose": "policy_review",
+        "context": "Hari 0: 115 pesanan, 90 selesai, 21 kali ditahan, 19 komplain. Paling bermasalah: Susu (15x menahan pesanan); Telur (10x menahan pesanan, habis 76 menit); Nasi (2x menahan pesanan).\n- Gula: batas 300 (awal 300), menahan 0 pesanan, habis 0 menit\n- Kopi: batas 300 (awal 300), menahan 0 pesanan, habis 0 menit\n- Mie: batas 500 (awal 500), menahan 0 pesanan, habis 0 menit\n- Nasi: batas 1000 (awal 1000), menahan 2 pesanan, habis 0 menit\n- Roti: batas 10 (awal 10), menahan 0 pesanan, habis 0 menit\n- Susu: batas 1000 (awal 1000), menahan 15 pesanan, habis 0 menit\n- Teh: batas 100 (awal 100), menahan 0 pesanan, habis 0 menit\n- Telur: batas 10 (awal 10), menahan 10 pesanan, habis 76 menit\nUsulkan paling banyak satu perubahan batas minimum, atau tidak ada.",
+        "facts": {
+          "kind": "review",
+          "day": 0,
+          "summary": "Hari 0: 115 pesanan, 90 selesai, 21 kali ditahan, 19 komplain. Paling bermasalah: Susu (15x menahan pesanan); Telur (10x menahan pesanan, habis 76 menit); Nasi (2x menahan pesanan).",
+          "ingredients": [
+            {
+              "ingredient_id": "gula",
+              "name": "Gula",
+              "unit": "g",
+              "base_min_qty": 300,
+              "min_qty": 300,
+              "capacity_qty": 2000,
+              "held": 0,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 150,
+                "max": 900
+              }
+            },
+            {
+              "ingredient_id": "kopi",
+              "name": "Kopi",
+              "unit": "g",
+              "base_min_qty": 300,
+              "min_qty": 300,
+              "capacity_qty": 2000,
+              "held": 0,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 150,
+                "max": 900
+              }
+            },
+            {
+              "ingredient_id": "mie",
+              "name": "Mie",
+              "unit": "g",
+              "base_min_qty": 500,
+              "min_qty": 500,
+              "capacity_qty": 4000,
+              "held": 0,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 250,
+                "max": 1500
+              }
+            },
+            {
+              "ingredient_id": "nasi",
+              "name": "Nasi",
+              "unit": "g",
+              "base_min_qty": 1000,
+              "min_qty": 1000,
+              "capacity_qty": 8000,
+              "held": 2,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 500,
+                "max": 3000
+              }
+            },
+            {
+              "ingredient_id": "roti",
+              "name": "Roti",
+              "unit": "pcs",
+              "base_min_qty": 10,
+              "min_qty": 10,
+              "capacity_qty": 60,
+              "held": 0,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 5,
+                "max": 30
+              }
+            },
+            {
+              "ingredient_id": "susu",
+              "name": "Susu",
+              "unit": "ml",
+              "base_min_qty": 1000,
+              "min_qty": 1000,
+              "capacity_qty": 6000,
+              "held": 15,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 500,
+                "max": 3000
+              }
+            },
+            {
+              "ingredient_id": "teh",
+              "name": "Teh",
+              "unit": "g",
+              "base_min_qty": 100,
+              "min_qty": 100,
+              "capacity_qty": 500,
+              "held": 0,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 50,
+                "max": 300
+              }
+            },
+            {
+              "ingredient_id": "telur",
+              "name": "Telur",
+              "unit": "pcs",
+              "base_min_qty": 10,
+              "min_qty": 10,
+              "capacity_qty": 60,
+              "held": 10,
+              "stockout_sec": 4574,
+              "bounds": {
+                "min": 5,
+                "max": 30
+              }
+            }
+          ],
+          "blocked": []
+        }
+      },
+      "world": {
+        "ingredients": {
+          "gula": {
+            "qty": 1710,
+            "capacity_qty": 2000,
+            "base_min_qty": 300
+          },
+          "kopi": {
+            "qty": 228,
+            "capacity_qty": 2000,
+            "base_min_qty": 300
+          },
+          "mie": {
+            "qty": 100,
+            "capacity_qty": 4000,
+            "base_min_qty": 500
+          },
+          "nasi": {
+            "qty": 4600,
+            "capacity_qty": 8000,
+            "base_min_qty": 1000
+          },
+          "roti": {
+            "qty": 14,
+            "capacity_qty": 60,
+            "base_min_qty": 10
+          },
+          "susu": {
+            "qty": 1200,
+            "capacity_qty": 6000,
+            "base_min_qty": 1000
+          },
+          "teh": {
+            "qty": 220,
+            "capacity_qty": 500,
+            "base_min_qty": 100
+          },
+          "telur": {
+            "qty": 29,
+            "capacity_qty": 60,
+            "base_min_qty": 10
+          }
+        },
+        "covered": [
+          "kopi",
+          "mie"
+        ],
+        "blocked": []
+      }
+    },
+    {
+      "id": "review-s15-08",
+      "purpose": "policy_review",
+      "note": "seed 15, review of day 0",
+      "request": {
+        "purpose": "policy_review",
+        "context": "Hari 0: 141 pesanan, 106 selesai, 48 kali ditahan, 19 komplain. Paling bermasalah: Gula (35x menahan pesanan, habis 327 menit); Telur (11x menahan pesanan, habis 90 menit); Roti (1x menahan pesanan, habis 25 menit).\n- Gula: batas 300 (awal 300), menahan 35 pesanan, habis 327 menit\n- Kopi: batas 300 (awal 300), menahan 0 pesanan, habis 0 menit\n- Mie: batas 500 (awal 500), menahan 0 pesanan, habis 0 menit\n- Nasi: batas 1000 (awal 1000), menahan 0 pesanan, habis 0 menit\n- Roti: batas 10 (awal 10), menahan 1 pesanan, habis 25 menit\n- Susu: batas 1000 (awal 1000), menahan 1 pesanan, habis 0 menit\n- Teh: batas 100 (awal 100), menahan 0 pesanan, habis 0 menit\n- Telur: batas 10 (awal 10), menahan 11 pesanan, habis 90 menit\nUsulkan paling banyak satu perubahan batas minimum, atau tidak ada.",
+        "facts": {
+          "kind": "review",
+          "day": 0,
+          "summary": "Hari 0: 141 pesanan, 106 selesai, 48 kali ditahan, 19 komplain. Paling bermasalah: Gula (35x menahan pesanan, habis 327 menit); Telur (11x menahan pesanan, habis 90 menit); Roti (1x menahan pesanan, habis 25 menit).",
+          "ingredients": [
+            {
+              "ingredient_id": "gula",
+              "name": "Gula",
+              "unit": "g",
+              "base_min_qty": 300,
+              "min_qty": 300,
+              "capacity_qty": 2000,
+              "held": 35,
+              "stockout_sec": 19607,
+              "bounds": {
+                "min": 150,
+                "max": 900
+              }
+            },
+            {
+              "ingredient_id": "kopi",
+              "name": "Kopi",
+              "unit": "g",
+              "base_min_qty": 300,
+              "min_qty": 300,
+              "capacity_qty": 2000,
+              "held": 0,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 150,
+                "max": 900
+              }
+            },
+            {
+              "ingredient_id": "mie",
+              "name": "Mie",
+              "unit": "g",
+              "base_min_qty": 500,
+              "min_qty": 500,
+              "capacity_qty": 4000,
+              "held": 0,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 250,
+                "max": 1500
+              }
+            },
+            {
+              "ingredient_id": "nasi",
+              "name": "Nasi",
+              "unit": "g",
+              "base_min_qty": 1000,
+              "min_qty": 1000,
+              "capacity_qty": 8000,
+              "held": 0,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 500,
+                "max": 3000
+              }
+            },
+            {
+              "ingredient_id": "roti",
+              "name": "Roti",
+              "unit": "pcs",
+              "base_min_qty": 10,
+              "min_qty": 10,
+              "capacity_qty": 60,
+              "held": 1,
+              "stockout_sec": 1517,
+              "bounds": {
+                "min": 5,
+                "max": 30
+              }
+            },
+            {
+              "ingredient_id": "susu",
+              "name": "Susu",
+              "unit": "ml",
+              "base_min_qty": 1000,
+              "min_qty": 1000,
+              "capacity_qty": 6000,
+              "held": 1,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 500,
+                "max": 3000
+              }
+            },
+            {
+              "ingredient_id": "teh",
+              "name": "Teh",
+              "unit": "g",
+              "base_min_qty": 100,
+              "min_qty": 100,
+              "capacity_qty": 500,
+              "held": 0,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 50,
+                "max": 300
+              }
+            },
+            {
+              "ingredient_id": "telur",
+              "name": "Telur",
+              "unit": "pcs",
+              "base_min_qty": 10,
+              "min_qty": 10,
+              "capacity_qty": 60,
+              "held": 11,
+              "stockout_sec": 5417,
+              "bounds": {
+                "min": 5,
+                "max": 30
+              }
+            }
+          ],
+          "blocked": []
+        }
+      },
+      "world": {
+        "ingredients": {
+          "gula": {
+            "qty": 0,
+            "capacity_qty": 2000,
+            "base_min_qty": 300
+          },
+          "kopi": {
+            "qty": 1856,
+            "capacity_qty": 2000,
+            "base_min_qty": 300
+          },
+          "mie": {
+            "qty": 800,
+            "capacity_qty": 4000,
+            "base_min_qty": 500
+          },
+          "nasi": {
+            "qty": 3200,
+            "capacity_qty": 8000,
+            "base_min_qty": 1000
+          },
+          "roti": {
+            "qty": 50,
+            "capacity_qty": 60,
+            "base_min_qty": 10
+          },
+          "susu": {
+            "qty": 1350,
+            "capacity_qty": 6000,
+            "base_min_qty": 1000
+          },
+          "teh": {
+            "qty": 245,
+            "capacity_qty": 500,
+            "base_min_qty": 100
+          },
+          "telur": {
+            "qty": 29,
+            "capacity_qty": 60,
+            "base_min_qty": 10
+          }
+        },
+        "covered": [
+          "gula"
+        ],
+        "blocked": []
+      }
+    },
+    {
+      "id": "review-s16-08",
+      "purpose": "policy_review",
+      "note": "seed 16, review of day 0",
+      "request": {
+        "purpose": "policy_review",
+        "context": "Hari 0: 125 pesanan, 96 selesai, 4 kali ditahan, 20 komplain. Paling bermasalah: Gula (4x menahan pesanan, habis 13 menit); Nasi (0x menahan pesanan, habis 20 menit).\n- Gula: batas 300 (awal 300), menahan 4 pesanan, habis 13 menit\n- Kopi: batas 300 (awal 300), menahan 0 pesanan, habis 0 menit\n- Mie: batas 500 (awal 500), menahan 0 pesanan, habis 0 menit\n- Nasi: batas 1000 (awal 1000), menahan 0 pesanan, habis 20 menit\n- Roti: batas 10 (awal 10), menahan 0 pesanan, habis 0 menit\n- Susu: batas 1000 (awal 1000), menahan 0 pesanan, habis 0 menit\n- Teh: batas 100 (awal 100), menahan 0 pesanan, habis 0 menit\n- Telur: batas 10 (awal 10), menahan 0 pesanan, habis 0 menit\nUsulkan paling banyak satu perubahan batas minimum, atau tidak ada.",
+        "facts": {
+          "kind": "review",
+          "day": 0,
+          "summary": "Hari 0: 125 pesanan, 96 selesai, 4 kali ditahan, 20 komplain. Paling bermasalah: Gula (4x menahan pesanan, habis 13 menit); Nasi (0x menahan pesanan, habis 20 menit).",
+          "ingredients": [
+            {
+              "ingredient_id": "gula",
+              "name": "Gula",
+              "unit": "g",
+              "base_min_qty": 300,
+              "min_qty": 300,
+              "capacity_qty": 2000,
+              "held": 4,
+              "stockout_sec": 797,
+              "bounds": {
+                "min": 150,
+                "max": 900
+              }
+            },
+            {
+              "ingredient_id": "kopi",
+              "name": "Kopi",
+              "unit": "g",
+              "base_min_qty": 300,
+              "min_qty": 300,
+              "capacity_qty": 2000,
+              "held": 0,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 150,
+                "max": 900
+              }
+            },
+            {
+              "ingredient_id": "mie",
+              "name": "Mie",
+              "unit": "g",
+              "base_min_qty": 500,
+              "min_qty": 500,
+              "capacity_qty": 4000,
+              "held": 0,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 250,
+                "max": 1500
+              }
+            },
+            {
+              "ingredient_id": "nasi",
+              "name": "Nasi",
+              "unit": "g",
+              "base_min_qty": 1000,
+              "min_qty": 1000,
+              "capacity_qty": 8000,
+              "held": 0,
+              "stockout_sec": 1217,
+              "bounds": {
+                "min": 500,
+                "max": 3000
+              }
+            },
+            {
+              "ingredient_id": "roti",
+              "name": "Roti",
+              "unit": "pcs",
+              "base_min_qty": 10,
+              "min_qty": 10,
+              "capacity_qty": 60,
+              "held": 0,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 5,
+                "max": 30
+              }
+            },
+            {
+              "ingredient_id": "susu",
+              "name": "Susu",
+              "unit": "ml",
+              "base_min_qty": 1000,
+              "min_qty": 1000,
+              "capacity_qty": 6000,
+              "held": 0,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 500,
+                "max": 3000
+              }
+            },
+            {
+              "ingredient_id": "teh",
+              "name": "Teh",
+              "unit": "g",
+              "base_min_qty": 100,
+              "min_qty": 100,
+              "capacity_qty": 500,
+              "held": 0,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 50,
+                "max": 300
+              }
+            },
+            {
+              "ingredient_id": "telur",
+              "name": "Telur",
+              "unit": "pcs",
+              "base_min_qty": 10,
+              "min_qty": 10,
+              "capacity_qty": 60,
+              "held": 0,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 5,
+                "max": 30
+              }
+            }
+          ],
+          "blocked": []
+        }
+      },
+      "world": {
+        "ingredients": {
+          "gula": {
+            "qty": 1600,
+            "capacity_qty": 2000,
+            "base_min_qty": 300
+          },
+          "kopi": {
+            "qty": 228,
+            "capacity_qty": 2000,
+            "base_min_qty": 300
+          },
+          "mie": {
+            "qty": 3600,
+            "capacity_qty": 4000,
+            "base_min_qty": 500
+          },
+          "nasi": {
+            "qty": 4000,
+            "capacity_qty": 8000,
+            "base_min_qty": 1000
+          },
+          "roti": {
+            "qty": 10,
+            "capacity_qty": 60,
+            "base_min_qty": 10
+          },
+          "susu": {
+            "qty": 2250,
+            "capacity_qty": 6000,
+            "base_min_qty": 1000
+          },
+          "teh": {
+            "qty": 195,
+            "capacity_qty": 500,
+            "base_min_qty": 100
+          },
+          "telur": {
+            "qty": 27,
+            "capacity_qty": 60,
+            "base_min_qty": 10
+          }
+        },
+        "covered": [
+          "kopi",
+          "roti"
+        ],
+        "blocked": []
+      }
+    },
+    {
+      "id": "review-s17-10",
+      "purpose": "policy_review",
+      "note": "seed 17, review of day 0",
+      "request": {
+        "purpose": "policy_review",
+        "context": "Hari 0: 122 pesanan, 111 selesai, 27 kali ditahan, 16 komplain. Paling bermasalah: Susu (15x menahan pesanan, habis 70 menit); Nasi (6x menahan pesanan, habis 92 menit); Kopi (6x menahan pesanan).\n- Gula: batas 300 (awal 300), menahan 4 pesanan, habis 6 menit\n- Kopi: batas 300 (awal 300), menahan 6 pesanan, habis 0 menit\n- Mie: batas 500 (awal 500), menahan 0 pesanan, habis 0 menit\n- Nasi: batas 1000 (awal 1000), menahan 6 pesanan, habis 92 menit\n- Roti: batas 10 (awal 10), menahan 0 pesanan, habis 0 menit\n- Susu: batas 1000 (awal 1000), menahan 15 pesanan, habis 70 menit\n- Teh: batas 100 (awal 100), menahan 0 pesanan, habis 0 menit\n- Telur: batas 10 (awal 10), menahan 0 pesanan, habis 0 menit\nUsulkan paling banyak satu perubahan batas minimum, atau tidak ada.",
+        "facts": {
+          "kind": "review",
+          "day": 0,
+          "summary": "Hari 0: 122 pesanan, 111 selesai, 27 kali ditahan, 16 komplain. Paling bermasalah: Susu (15x menahan pesanan, habis 70 menit); Nasi (6x menahan pesanan, habis 92 menit); Kopi (6x menahan pesanan).",
+          "ingredients": [
+            {
+              "ingredient_id": "gula",
+              "name": "Gula",
+              "unit": "g",
+              "base_min_qty": 300,
+              "min_qty": 300,
+              "capacity_qty": 2000,
+              "held": 4,
+              "stockout_sec": 360,
+              "bounds": {
+                "min": 150,
+                "max": 900
+              }
+            },
+            {
+              "ingredient_id": "kopi",
+              "name": "Kopi",
+              "unit": "g",
+              "base_min_qty": 300,
+              "min_qty": 300,
+              "capacity_qty": 2000,
+              "held": 6,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 150,
+                "max": 900
+              }
+            },
+            {
+              "ingredient_id": "mie",
+              "name": "Mie",
+              "unit": "g",
+              "base_min_qty": 500,
+              "min_qty": 500,
+              "capacity_qty": 4000,
+              "held": 0,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 250,
+                "max": 1500
+              }
+            },
+            {
+              "ingredient_id": "nasi",
+              "name": "Nasi",
+              "unit": "g",
+              "base_min_qty": 1000,
+              "min_qty": 1000,
+              "capacity_qty": 8000,
+              "held": 6,
+              "stockout_sec": 5492,
+              "bounds": {
+                "min": 500,
+                "max": 3000
+              }
+            },
+            {
+              "ingredient_id": "roti",
+              "name": "Roti",
+              "unit": "pcs",
+              "base_min_qty": 10,
+              "min_qty": 10,
+              "capacity_qty": 60,
+              "held": 0,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 5,
+                "max": 30
+              }
+            },
+            {
+              "ingredient_id": "susu",
+              "name": "Susu",
+              "unit": "ml",
+              "base_min_qty": 1000,
+              "min_qty": 1000,
+              "capacity_qty": 6000,
+              "held": 15,
+              "stockout_sec": 4200,
+              "bounds": {
+                "min": 500,
+                "max": 3000
+              }
+            },
+            {
+              "ingredient_id": "teh",
+              "name": "Teh",
+              "unit": "g",
+              "base_min_qty": 100,
+              "min_qty": 100,
+              "capacity_qty": 500,
+              "held": 0,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 50,
+                "max": 300
+              }
+            },
+            {
+              "ingredient_id": "telur",
+              "name": "Telur",
+              "unit": "pcs",
+              "base_min_qty": 10,
+              "min_qty": 10,
+              "capacity_qty": 60,
+              "held": 0,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 5,
+                "max": 30
+              }
+            }
+          ],
+          "blocked": []
+        }
+      },
+      "world": {
+        "ingredients": {
+          "gula": {
+            "qty": 1320,
+            "capacity_qty": 2000,
+            "base_min_qty": 300
+          },
+          "kopi": {
+            "qty": 1622,
+            "capacity_qty": 2000,
+            "base_min_qty": 300
+          },
+          "mie": {
+            "qty": 300,
+            "capacity_qty": 4000,
+            "base_min_qty": 500
+          },
+          "nasi": {
+            "qty": 6200,
+            "capacity_qty": 8000,
+            "base_min_qty": 1000
+          },
+          "roti": {
+            "qty": 4,
+            "capacity_qty": 60,
+            "base_min_qty": 10
+          },
+          "susu": {
+            "qty": 4950,
+            "capacity_qty": 6000,
+            "base_min_qty": 1000
+          },
+          "teh": {
+            "qty": 180,
+            "capacity_qty": 500,
+            "base_min_qty": 100
+          },
+          "telur": {
+            "qty": 39,
+            "capacity_qty": 60,
+            "base_min_qty": 10
+          }
+        },
+        "covered": [
+          "mie",
+          "roti"
+        ],
+        "blocked": []
+      }
+    },
+    {
+      "id": "review-s18-07",
+      "purpose": "policy_review",
+      "note": "seed 18, review of day 0",
+      "request": {
+        "purpose": "policy_review",
+        "context": "Hari 0: 132 pesanan, 105 selesai, 18 kali ditahan, 20 komplain. Paling bermasalah: Gula (10x menahan pesanan, habis 56 menit); Nasi (4x menahan pesanan, habis 27 menit); Susu (4x menahan pesanan).\n- Gula: batas 300 (awal 300), menahan 10 pesanan, habis 56 menit\n- Kopi: batas 300 (awal 300), menahan 0 pesanan, habis 0 menit\n- Mie: batas 500 (awal 500), menahan 0 pesanan, habis 0 menit\n- Nasi: batas 1000 (awal 1000), menahan 4 pesanan, habis 27 menit\n- Roti: batas 10 (awal 10), menahan 0 pesanan, habis 0 menit\n- Susu: batas 1000 (awal 1000), menahan 4 pesanan, habis 0 menit\n- Teh: batas 100 (awal 100), menahan 0 pesanan, habis 0 menit\n- Telur: batas 10 (awal 10), menahan 0 pesanan, habis 0 menit\nUsulkan paling banyak satu perubahan batas minimum, atau tidak ada.",
+        "facts": {
+          "kind": "review",
+          "day": 0,
+          "summary": "Hari 0: 132 pesanan, 105 selesai, 18 kali ditahan, 20 komplain. Paling bermasalah: Gula (10x menahan pesanan, habis 56 menit); Nasi (4x menahan pesanan, habis 27 menit); Susu (4x menahan pesanan).",
+          "ingredients": [
+            {
+              "ingredient_id": "gula",
+              "name": "Gula",
+              "unit": "g",
+              "base_min_qty": 300,
+              "min_qty": 300,
+              "capacity_qty": 2000,
+              "held": 10,
+              "stockout_sec": 3375,
+              "bounds": {
+                "min": 150,
+                "max": 900
+              }
+            },
+            {
+              "ingredient_id": "kopi",
+              "name": "Kopi",
+              "unit": "g",
+              "base_min_qty": 300,
+              "min_qty": 300,
+              "capacity_qty": 2000,
+              "held": 0,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 150,
+                "max": 900
+              }
+            },
+            {
+              "ingredient_id": "mie",
+              "name": "Mie",
+              "unit": "g",
+              "base_min_qty": 500,
+              "min_qty": 500,
+              "capacity_qty": 4000,
+              "held": 0,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 250,
+                "max": 1500
+              }
+            },
+            {
+              "ingredient_id": "nasi",
+              "name": "Nasi",
+              "unit": "g",
+              "base_min_qty": 1000,
+              "min_qty": 1000,
+              "capacity_qty": 8000,
+              "held": 4,
+              "stockout_sec": 1635,
+              "bounds": {
+                "min": 500,
+                "max": 3000
+              }
+            },
+            {
+              "ingredient_id": "roti",
+              "name": "Roti",
+              "unit": "pcs",
+              "base_min_qty": 10,
+              "min_qty": 10,
+              "capacity_qty": 60,
+              "held": 0,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 5,
+                "max": 30
+              }
+            },
+            {
+              "ingredient_id": "susu",
+              "name": "Susu",
+              "unit": "ml",
+              "base_min_qty": 1000,
+              "min_qty": 1000,
+              "capacity_qty": 6000,
+              "held": 4,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 500,
+                "max": 3000
+              }
+            },
+            {
+              "ingredient_id": "teh",
+              "name": "Teh",
+              "unit": "g",
+              "base_min_qty": 100,
+              "min_qty": 100,
+              "capacity_qty": 500,
+              "held": 0,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 50,
+                "max": 300
+              }
+            },
+            {
+              "ingredient_id": "telur",
+              "name": "Telur",
+              "unit": "pcs",
+              "base_min_qty": 10,
+              "min_qty": 10,
+              "capacity_qty": 60,
+              "held": 0,
+              "stockout_sec": 0,
+              "bounds": {
+                "min": 5,
+                "max": 30
+              }
+            }
+          ],
+          "blocked": []
+        }
+      },
+      "world": {
+        "ingredients": {
+          "gula": {
+            "qty": 1310,
+            "capacity_qty": 2000,
+            "base_min_qty": 300
+          },
+          "kopi": {
+            "qty": 1730,
+            "capacity_qty": 2000,
+            "base_min_qty": 300
+          },
+          "mie": {
+            "qty": 600,
+            "capacity_qty": 4000,
+            "base_min_qty": 500
+          },
+          "nasi": {
+            "qty": 4000,
+            "capacity_qty": 8000,
+            "base_min_qty": 1000
+          },
+          "roti": {
+            "qty": 8,
+            "capacity_qty": 60,
+            "base_min_qty": 10
+          },
+          "susu": {
+            "qty": 1500,
+            "capacity_qty": 6000,
+            "base_min_qty": 1000
+          },
+          "teh": {
+            "qty": 150,
+            "capacity_qty": 500,
+            "base_min_qty": 100
+          },
+          "telur": {
+            "qty": 31,
+            "capacity_qty": 60,
+            "base_min_qty": 10
+          }
+        },
+        "covered": [
+          "roti"
+        ],
+        "blocked": []
+      }
+    }
+  ]
+}

@@ -3,6 +3,7 @@ export * from './agents';
 export * from './clock';
 export * from './events';
 export * from './ids';
+export * from './llm/attempts';
 export * from './llm/contracts';
 export * from './llm/context';
 export * from './llm/fake-llm';
