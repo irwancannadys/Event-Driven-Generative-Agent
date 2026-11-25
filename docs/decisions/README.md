@@ -40,3 +40,4 @@ Satu file per keputusan, beberapa baris tiap file. Brief menang jika ada bentura
 | [034](034-stock-admin-is-the-generative-agent.md) | Admin Stok menjadi agent generatif (menggantikan Rina di Tahap 5) |
 | [035](035-decision-pipeline-with-fake-llm.md) | Pipa keputusan agent: FakeLLM instan, validasi, ulang, fallback aturan |
 | [036](036-what-the-learning-admin-achieves.md) | Apa yang dicapai Admin Stok yang belajar (hasil eksperimen) |
+| [037](037-async-model-call-in-two-steps.md) | Model sungguhan memakai dua langkah: bertanya di luar transaksi, menerapkan di langkah baru |
