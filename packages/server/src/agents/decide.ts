@@ -101,11 +101,15 @@ function keepCall(
   return Number(result.lastInsertRowid);
 }
 
-type DecidedExtra = { llm_call_id?: number; fallback_reason?: FallbackReason; attempts?: number };
+export type DecidedExtra = {
+  llm_call_id?: number;
+  fallback_reason?: FallbackReason;
+  attempts?: number;
+};
 
-function writeDecided<P extends Purpose>(
+export function writeDecided<P extends Purpose>(
   emit: Emit,
-  input: DecideInput<P>,
+  input: Pick<DecideInput<P>, 'agent' | 'purpose'>,
   thinkEventId: number,
   origin: Decided<P>['origin'],
   decision: DecisionOf<P>,
@@ -306,6 +310,16 @@ async function askUntilDecided<P extends Purpose>(
   settle(ctx, input, thinkEventId, attempts, { kind: 'fallback', reason: lastReason }, then);
 }
 
+/** The agent stops thinking and is free for the tasks that wait. `kick` starts them. */
+export function freeAgent(ctx: Context, emit: Emit, agent: AgentId): void {
+  emit({
+    type: 'agent_state_changed',
+    actor: agent,
+    origin: 'rule',
+    payload: { agent_id: agent, state: 'idle', station: readAgent(ctx.db, agent).station },
+  });
+}
+
 /**
  * Step B: the answer is in. Writes what the model was asked and answered, the decision, lets the agent go
  * back to being free, and does what follows from the decision.
@@ -330,18 +344,7 @@ function settle<P extends Purpose>(
         attempt.model,
       ),
     );
-    const free = (): void => {
-      emit({
-        type: 'agent_state_changed',
-        actor: input.agent,
-        origin: 'rule',
-        payload: {
-          agent_id: input.agent,
-          state: 'idle',
-          station: readAgent(ctx.db, input.agent).station,
-        },
-      });
-    };
+    const free = (): void => freeAgent(ctx, emit, input.agent);
 
     if (outcome.kind === 'llm') {
       const decided = writeDecided(emit, input, thinkEventId, 'llm', outcome.decision, {

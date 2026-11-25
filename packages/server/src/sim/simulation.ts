@@ -12,6 +12,7 @@ import {
 import type { Db } from '../db/database';
 import type { EventBus } from '../events/bus';
 import { reactToEvent } from '../agents/reactions';
+import { recoverPendingThinks } from '../agents/recover';
 import { Thinker } from '../agents/thinker';
 import { readWorldSeed } from '../db/queries';
 import { rebuildProjections } from '../projection/rebuild';
@@ -33,6 +34,8 @@ export interface Simulation {
   recovered: boolean;
   /** How many events were replayed to restore the world (0 for a new world). */
   replayedEvents: number;
+  /** How many thoughts that a stop had cut short were finished by the rules at boot (decision 037). */
+  settledThoughts: number;
   /** Asks the model that takes its time, one question at a time. Only when there is such a model. */
   thinker?: Thinker;
   /** The boss jumps forward in time: records `sim_time_advanced`, then moves the clock. */
@@ -108,6 +111,7 @@ export function bootSimulation(options: BootOptions): Simulation {
   holder.ctx = context;
 
   if (!existing) initializeWorld(context, { seed: scenario.seed });
+  const settledThoughts = existing && agents ? recoverPendingThinks(context) : 0;
 
   return {
     ctx: context,
@@ -116,6 +120,7 @@ export function bootSimulation(options: BootOptions): Simulation {
     thinker: context.thinker,
     recovered: existing,
     replayedEvents,
+    settledThoughts,
     skipTime(seconds: number): void {
       if (!Number.isInteger(seconds) || seconds <= 0) {
         throw new Error(`skipTime expects a positive whole number of seconds, got ${seconds}`);

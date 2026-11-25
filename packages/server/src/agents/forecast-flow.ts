@@ -12,7 +12,7 @@ import type { Db } from '../db/database';
 import { readRecipe, readStock } from '../db/queries';
 import type { Context, Emit } from '../usecases/context';
 import { enqueueWork, readAgent, readOpenTasks } from './engine';
-import { coveredIngredients, proposeToBoss } from './restock-flow';
+import { coveredIngredients, proposeToBoss, type Proposal } from './restock-flow';
 
 // The stock admin looks ahead (decision 034): twice a day she compares what the same hours asked of each
 // ingredient on the last days with what is on the shelf, and orders before the stock runs out. She looks only
@@ -97,6 +97,18 @@ function forecastNow(ctx: Context): Forecast | null {
   return { proposal, lines };
 }
 
+const toProposal = (found: RestockProposal): Proposal => ({
+  items: found.items,
+  urgency: found.urgency,
+  rationale: found.rationale,
+});
+
+/** What the forecast would have her order now, or `null` when nothing is needed. */
+export function forecastProposal(ctx: Context): Proposal | null {
+  const forecast = forecastNow(ctx);
+  return forecast && toProposal(forecast.proposal);
+}
+
 /**
  * The hour to look ahead has come. She goes to the shelf to work it out when she is free and the forecast says
  * something must be ordered; otherwise nothing happens (no trip, no question for the model).
@@ -115,18 +127,10 @@ export function scheduleForecast(ctx: Context, emit: Emit): void {
 export function decideForecast(ctx: Context, emit: Emit): void {
   const forecast = forecastNow(ctx);
   if (!forecast) return; // what she saw has been taken care of meanwhile
-  const toProposal = (found: RestockProposal) => ({
-    items: found.items,
-    urgency: found.urgency,
-    rationale: found.rationale,
-  });
   proposeToBoss(ctx, emit, {
     kind: 'forecast',
     lines: forecast.lines,
     fallback: toProposal(forecast.proposal),
-    refresh: () => {
-      const now = forecastNow(ctx);
-      return now && toProposal(now.proposal);
-    },
+    refresh: () => forecastProposal(ctx),
   });
 }

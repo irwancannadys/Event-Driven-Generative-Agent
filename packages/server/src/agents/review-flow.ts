@@ -14,7 +14,7 @@ import {
 import { readMemories, readOpenPolicyIngredients, readStock, type ReportRow } from '../db/queries';
 import { listEvents } from '../events/store';
 import { nextId, type Context, type Emit } from '../usecases/context';
-import { decide, validationWorld, type Decided } from './decide';
+import { decide, validationWorld, writeDecided, type Decided } from './decide';
 import { enqueueWork } from './engine';
 
 // The nightly review of the stock admin (decision 034): when the cafe has closed she reads the day from the
@@ -122,10 +122,15 @@ function reflectOnChanges(
   }
 }
 
-/** She has read the day. She decides what to say about it and what to propose, and writes both down. */
-export function decideReview(ctx: Context, emit: Emit, day: number): void {
-  if (reviewWritten(ctx, day)) return; // a day is reviewed once, also after a restart
+interface ReviewSetup {
+  metrics: ReturnType<typeof dayMetrics>;
+  ingredients: PolicyIngredient[];
+  notes: ReturnType<typeof readMemories>;
+  blocked: Set<string>;
+}
 
+/** What she needs to review a day: its numbers, the ingredients, her notes, and what she must not propose again. */
+function setUpReview(ctx: Context, emit: Emit, day: number): ReviewSetup {
   const epoch = ctx.db
     .prepare("SELECT COALESCE(MAX(id), 0) FROM events WHERE type = 'world_initialized'")
     .pluck()
@@ -144,8 +149,29 @@ export function decideReview(ctx: Context, emit: Emit, day: number): void {
   }));
   // First what came of what she proposed before: the notes she writes now are part of what she knows tonight.
   reflectOnChanges(ctx, emit, day, events, ingredients);
-  const notes = readMemories(ctx.db, 'stock_admin');
-  const blocked = blockedIngredients(ctx);
+  return {
+    metrics,
+    ingredients,
+    notes: readMemories(ctx.db, 'stock_admin'),
+    blocked: blockedIngredients(ctx),
+  };
+}
+
+/** The latest day that has closed and has no review yet, if any. */
+export function pendingReviewDay(ctx: Context): number | undefined {
+  const closed = ctx.db
+    .prepare("SELECT payload_json FROM events WHERE type = 'day_closed' ORDER BY id DESC")
+    .pluck()
+    .all() as string[];
+  return closed
+    .map((json) => (JSON.parse(json) as { day: number }).day)
+    .find((day) => !reviewWritten(ctx, day));
+}
+
+/** She has read the day. She decides what to say about it and what to propose, and writes both down. */
+export function decideReview(ctx: Context, emit: Emit, day: number): void {
+  if (reviewWritten(ctx, day)) return; // a day is reviewed once, also after a restart
+  const { metrics, ingredients, notes, blocked } = setUpReview(ctx, emit, day);
 
   decide(
     ctx,
@@ -234,6 +260,29 @@ function writeReview(
     duration_sim_sec: TASK_DURATION_SEC.submitting_report,
     ref: { type: 'report', id: report_id },
   });
+}
+
+/**
+ * The thought of a review was cut short by a restart (decision 037): the rules decide it, and what follows from
+ * the decision is written as it would have been. The model is not asked again at boot.
+ */
+export function finishReviewByRules(
+  ctx: Context,
+  emit: Emit,
+  day: number,
+  thinkEventId: number,
+): void {
+  if (reviewWritten(ctx, day)) return;
+  const { metrics, ingredients, blocked } = setUpReview(ctx, emit, day);
+  const decided = writeDecided(
+    emit,
+    { agent: 'stock_admin', purpose: 'policy_review' },
+    thinkEventId,
+    'fallback',
+    reviewPolicyRule(metrics, ingredients, { blocked }),
+    { fallback_reason: 'timeout' },
+  );
+  writeReview(ctx, emit, day, metrics, ingredients, decided);
 }
 
 /**

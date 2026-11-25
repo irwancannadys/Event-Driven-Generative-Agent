@@ -14,7 +14,7 @@ import {
 } from '@cafe/core';
 import { readReport, readStock, readWorldSeed, type ReportRow } from '../db/queries';
 import { nextId, type Context, type Emit } from '../usecases/context';
-import { decide, validationWorld } from './decide';
+import { decide, validationWorld, type Decided } from './decide';
 import { enqueueGoto, enqueueWork, readOpenTasks } from './engine';
 
 // The restock flow (decisions 022 and 024): a low stock sends the admin to check the shelf, she writes
@@ -73,10 +73,14 @@ export function candidatesNow(ctx: Context): RestockCandidate[] {
   }));
 }
 
-type Proposal = { items: StockLine[]; urgency: 'low' | 'normal' | 'high'; rationale: string };
+export type Proposal = {
+  items: StockLine[];
+  urgency: 'low' | 'normal' | 'high';
+  rationale: string;
+};
 
 /** What the rule "fill up to full" would order now, or `null` when nothing is low (or all of it is covered). */
-function lowStockProposal(ctx: Context): Proposal | null {
+export function lowStockProposal(ctx: Context): Proposal | null {
   const proposal = proposeRestock(candidatesNow(ctx), coveredIngredients(ctx));
   return (
     proposal && { items: proposal.items, urgency: proposal.urgency, rationale: proposal.rationale }
@@ -143,27 +147,30 @@ export function proposeToBoss(
       fallback: input.fallback,
       refresh: input.refresh,
     },
-    (decided, emitDecided) => {
-      const { items, urgency, rationale } = decided.decision;
-      const report_id = nextId(ctx.db, 'reports');
-      emitDecided({
-        type: 'restock_proposed',
-        actor: 'stock_admin',
-        origin: decided.origin,
-        payload: {
-          report: { report_id, ...restockReport(candidatesNow(ctx), items, urgency) },
-          items,
-          urgency,
-          rationale,
-        },
-      });
-      enqueueWork(ctx, emitDecided, 'stock_admin', 'boss_desk', {
-        label: 'submitting_report',
-        duration_sim_sec: TASK_DURATION_SEC.submitting_report,
-        ref: { type: 'report', id: report_id },
-      });
-    },
+    (decided, emitDecided) => emitProposal(ctx, emitDecided, decided),
   );
+}
+
+/** What follows from a decision about what to order: the report for the boss, and the trip to carry it. */
+export function emitProposal(ctx: Context, emit: Emit, decided: Decided<'stock_proposal'>): void {
+  const { items, urgency, rationale } = decided.decision;
+  const report_id = nextId(ctx.db, 'reports');
+  emit({
+    type: 'restock_proposed',
+    actor: 'stock_admin',
+    origin: decided.origin,
+    payload: {
+      report: { report_id, ...restockReport(candidatesNow(ctx), items, urgency) },
+      items,
+      urgency,
+      rationale,
+    },
+  });
+  enqueueWork(ctx, emit, 'stock_admin', 'boss_desk', {
+    label: 'submitting_report',
+    duration_sim_sec: TASK_DURATION_SEC.submitting_report,
+    ref: { type: 'report', id: report_id },
+  });
 }
 
 /** The report is on the boss's desk. The agent who carried it goes back to her place. */

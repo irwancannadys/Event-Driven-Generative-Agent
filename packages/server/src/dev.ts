@@ -120,6 +120,11 @@ export async function startDevServer(options: DevServerOptions): Promise<DevServ
       ? `Dunia dipulihkan dari log: ${simulation.replayedEvents} event dibaca ulang, ${where}, seed ${simulation.scenario.seed}`
       : `Dunia baru dibuat: ${where}, seed ${simulation.scenario.seed}`,
   );
+  if (simulation.settledThoughts > 0) {
+    log(
+      `Pemikiran Admin Stok yang terputus saat server berhenti diselesaikan aturan: ${simulation.settledThoughts}`,
+    );
+  }
   log('Tekan Ctrl+C untuk berhenti. Jam virtual disimpan saat berhenti.');
   banner = true;
   for (const line of heldBack.splice(0)) log(line);
