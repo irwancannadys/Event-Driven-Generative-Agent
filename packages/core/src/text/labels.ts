@@ -26,7 +26,7 @@ export const AGENT_STATE_NAME_ID = {
   idle: 'idle',
   walking: 'berjalan',
   working: 'bekerja',
-  thinking: 'berpikir',
+  thinking: 'mikir...',
 } as const;
 
 export const TASK_NAME_ID: Record<TaskLabel, string> = {

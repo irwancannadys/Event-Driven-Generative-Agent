@@ -23,4 +23,8 @@ describe('agentActivity', () => {
     expect(agentActivity(agent({ state: 'working', label: 'cooking' }))).toBe('bekerja: memasak');
     expect(agentActivity(agent({ state: 'working', label: null }))).toBe('bekerja: bekerja');
   });
+
+  it('says that the agent is waiting for the model while she thinks', () => {
+    expect(agentActivity(agent({ state: 'thinking', station: 'stock_shelf' }))).toBe('mikir...');
+  });
 });

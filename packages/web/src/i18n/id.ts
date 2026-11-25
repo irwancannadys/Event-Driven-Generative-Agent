@@ -39,7 +39,7 @@ export const ID = {
   'agent.status.idle': 'Idle',
   'agent.status.walking': 'Berjalan',
   'agent.status.working': 'Bekerja',
-  'agent.status.thinking': 'Berpikir',
+  'agent.status.thinking': 'Mikir...',
   'agents.summary': 'bekerja',
   'agents.outOf': 'dari',
   'orders.doneTotal': 'selesai',

@@ -7,6 +7,7 @@ import type { LLMClient, LLMRequest, LLMResponse } from '@cafe/core';
 export class DeferredLLM implements LLMClient {
   readonly calls: LLMRequest[] = [];
   private readonly waiting: {
+    request: LLMRequest;
     resolve: (response: LLMResponse) => void;
     reject: (error: Error) => void;
   }[] = [];
@@ -14,12 +15,17 @@ export class DeferredLLM implements LLMClient {
 
   complete(request: LLMRequest): Promise<LLMResponse> {
     this.calls.push(request);
-    return new Promise((resolve, reject) => this.waiting.push({ resolve, reject }));
+    return new Promise((resolve, reject) => this.waiting.push({ request, resolve, reject }));
   }
 
   /** How many questions are waiting for an answer. */
   get pending(): number {
     return this.waiting.length;
+  }
+
+  /** The oldest question that waits for an answer. */
+  get oldest(): LLMRequest | undefined {
+    return this.waiting[0]?.request;
   }
 
   /** Answers the oldest question. */

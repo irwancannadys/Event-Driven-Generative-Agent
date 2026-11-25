@@ -105,6 +105,52 @@ describe('agentRows', () => {
   });
 });
 
+describe('a character that thinks (the model is working on it)', () => {
+  const thinking = (state: WorldState) =>
+    apply(
+      state,
+      event(
+        'agent_state_changed',
+        { agent_id: 'stock_admin', state: 'thinking', station: 'stock_shelf' },
+        30_200,
+        { actor: 'stock_admin' },
+      ),
+    );
+
+  it('is busy, says Mikir... in the pill and on the label, and has no end time to wait for', () => {
+    const state = thinking(world({ agents: [agent('stock_admin', 'stock_shelf')] }));
+    expect(agentRows(state)).toEqual([
+      {
+        id: 'stock_admin',
+        name: 'Admin Stok',
+        where: 'Rak Stok',
+        doing: 'mikir...',
+        until: null,
+        initials: 'AS',
+        busy: true,
+        statusLabel: 'Mikir...',
+        detail: 'Rak Stok',
+      },
+    ]);
+    expect(agentsSummary(state)).toEqual({ busy: 1, total: 1 });
+  });
+
+  it('is free again when the decision has been made', () => {
+    const state = apply(
+      thinking(world({ agents: [agent('stock_admin', 'stock_shelf')] })),
+      event(
+        'agent_state_changed',
+        { agent_id: 'stock_admin', state: 'idle', station: 'stock_shelf' },
+        30_900,
+        {
+          actor: 'stock_admin',
+        },
+      ),
+    );
+    expect(agentRows(state)[0]).toMatchObject({ busy: false, statusLabel: 'Idle', doing: 'idle' });
+  });
+});
+
 describe('logRows', () => {
   it('lists the newest event first and leaves out the plumbing of the characters', () => {
     const state = apply(
