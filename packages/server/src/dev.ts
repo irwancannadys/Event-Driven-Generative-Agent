@@ -1,10 +1,11 @@
-import { DEFAULT_FAKE_SCRIPT, FakeLLM, WS_PATH, dayOf, formatClock } from '@cafe/core';
+import { WS_PATH, dayOf, formatClock } from '@cafe/core';
 import type { Config } from './config';
 import { openDatabase } from './db/database';
 import { loadMigrations, runMigrations } from './db/migrate';
 import { seedReferenceData } from './db/seed';
 import { EventBus } from './events/bus';
 import { startApiServer } from './http/api';
+import { makeLlm } from './llm/make-llm';
 import { formatEvent } from './log/terminal-log';
 import { saveClockState } from './sim/clock-state';
 import { Pacer } from './sim/pacer';
@@ -57,14 +58,11 @@ export async function startDevServer(options: DevServerOptions): Promise<DevServ
     }
   });
 
-  if (config.llmProvider === 'ollama') {
-    throw new Error('LLM_PROVIDER=ollama is not wired into the server yet');
-  }
   const simulation = bootSimulation({
     db,
     bus,
     scenario: config.scenario,
-    llm: config.llmProvider === 'fake' ? new FakeLLM(DEFAULT_FAKE_SCRIPT) : undefined,
+    llm: makeLlm(config),
   });
   const pacer = new Pacer(simulation.clock, { speed: config.speed, tickMs: options.tickMs });
   // Pages hear about a change of speed or pause right away, not at the next 250 ms tick.
@@ -109,6 +107,15 @@ export async function startDevServer(options: DevServerOptions): Promise<DevServ
   );
   log(`Kecepatan: ${pacer.speed}x (1 detik asli = ${pacer.speed} detik virtual)`);
   log(
+    `Model    : ${
+      config.llmProvider === 'ollama'
+        ? `${config.ollama.model} lewat Ollama (${config.ollama.url}), jawaban ditunggu paling lama ${config.ollama.timeoutSec} detik`
+        : config.llmProvider === 'fake'
+          ? 'FakeLLM (skrip, tanpa model sungguhan)'
+          : 'tidak ada, aturan yang memutuskan'
+    }`,
+  );
+  log(
     simulation.recovered
       ? `Dunia dipulihkan dari log: ${simulation.replayedEvents} event dibaca ulang, ${where}, seed ${simulation.scenario.seed}`
       : `Dunia baru dibuat: ${where}, seed ${simulation.scenario.seed}`,
@@ -137,6 +144,9 @@ export async function startDevServer(options: DevServerOptions): Promise<DevServ
       stopped = true;
       pacer.stop();
       clearInterval(saver);
+      // A question the model is still working on is left open: the next boot finishes it (decision 037).
+      simulation.thinker?.close();
+      await simulation.thinker?.idle();
       await sockets.close();
       await api.close();
       saveClock();

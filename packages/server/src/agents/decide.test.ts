@@ -3,8 +3,8 @@ import { FakeLLM, type FakeLine, type FallbackReason, type StoredEvent } from '@
 import { rebuildProjections } from '../projection/rebuild';
 import { snapshotProjections } from '../projection/snapshot';
 import { createTestWorld } from '../test-support/world';
-import { transact, type Context } from '../usecases/context';
-import { MAX_ATTEMPTS, decide, validationWorld } from './decide';
+import { transact, type Context, type Emit } from '../usecases/context';
+import { MAX_ATTEMPTS, decide, validationWorld, type DecideInput, type Decided } from './decide';
 
 // The pipeline of a decision (decisions 010 and 034): the question, the answer of the model checked, a retry
 // with the error, and the rules when the model keeps failing. A proposal of milk is the example.
@@ -20,18 +20,27 @@ const GOOD = {
   rationale: 'Pesan susu sebelum jam sibuk.',
 };
 
+/** A model that answers at once decides inside the step, so what follows from the decision runs right there. */
+function decideOnce(ctx: Context, emit: Emit, input: DecideInput<'stock_proposal'>) {
+  let decided: Decided<'stock_proposal'> | undefined;
+  decide(ctx, emit, input, (result) => {
+    decided = result;
+  });
+  return decided as Decided<'stock_proposal'>;
+}
+
 function setup(script: FakeLine[] | undefined) {
   const world = createTestWorld();
   const fake = script ? new FakeLLM(script) : undefined;
   const ctx: Context = { ...world.ctx, ...(fake && { llm: fake }) };
   const run = () =>
     transact(ctx, (emit) =>
-      decide(ctx, emit, {
+      decideOnce(ctx, emit, {
         agent: 'stock_admin',
         purpose: 'stock_proposal',
         subject: { ingredient_ids: ['susu'] },
         built: { context: 'Susu tinggal 2500 ml.', facts: {} },
-        world: validationWorld(ctx),
+        world: () => validationWorld(ctx),
         fallback: RULE,
       }),
     );
@@ -127,11 +136,11 @@ describe('decide with a model', () => {
     const fake = new FakeLLM(answer(GOOD));
     const ctx: Context = { ...world.ctx, llm: fake };
     const decided = transact(ctx, (emit) =>
-      decide(ctx, emit, {
+      decideOnce(ctx, emit, {
         agent: 'stock_admin',
         purpose: 'stock_proposal',
         built: { context: 'x', facts: {} },
-        world: validationWorld(ctx, new Set(['susu'])),
+        world: () => validationWorld(ctx, new Set(['susu'])),
         fallback: RULE,
       }),
     );
@@ -155,11 +164,11 @@ describe('decide with a model', () => {
     const ctx: Context = { ...world.ctx, llm: fake as FakeLLM };
     expect(() =>
       transact(ctx, (emit) => {
-        decide(ctx, emit, {
+        decideOnce(ctx, emit, {
           agent: 'stock_admin',
           purpose: 'stock_proposal',
           built: { context: 'x', facts: {} },
-          world: validationWorld(ctx),
+          world: () => validationWorld(ctx),
           fallback: RULE,
         });
         throw new Error('the step failed');

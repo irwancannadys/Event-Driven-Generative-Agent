@@ -59,14 +59,9 @@ export function coveredIngredients(ctx: Context): Set<string> {
   return covered;
 }
 
-/**
- * The admin has checked the shelf. The rule "fill up to full" says what a proposal would be; she decides
- * (with the model, when there is one, and the rule when it fails), writes the report and carries it to the
- * boss. The think request and the decision are written one after the other at the same moment: the model
- * answers at once here, the asynchronous way comes in stage 6.
- */
-export function decideRestock(ctx: Context, emit: Emit): void {
-  const candidates: RestockCandidate[] = readStock(ctx.db).map((row) => ({
+/** The stock of every ingredient as it is now, in the shape the restock rules want. */
+export function candidatesNow(ctx: Context): RestockCandidate[] {
+  return readStock(ctx.db).map((row) => ({
     ingredient_id: row.ingredient_id,
     name: row.name,
     unit: row.unit,
@@ -76,14 +71,32 @@ export function decideRestock(ctx: Context, emit: Emit): void {
     low: row.low_flagged,
     out: row.out_flagged,
   }));
-  const covered = coveredIngredients(ctx);
-  const proposal = proposeRestock(candidates, covered);
+}
+
+type Proposal = { items: StockLine[]; urgency: 'low' | 'normal' | 'high'; rationale: string };
+
+/** What the rule "fill up to full" would order now, or `null` when nothing is low (or all of it is covered). */
+function lowStockProposal(ctx: Context): Proposal | null {
+  const proposal = proposeRestock(candidatesNow(ctx), coveredIngredients(ctx));
+  return (
+    proposal && { items: proposal.items, urgency: proposal.urgency, rationale: proposal.rationale }
+  );
+}
+
+/**
+ * The admin has checked the shelf. The rule "fill up to full" says what a proposal would be; she decides
+ * (with the model, when there is one, and the rule when it fails), writes the report and carries it to the
+ * boss. A model that answers at once decides in this very step; one that takes its time decides in a step of
+ * its own (decision 037), and what she would order is then worked out again when the answer arrives.
+ */
+export function decideRestock(ctx: Context, emit: Emit): void {
+  const candidates = candidatesNow(ctx);
+  const proposal = lowStockProposal(ctx);
   if (!proposal) return;
   proposeToBoss(ctx, emit, {
-    candidates,
-    covered,
     kind: 'low_stock',
-    fallback: { items: proposal.items, urgency: proposal.urgency, rationale: proposal.rationale },
+    fallback: proposal,
+    refresh: () => lowStockProposal(ctx),
     lines: candidates
       .filter((candidate) =>
         proposal.items.some((item) => item.ingredient_id === candidate.ingredient_id),
@@ -110,39 +123,47 @@ export function proposeToBoss(
   ctx: Context,
   emit: Emit,
   input: {
-    candidates: readonly RestockCandidate[];
-    covered: ReadonlySet<string>;
     kind: 'low_stock' | 'forecast';
     lines: readonly StockContextLine[];
-    fallback: { items: StockLine[]; urgency: 'low' | 'normal' | 'high'; rationale: string };
+    /** What the rule orders now. */
+    fallback: Proposal;
+    /** What the rule orders by the time a slow model has answered, `null` when nothing is needed any more. */
+    refresh: () => Proposal | null;
   },
 ): void {
-  const decided = decide(ctx, emit, {
-    agent: 'stock_admin',
-    purpose: 'stock_proposal',
-    subject: { ingredient_ids: input.fallback.items.map((item) => item.ingredient_id) },
-    built: stockContext({ kind: input.kind, now: ctx.clock.now(), lines: input.lines }),
-    world: validationWorld(ctx, input.covered),
-    fallback: input.fallback,
-  });
-  const { items, urgency, rationale } = decided.decision;
-  const report_id = nextId(ctx.db, 'reports');
-  emit({
-    type: 'restock_proposed',
-    actor: 'stock_admin',
-    origin: decided.origin,
-    payload: {
-      report: { report_id, ...restockReport(input.candidates, items, urgency) },
-      items,
-      urgency,
-      rationale,
+  decide(
+    ctx,
+    emit,
+    {
+      agent: 'stock_admin',
+      purpose: 'stock_proposal',
+      subject: { ingredient_ids: input.fallback.items.map((item) => item.ingredient_id) },
+      built: stockContext({ kind: input.kind, now: ctx.clock.now(), lines: input.lines }),
+      world: () => validationWorld(ctx, coveredIngredients(ctx)),
+      fallback: input.fallback,
+      refresh: input.refresh,
     },
-  });
-  enqueueWork(ctx, emit, 'stock_admin', 'boss_desk', {
-    label: 'submitting_report',
-    duration_sim_sec: TASK_DURATION_SEC.submitting_report,
-    ref: { type: 'report', id: report_id },
-  });
+    (decided, emitDecided) => {
+      const { items, urgency, rationale } = decided.decision;
+      const report_id = nextId(ctx.db, 'reports');
+      emitDecided({
+        type: 'restock_proposed',
+        actor: 'stock_admin',
+        origin: decided.origin,
+        payload: {
+          report: { report_id, ...restockReport(candidatesNow(ctx), items, urgency) },
+          items,
+          urgency,
+          rationale,
+        },
+      });
+      enqueueWork(ctx, emitDecided, 'stock_admin', 'boss_desk', {
+        label: 'submitting_report',
+        duration_sim_sec: TASK_DURATION_SEC.submitting_report,
+        ref: { type: 'report', id: report_id },
+      });
+    },
+  );
 }
 
 /** The report is on the boss's desk. The agent who carried it goes back to her place. */

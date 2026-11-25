@@ -4,13 +4,15 @@ import {
   makeStaticSource,
   priorityOf,
   type DueItem,
-  type InstantLLM,
+  isInstant,
+  type LLMClient,
   type Scenario,
   type SimTime,
 } from '@cafe/core';
 import type { Db } from '../db/database';
 import type { EventBus } from '../events/bus';
 import { reactToEvent } from '../agents/reactions';
+import { Thinker } from '../agents/thinker';
 import { readWorldSeed } from '../db/queries';
 import { rebuildProjections } from '../projection/rebuild';
 import { transact, type Context } from '../usecases/context';
@@ -31,6 +33,8 @@ export interface Simulation {
   recovered: boolean;
   /** How many events were replayed to restore the world (0 for a new world). */
   replayedEvents: number;
+  /** Asks the model that takes its time, one question at a time. Only when there is such a model. */
+  thinker?: Thinker;
   /** The boss jumps forward in time: records `sim_time_advanced`, then moves the clock. */
   skipTime(seconds: number): void;
 }
@@ -45,8 +49,12 @@ export interface BootOptions {
    * stages, which rely on "nobody cooks yet", switch them off. Default `true`.
    */
   agents?: boolean;
-  /** The model that helps the agents decide. Without one the rules decide (decision 034). */
-  llm?: InstantLLM;
+  /**
+   * The model that helps the agents decide. Without one the rules decide (decision 034). A model that answers
+   * at once (`FakeLLM`) decides inside the step; any other one is asked outside the transaction through a
+   * `Thinker` that is made here (decision 037).
+   */
+  llm?: LLMClient;
 }
 
 /**
@@ -95,6 +103,7 @@ export function bootSimulation(options: BootOptions): Simulation {
     react: agents ? reactToEvent : undefined,
     scenario,
     llm: options.llm,
+    thinker: options.llm && !isInstant(options.llm) ? new Thinker(options.llm) : undefined,
   };
   holder.ctx = context;
 
@@ -104,6 +113,7 @@ export function bootSimulation(options: BootOptions): Simulation {
     ctx: context,
     clock,
     scenario,
+    thinker: context.thinker,
     recovered: existing,
     replayedEvents,
     skipTime(seconds: number): void {

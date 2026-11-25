@@ -1,4 +1,5 @@
-import type { Event, InstantLLM, Scenario, SimClock, StoredEvent } from '@cafe/core';
+import type { Event, LLMClient, Scenario, SimClock, StoredEvent } from '@cafe/core';
+import type { Thinker } from '../agents/thinker';
 import type { Db } from '../db/database';
 import { appendEvent } from '../events/store';
 
@@ -27,9 +28,12 @@ export interface Context {
   scenario?: Scenario;
   /**
    * The model that helps the agents decide (decision 034). Without one the rules decide, as before. Replay
-   * never uses it: the decisions are in the log.
+   * never uses it: the decisions are in the log. An instant model (`FakeLLM`) answers inside the step; any
+   * other one is asked through `thinker`, outside the transaction (decision 037).
    */
-  llm?: InstantLLM;
+  llm?: LLMClient;
+  /** Asks a model that takes its time, one question at a time. Present exactly when `llm` is not instant. */
+  thinker?: Thinker;
 }
 
 /** A rule of the cafe was broken by the request (unknown menu item, wrong order status, ...). */
@@ -49,6 +53,8 @@ interface Step {
   written: StoredEvent[];
   queue: StoredEvent[];
   emit: Emit;
+  /** Work that may only start once the step has committed (decision 037). */
+  afterCommit: (() => void)[];
 }
 
 /** The step that is running on a database right now, so that nested `transact` calls can join it. */
@@ -63,7 +69,7 @@ function createStep(ctx: Context): Step {
     queue.push(stored);
     return stored;
   };
-  return { written, queue, emit };
+  return { written, queue, emit, afterCommit: [] };
 }
 
 function drainReactions(ctx: Context, step: Step): void {
@@ -117,7 +123,25 @@ export function transact<T>(ctx: Context, work: (emit: Emit) => T): T {
       console.error('publish failed after commit:', error);
     }
   }
+  for (const work of step.afterCommit) {
+    try {
+      work();
+    } catch (error) {
+      console.error('work after commit failed:', error);
+    }
+  }
   return result;
+}
+
+/**
+ * Runs `work` once the running step has committed, and not at all if it rolls back. Outside a step it runs
+ * at once. A question for a slow model is sent this way: it must not be asked for a thought that was never
+ * written down.
+ */
+export function afterCommit(ctx: Context, work: () => void): void {
+  const running = activeSteps.get(ctx.db);
+  if (running) running.afterCommit.push(work);
+  else work();
 }
 
 /** Entity tables whose ids are allocated inside the transaction that creates them (decision 012). */

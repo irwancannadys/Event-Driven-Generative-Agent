@@ -14,7 +14,7 @@ import {
 import { readMemories, readOpenPolicyIngredients, readStock, type ReportRow } from '../db/queries';
 import { listEvents } from '../events/store';
 import { nextId, type Context, type Emit } from '../usecases/context';
-import { decide, validationWorld } from './decide';
+import { decide, validationWorld, type Decided } from './decide';
 import { enqueueWork } from './engine';
 
 // The nightly review of the stock admin (decision 034): when the cafe has closed she reads the day from the
@@ -36,6 +36,16 @@ function reviewWritten(ctx: Context, day: number): boolean {
     .pluck()
     .all() as string[];
   return rows.some((json) => (JSON.parse(json) as { day: number }).day === day);
+}
+
+/** Ingredients that must not be proposed: a proposal for them waits at the boss, or a note says not to try again. */
+function blockedIngredients(ctx: Context): Set<string> {
+  return new Set([
+    ...readOpenPolicyIngredients(ctx.db),
+    ...readMemories(ctx.db, 'stock_admin')
+      .filter((entry) => entry.ingredient_id !== null && blocksRepeat(entry.text))
+      .map((entry) => entry.ingredient_id as string),
+  ]);
 }
 
 function note(
@@ -135,25 +145,40 @@ export function decideReview(ctx: Context, emit: Emit, day: number): void {
   // First what came of what she proposed before: the notes she writes now are part of what she knows tonight.
   reflectOnChanges(ctx, emit, day, events, ingredients);
   const notes = readMemories(ctx.db, 'stock_admin');
-  const blocked = new Set([
-    ...readOpenPolicyIngredients(ctx.db),
-    ...notes
-      .filter((note) => note.ingredient_id !== null && blocksRepeat(note.text))
-      .map((note) => note.ingredient_id as string),
-  ]);
+  const blocked = blockedIngredients(ctx);
 
-  const decided = decide(ctx, emit, {
-    agent: 'stock_admin',
-    purpose: 'policy_review',
-    built: reviewContext({
-      metrics,
-      ingredients,
-      lessons: notes.slice(-5).map((note) => note.text),
-      blocked: [...blocked],
-    }),
-    world: { ...validationWorld(ctx), blocked },
-    fallback: reviewPolicyRule(metrics, ingredients, { blocked }),
-  });
+  decide(
+    ctx,
+    emit,
+    {
+      agent: 'stock_admin',
+      purpose: 'policy_review',
+      built: reviewContext({
+        metrics,
+        ingredients,
+        lessons: notes.slice(-5).map((note) => note.text),
+        blocked: [...blocked],
+      }),
+      world: () => ({ ...validationWorld(ctx), blocked: blockedIngredients(ctx) }),
+      fallback: reviewPolicyRule(metrics, ingredients, { blocked }),
+      refresh: () => reviewPolicyRule(metrics, ingredients, { blocked: blockedIngredients(ctx) }),
+    },
+    (decided, emitDecided) => {
+      if (reviewWritten(ctx, day)) return; // the review was written while she thought
+      writeReview(ctx, emitDecided, day, metrics, ingredients, decided);
+    },
+  );
+}
+
+/** What follows from the decision: the review, the note of the night, and the proposal for the boss if there is one. */
+function writeReview(
+  ctx: Context,
+  emit: Emit,
+  day: number,
+  metrics: ReturnType<typeof dayMetrics>,
+  ingredients: readonly PolicyIngredient[],
+  decided: Decided<'policy_review'>,
+): void {
   const { summary, change, rationale } = decided.decision;
 
   emit({
@@ -179,11 +204,13 @@ export function decideReview(ctx: Context, emit: Emit, day: number): void {
   note(emit, 'observation', DEFAULT_TEXT.observationText(facts), worst?.ingredient_id);
   if (!change) return;
 
-  const current = ingredients.find((entry) => entry.ingredient_id === change.ingredient_id);
-  if (!current) return;
+  // The minimum in force when the proposal is written, which may not be the one she read the day with.
+  const current = readStock(ctx.db).find((row) => row.ingredient_id === change.ingredient_id);
+  const named = ingredients.find((entry) => entry.ingredient_id === change.ingredient_id);
+  if (!current || !named) return;
   const proposed = {
-    name: current.name,
-    unit: current.unit,
+    name: named.name,
+    unit: named.unit,
     from: current.min_qty,
     to: change.min_qty,
   };

@@ -155,13 +155,15 @@ function mayStart(ctx: Context, task: TaskRow): boolean {
 
 /**
  * Gets a free agent going: starts the next task in its queue, or sets it to idle when the queue is
- * empty. Does nothing while a task is running. Tasks that may not start are skipped on the spot.
+ * empty. Does nothing while a task is running, or while the agent is thinking. Tasks that may not start are skipped on the spot.
  */
 export function kick(ctx: Context, emit: Emit, agentId: AgentId): void {
   for (;;) {
     const tasks = readOpenTasks(ctx.db, agentId);
     if (tasks.some((task) => task.status === 'active')) return;
     const agent = readAgent(ctx.db, agentId);
+    // Thinking is not interrupted: what waits in the queue starts when the answer has been applied (decision 037).
+    if (agent.state === 'thinking') return;
 
     const next = tasks[0];
     if (!next) {

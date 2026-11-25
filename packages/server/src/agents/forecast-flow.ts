@@ -11,7 +11,7 @@ import {
 import type { Db } from '../db/database';
 import { readRecipe, readStock } from '../db/queries';
 import type { Context, Emit } from '../usecases/context';
-import { enqueueWork, readOpenTasks } from './engine';
+import { enqueueWork, readAgent, readOpenTasks } from './engine';
 import { coveredIngredients, proposeToBoss } from './restock-flow';
 
 // The stock admin looks ahead (decision 034): twice a day she compares what the same hours asked of each
@@ -40,8 +40,6 @@ function demandHistory(db: Db) {
 }
 
 interface Forecast {
-  candidates: ForecastCandidate[];
-  covered: Set<string>;
   proposal: RestockProposal;
   lines: StockContextLine[];
 }
@@ -96,7 +94,7 @@ function forecastNow(ctx: Context): Forecast | null {
         shortfall: reading?.shortfall ?? 0,
       };
     });
-  return { candidates, covered, proposal, lines };
+  return { proposal, lines };
 }
 
 /**
@@ -105,6 +103,7 @@ function forecastNow(ctx: Context): Forecast | null {
  */
 export function scheduleForecast(ctx: Context, emit: Emit): void {
   if (readOpenTasks(ctx.db, 'stock_admin').length > 0) return; // busy: not now
+  if (readAgent(ctx.db, 'stock_admin').state === 'thinking') return; // busy thinking
   if (!forecastNow(ctx)) return;
   enqueueWork(ctx, emit, 'stock_admin', 'stock_shelf', {
     label: 'forecasting',
@@ -116,12 +115,18 @@ export function scheduleForecast(ctx: Context, emit: Emit): void {
 export function decideForecast(ctx: Context, emit: Emit): void {
   const forecast = forecastNow(ctx);
   if (!forecast) return; // what she saw has been taken care of meanwhile
-  const { proposal } = forecast;
+  const toProposal = (found: RestockProposal) => ({
+    items: found.items,
+    urgency: found.urgency,
+    rationale: found.rationale,
+  });
   proposeToBoss(ctx, emit, {
-    candidates: forecast.candidates,
-    covered: forecast.covered,
     kind: 'forecast',
     lines: forecast.lines,
-    fallback: { items: proposal.items, urgency: proposal.urgency, rationale: proposal.rationale },
+    fallback: toProposal(forecast.proposal),
+    refresh: () => {
+      const now = forecastNow(ctx);
+      return now && toProposal(now.proposal);
+    },
   });
 }
