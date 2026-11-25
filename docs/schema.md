@@ -104,7 +104,7 @@ SQLite lewat `better-sqlite3`. Migrasi awal: `0001_init.sql` (Langkah 10). Dafta
 
 ## 5. Operasional
 
-**`llm_calls`**: `id` INTEGER PK, `purpose`, `input_summary` TEXT, `output_json` TEXT nullable, `valid` 0/1, `latency_ms` INTEGER, `model` TEXT, `fallback_used` 0/1, `sim_time` INTEGER, `created_at`. Dirujuk `agent_decided.llm_call_id`. Tidak dipakai replay.
+**`llm_calls`**: `id` INTEGER PK, `purpose`, `input_summary` TEXT, `output_json` TEXT nullable, `valid` 0/1, `latency_ms` INTEGER, `model` TEXT, `fallback_used` 0/1, `sim_time` INTEGER, `created_at`. Dirujuk `agent_decided.llm_call_id`. Tidak dipakai replay. Sejak Tahap 6 percobaan yang tidak dijawab sama sekali (Ollama mati, waktu habis) juga dapat baris: `valid` 0, `output_json` kosong, `model` `unavailable`; satu keputusan bisa punya sampai tiga baris (tiga percobaan).
 
 **`sim_clock`**: satu baris (`id = 1`): `current_sim_sec`, `speed` (detik virtual per detik asli, default 60), `paused` 0/1. Disimpan berkala dan saat shutdown.
 

@@ -274,15 +274,15 @@ Menggantikan "Pelayan dengan memori dan inisiatif" atas permintaan pemilik (kepu
 **Tujuan:** ganti `FakeLLM` dengan model lokal untuk **usulan belanja** dan **review kebijakan** (inisiatif pelayan jatuh, keputusan 034), dengan pengaman lengkap.
 
 **Tugas:**
-- [ ] Pasang Ollama, uji model kandidat
-- [ ] `eval/llm-situations.json` (sekitar 20 situasi) dan skrip evaluasi yang mencetak: persentase JSON valid, persentase aksi benar, latensi. "Aksi benar" untuk `policy_review` = lolos pemeriksaan berbasis aturan (bahan dikenal, batas dalam rentang yang diizinkan); untuk `stock_proposal` = lolos pemeriksaan berbasis aturan (semua bahan yang tipis masuk, qty <= kapasitas, tidak ada bahan nyasar), bukan mencocokkan angka persis
-- [ ] Bandingkan 2 sampai 3 model (mulai 4B sampai 9B), pilih yang **terkecil dan masih benar**
-- [ ] `OllamaLLM`: parameter `format` (JSON schema), temperature 0, timeout, antrean satu panggilan sekaligus
-- [ ] Retry maksimal 2 dengan umpan balik galat validasi, lalu **fallback aturan** dan catat
-- [ ] Tabel `llm_calls` (tujuan, ringkasan input, output, valid, latensi, model, fallback)
-- [ ] Saklar lewat `.env` (`LLM_PROVIDER=fake|ollama`)
-- [ ] Status "mikir..." di tampilan selama menunggu; jam virtual tetap jalan, dan jawaban dicek ulang saat diterapkan (keputusan #10)
-- [ ] Terapkan ke `stock_proposal` dan `policy_review`
+- [x] Pasang Ollama, uji model kandidat
+- [x] `eval/llm-situations.json` (sekitar 20 situasi) dan skrip evaluasi yang mencetak: persentase JSON valid, persentase aksi benar, latensi. "Aksi benar" untuk `policy_review` = lolos pemeriksaan berbasis aturan (bahan dikenal, batas dalam rentang yang diizinkan); untuk `stock_proposal` = lolos pemeriksaan berbasis aturan (semua bahan yang tipis masuk, qty <= kapasitas, tidak ada bahan nyasar), bukan mencocokkan angka persis
+- [x] Bandingkan 2 sampai 3 model (mulai 4B sampai 9B), pilih yang **terkecil dan masih benar**
+- [x] `OllamaLLM`: parameter `format` (JSON schema), temperature 0, timeout, antrean satu panggilan sekaligus
+- [x] Retry maksimal 2 dengan umpan balik galat validasi, lalu **fallback aturan** dan catat
+- [x] Tabel `llm_calls` (tujuan, ringkasan input, output, valid, latensi, model, fallback)
+- [x] Saklar lewat `.env` (`LLM_PROVIDER=fake|ollama`)
+- [x] Status "mikir..." di tampilan selama menunggu; jam virtual tetap jalan, dan jawaban dicek ulang saat diterapkan (keputusan #10)
+- [x] Terapkan ke `stock_proposal` dan `policy_review`
 
 **Tes:** mock Ollama (JSON rusak, timeout, ID tidak dikenal, enum salah) memicu fallback yang benar; jawaban basi (kondisi berubah saat menunggu) ditolak lalu fallback; tes kontrak schema.
 

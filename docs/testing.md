@@ -17,7 +17,7 @@ npm install      # pasang dependency
 npm test
 ```
 
-**Yang diharapkan:** baris terakhir seperti `Tests  1054 passed (1054)` (angkanya naik tiap tahap) dan tidak ada tulisan `failed`. Kalau ada yang merah, nama tesnya menunjukkan bagian mana yang rusak.
+**Yang diharapkan:** baris terakhir seperti `Tests  1156 passed (1156)` (angkanya naik tiap tahap) dan tidak ada tulisan `failed`. Kalau ada yang merah, nama tesnya menunjukkan bagian mana yang rusak.
 
 Pemeriksaan lain yang cepat: `npm run lint`, `npm run typecheck`, `npm run format:check`. Ketiganya tidak boleh mencetak error.
 
@@ -191,7 +191,8 @@ Semua lewat variabel lingkungan atau file `.env` (salin dari `.env.example`):
 | `CROWD_PCT` | keramaian, 100 = hari biasa, 200 = dua kali lipat (server mulai di 150 supaya sering ada kejadian; di atas 250 satu koki tertinggal berjam-jam) | 150 |
 | `COMPLAINT_CHANCE_PCT` | peluang pesanan yang menunggu sampai batas waktu komplain jadi komplain | 15 |
 | `COMPLAINT_WAIT_MIN` | menit virtual menunggu sebelum pesanan bisa dikomplain (1 sampai 1440) | 20 |
-| `LLM_PROVIDER` | `fake` (FakeLLM, skrip) atau `off` (aturan saja); lihat bagian 10 | fake |
+| `LLM_PROVIDER` | `fake` (FakeLLM, skrip), `off` (aturan saja) atau `ollama` (model sungguhan, lihat bagian 11) | fake |
+| `OLLAMA_URL` / `OLLAMA_MODEL` / `OLLAMA_TIMEOUT_SEC` | alamat Ollama, model yang ditanya, dan detik asli menunggu satu jawaban (hanya untuk `ollama`) | `http://127.0.0.1:11434` / `qwen3:4b` / 60 |
 | `STOCK_FORECAST` | `on` atau `off`: Admin Stok memperkirakan dan memesan jam 10:00 dan 15:00 | on |
 
 Nilai yang salah (mis. `SPEED=abc`) membuat server menolak nyala dengan pesan yang menyebut nama variabelnya.
@@ -341,8 +342,8 @@ Gua uji keempatnya di server sungguhan (45 menit disetujui, 45 menit ditolak, 65
 
 - **Koki kewalahan di jam makan siang.** Ada satu koki dan pesanan sekitar 14 per jam, jadi antrean menumpuk dan komplain "layanan lambat" muncul. Itu perilaku yang wajar dan bahan pelajaran tentang bottleneck, bukan bug. Kasir menjawab komplain sendiri dengan template permohonan maaf.
 - **Komplain ringan dijawab kasir sendiri.** Di pengaturan bawaan komplain muncul di menit ke-20 menunggu, dan kasir (kurang dari 40 menit) langsung membalas dengan permintaan maaf tanpa menyusahkan bos. Mau lihat komplain yang sampai ke meja bos? Lihat bagian 6.9.
-- Teks laporan dan balasan komplain masih **template**. Sejak Tahap 5 Admin Stok memakai `FakeLLM` (skrip, bukan model sungguhan) untuk belanja dan review malam (bagian 10); kasir dan koki tetap aturan. Model sungguhan baru di Tahap 6.
-- Rina (pelayan) ada di papan di Meja 2 dan memang tetap diam: perannya dibuang dari Tahap 5 (keputusan 034). Status `berpikir` belum dipakai (Tahap 6).
+- Teks laporan dan balasan komplain masih **template**. Sejak Tahap 5 Admin Stok memakai `FakeLLM` (skrip) untuk belanja dan review malam (bagian 10), dan sejak Tahap 6 bisa memakai model sungguhan lewat Ollama (bagian 11); kasir dan koki tetap aturan.
+- Rina (pelayan) ada di papan di Meja 2 dan memang tetap diam: perannya dibuang dari Tahap 5 (keputusan 034). Status `Mikir...` dipakai Admin Stok saat menunggu model sungguhan (bagian 11).
 - Tampilan 3D ada sejak Tahap 4 (lihat bagian 9).
 - Setelah `day_closed` (20:00) sampai `day_opened` hari berikutnya tidak ada pesanan baru, tapi karakter menyelesaikan sisa tugasnya. Percepat dengan `{"speed":3600}` atau `{"advance_seconds":...}`.
 
@@ -475,3 +476,66 @@ Pakai dunia baru (`rm -f data/cafe.db*`) supaya perbandingannya bersih.
 - Hari 0 belum punya riwayat, jadi prakiraan baru bermakna dari hari 1 (rata-rata jam yang sama dari maksimal 3 hari terakhir).
 - Kartu Admin Stok kosong sebelum hari 0 tutup, itu normal.
 - Rina tetap diam (keputusan 034).
+
+## 11. Tahap 6: model lokal lewat Ollama
+
+Sampai Tahap 5 Admin Stok dijawab `FakeLLM`, skrip yang menjawab seketika. Sekarang kafe bisa bertanya ke **model sungguhan yang jalan di Mac lu** (Ollama, gratis, tanpa internet). Model butuh beberapa detik, jadi Admin Stok "mikir..." selagi jam virtual terus jalan, jawabannya diperiksa, dan kalau salah atau model mati, aturan yang memutuskan. Bawaan `npm run dev` tetap `fake`; model sungguhan hanya nyala kalau lu minta.
+
+### 11.1 Siapkan Ollama (sekali)
+
+```
+ollama serve            # tab sendiri (atau buka aplikasi Ollama), biarkan jalan
+ollama pull qwen3:4b    # ±2,5 GB, sekali saja
+ollama list             # qwen3:4b harus ada
+```
+
+### 11.2 Ukur modelnya
+
+```
+npm run eval:llm -- --model qwen3:4b      # ±2 menit: 20 situasi dari eval/llm-situations.json
+```
+
+**Yang diharapkan** (di mesin gua, Apple M5): tabel dengan `semua  20  100%  90%  100%  0%` (JSON valid, benar di coba pertama, benar dalam tiga coba, jatuh ke aturan) dan latensi p50 sekitar 3 sampai 4 detik, p95 sekitar 5. Model lain: `--model llama3.2:3b` (benar 75%, sering menulis bahan dobel di usulan belanja) dan `--model qwen3:8b` (sama baik, 5,2 GB). Opsi: `--runs 3` (hasilnya sama karena temperature 0, jadi tidak perlu), `--only stock_proposal` atau `--only policy_review`, `--verbose`. Perbandingan lengkap dan caranya ada di [keputusan 038](decisions/038-which-local-model.md).
+
+"Benar" artinya lolos pemeriksaan aturan (bahan dikenal, jumlah muat di rak, batas dalam rentang, tidak basi), **bukan** bahwa usulannya yang paling bijak.
+
+`npm run eval:situations` membuat ulang `eval/llm-situations.json` dari hari simulasi (perlu kalau pertanyaan Admin Stok berubah; tes menjaga file itu sama dengan hasil pembangkitnya).
+
+### 11.3 Kafe dengan model sungguhan
+
+```
+rm -f data/cafe.db*                        # dunia baru
+LLM_PROVIDER=ollama npm run dev            # tab 1 (atau isi LLM_PROVIDER=ollama di .env)
+npm run web                                # tab 2
+```
+
+Banner server mencetak `Model    : qwen3:4b lewat Ollama (...)`. Pilih **600x** di menu waktu supaya cepat. Yang dicari:
+
+- Kartu **Karakter**: Admin Stok berstatus **Mikir...** selama model bekerja (2 sampai 5 detik asli). Label di atas kepalanya juga "Admin Stok · mikir...". Itu terjadi saat ada bahan tipis (di seed 42 sekitar 09:50), saat prakiraan jam 10:00 dan 15:00, dan di review malam sekitar 20:03.
+- Log (filter **LLM**): `agent_decided` berasal dari LLM, lalu `restock_proposed` atau `daily_review_created`. Cap jamnya **lebih lambat** dari saat dia mulai mikir: jam virtual jalan terus. Di 600x tiga detik asli adalah 30 menit virtual, dan di 3600x tiga jam virtual (review jam 20:03 bisa tertulis lewat tengah malam). Itu perilaku, bukan bug.
+- Selama dia mikir, tugas lain yang antre menunggu; begitu jawaban dipakai, dia lanjut kerja.
+- Setiap panggilan tercatat di tabel `llm_calls` (latensi, model, valid atau tidak). Melihatnya (server boleh tetap jalan):
+  `node -e "const D=require('better-sqlite3');console.table(new D('data/cafe.db',{readonly:true}).prepare('SELECT id,purpose,valid,latency_ms,model,fallback_used FROM llm_calls').all())"`
+
+Satu hari penuh di 600x yang gua jalankan: 4 usulan belanja dan 1 review, semuanya `valid=1`, tanpa fallback, latensi 2,4 sampai 5,1 detik.
+
+### 11.4 Uji pemulihan: server mati di tengah mikir
+
+Kartu **Karakter** menunjukkan "Mikir..." hanya beberapa detik, jadi tekan **Ctrl+C di tab 1 tepat saat itu** (coba lagi kalau meleset). Nyalakan lagi dengan perintah yang sama:
+
+- Banner: `Pemikiran Admin Stok yang terputus saat server berhenti diselesaikan aturan: 1`.
+- Log: `agent_decided ... fallback_reason=timeout` (aturan yang memutuskan) lalu `restock_proposed`, dan Admin Stok kembali kerja (tidak macet di "Mikir...").
+- Model **tidak** ditanya ulang saat nyala; nyalakan sekali lagi dan tidak ada yang berubah.
+
+### 11.5 Kalau Ollama mati atau modelnya tidak ada
+
+Kafe tidak macet. Coba: `LLM_PROVIDER=ollama OLLAMA_URL=http://127.0.0.1:9 npm run dev` (tidak ada yang mendengar di sana) atau `OLLAMA_MODEL=model-yang-tidak-ada`. Setiap keputusan Admin Stok dicoba tiga kali, gagal dalam sekejap, lalu aturan memutuskan: log `agent_decided ... fallback_reason=timeout attempts=3`, `llm_calls` berisi tiga baris `valid=0 model=unavailable` (yang terakhir `fallback_used=1`), dan usulannya sama seperti kalau modelnya `off`. Alamat yang bukan http atau https ditolak server dengan pesan yang menyebut `OLLAMA_URL`.
+
+### 11.6 Yang wajar
+
+- **Model kecil bisa salah.** Jawaban yang ditolak (bahan tak dikenal, jumlah melebihi ruang di rak) dikirim balik dengan alasannya, sampai tiga kali; setelah itu aturan yang memutuskan. Itu desainnya.
+- **Lolos pemeriksaan bukan berarti bijak.** Alasan yang ditulis model kadang membingungkan; yang dijaga aturan adalah bahan, jumlah, dan rentang, dan bos tetap yang menyetujui.
+- **Hasil dengan model tidak bisa diulang persis** di mesin lain (temperature 0 dan seed belum menjamin itu). Yang selalu sama: replay (membaca log), semua tes, dan golden (`FakeLLM`).
+- Panggilan pertama setelah model dimuat ke memori lebih lama dari biasanya.
+- Kasir dan koki tetap aturan. Triase komplain lewat model baru di Tahap 7.
+

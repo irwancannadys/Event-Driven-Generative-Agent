@@ -246,7 +246,9 @@ cooking_done           order 5                                     rule
 stock_low              susu 400 <= batas 500                       rule
 agent_think_requested  stock_admin, stock_proposal                 rule
 agent_state_changed    stock_admin thinking                        rule
+  (model sungguhan: jam jalan terus, jawaban dipakai di langkah sendiri)
 agent_decided          stock_proposal (items, urgency)             llm
+agent_state_changed    stock_admin idle                            rule
 restock_proposed       laporan "Usul belanja susu"                 llm
 agent_task_assigned    stock_admin goto boss_desk                  rule
 agent_task_finished    stock_admin goto boss_desk                  rule
