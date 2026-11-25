@@ -18,6 +18,7 @@ describe('parseConfig', () => {
         stockForecast: true,
       },
       llmProvider: 'fake',
+      ollama: { url: 'http://127.0.0.1:11434', model: 'qwen3:4b', timeoutSec: 60 },
     });
   });
 
@@ -25,8 +26,36 @@ describe('parseConfig', () => {
     expect(parseConfig({ LLM_PROVIDER: 'off' }, root).llmProvider).toBe('off');
     expect(parseConfig({ LLM_PROVIDER: ' FAKE ' }, root).llmProvider).toBe('fake');
     expect(parseConfig({ LLM_PROVIDER: '' }, root).llmProvider).toBe('fake');
-    expect(() => parseConfig({ LLM_PROVIDER: 'ollama' }, root)).toThrow(
-      /LLM_PROVIDER must be fake or off/,
+    expect(() => parseConfig({ LLM_PROVIDER: 'openai' }, root)).toThrow(
+      /LLM_PROVIDER must be fake, off or ollama/,
+    );
+  });
+
+  it('asks the local model when told to, and says where it is and how long to wait for it', () => {
+    expect(parseConfig({ LLM_PROVIDER: ' Ollama ' }, root).llmProvider).toBe('ollama');
+    expect(
+      parseConfig(
+        {
+          LLM_PROVIDER: 'ollama',
+          OLLAMA_URL: 'http://localhost:11500',
+          OLLAMA_MODEL: ' llama3.2:3b ',
+          OLLAMA_TIMEOUT_SEC: '90',
+        },
+        root,
+      ).ollama,
+    ).toEqual({ url: 'http://localhost:11500', model: 'llama3.2:3b', timeoutSec: 90 });
+  });
+
+  it('refuses a model address that is not http or https and a timeout out of range, naming the variable', () => {
+    expect(() => parseConfig({ OLLAMA_URL: 'localhost:11434' }, root)).toThrow(
+      /OLLAMA_URL must be an http or https address/,
+    );
+    expect(() => parseConfig({ OLLAMA_URL: 'ftp://host' }, root)).toThrow(/OLLAMA_URL must be/);
+    expect(() => parseConfig({ OLLAMA_TIMEOUT_SEC: '0' }, root)).toThrow(
+      /OLLAMA_TIMEOUT_SEC must be between 1 and 600/,
+    );
+    expect(() => parseConfig({ OLLAMA_TIMEOUT_SEC: 'abc' }, root)).toThrow(
+      /OLLAMA_TIMEOUT_SEC must be a whole number/,
     );
   });
 

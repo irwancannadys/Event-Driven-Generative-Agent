@@ -20,9 +20,18 @@ export interface Config {
    * the seed that is in its log (decision 020).
    */
   scenario: Scenario;
-  /** Who helps the agents decide: `fake` answers from a script, `off` leaves it to the rules (decision 034). */
-  llmProvider: 'fake' | 'off';
+  /**
+   * Who helps the agents decide: `fake` answers from a script, `off` leaves it to the rules (decision 034),
+   * `ollama` asks a model that runs on this machine (stage 6).
+   */
+  llmProvider: 'fake' | 'off' | 'ollama';
+  /** Where the model is and how long to wait for it. Only used when `llmProvider` is `ollama`. */
+  ollama: { url: string; model: string; timeoutSec: number };
 }
+
+/** The model that is asked unless `OLLAMA_MODEL` says otherwise. */
+export const DEFAULT_OLLAMA_MODEL = 'qwen3:4b';
+export const DEFAULT_OLLAMA_URL = 'http://127.0.0.1:11434';
 
 type Env = Readonly<Record<string, string | undefined>>;
 
@@ -39,18 +48,39 @@ function intSetting(env: Env, name: string, fallback: number, min: number, max: 
   return value;
 }
 
+/** Reads an http(s) address. Unset or empty means "use the default". Errors name the variable. */
+function urlSetting(env: Env, name: string, fallback: string): string {
+  const raw = env[name]?.trim();
+  if (raw === undefined || raw === '') return fallback;
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new Error(`${name} must be an http or https address, got "${env[name]}"`);
+  }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    throw new Error(`${name} must be an http or https address, got "${env[name]}"`);
+  }
+  return raw;
+}
+
 /** Turns environment variables into a validated configuration. Pure, so it is easy to test. */
 export function parseConfig(env: Env, repoRoot: string): Config {
   const provider = (env.LLM_PROVIDER ?? '').trim().toLowerCase();
-  if (provider !== '' && provider !== 'fake' && provider !== 'off') {
-    throw new Error(`LLM_PROVIDER must be fake or off, got "${env.LLM_PROVIDER}"`);
+  if (provider !== '' && provider !== 'fake' && provider !== 'off' && provider !== 'ollama') {
+    throw new Error(`LLM_PROVIDER must be fake, off or ollama, got "${env.LLM_PROVIDER}"`);
   }
   const forecast = (env.STOCK_FORECAST ?? '').trim().toLowerCase();
   if (forecast !== '' && forecast !== 'on' && forecast !== 'off') {
     throw new Error(`STOCK_FORECAST must be on or off, got "${env.STOCK_FORECAST}"`);
   }
   return {
-    llmProvider: provider === 'off' ? 'off' : 'fake',
+    llmProvider: provider === 'off' || provider === 'ollama' ? provider : 'fake',
+    ollama: {
+      url: urlSetting(env, 'OLLAMA_URL', DEFAULT_OLLAMA_URL),
+      model: env.OLLAMA_MODEL?.trim() || DEFAULT_OLLAMA_MODEL,
+      timeoutSec: intSetting(env, 'OLLAMA_TIMEOUT_SEC', 60, 1, 600),
+    },
     repoRoot,
     databasePath: path.resolve(repoRoot, env.DATABASE_PATH?.trim() || 'data/cafe.db'),
     port: intSetting(env, 'PORT', 3000, 0, 65535),

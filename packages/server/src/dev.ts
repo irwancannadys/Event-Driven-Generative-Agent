@@ -57,6 +57,9 @@ export async function startDevServer(options: DevServerOptions): Promise<DevServ
     }
   });
 
+  if (config.llmProvider === 'ollama') {
+    throw new Error('LLM_PROVIDER=ollama is not wired into the server yet');
+  }
   const simulation = bootSimulation({
     db,
     bus,
