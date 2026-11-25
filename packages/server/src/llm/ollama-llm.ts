@@ -85,7 +85,7 @@ export class OllamaLLM implements LLMClient {
         { role: 'user', content: prompt.user },
       ],
       stream: false,
-      format: decisionJsonSchema(request.purpose),
+      format: decisionJsonSchema(request.purpose, request.facts),
       keep_alive: this.options.keepAlive ?? '30m',
       options: {
         temperature: 0,

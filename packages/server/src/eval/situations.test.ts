@@ -25,7 +25,7 @@ describe('the situations of the evaluation', () => {
       expect(situation.request.purpose, situation.id).toBe(situation.purpose);
       const prompt = buildPrompt(situation.request);
       expect(prompt.user, situation.id).toContain(situation.request.context);
-      expect(prompt.user, situation.id).toContain('id=');
+      expect(prompt.user, situation.id).toContain('ingredient_id (nama)');
       expect(toWorld(situation).ingredients.size, situation.id).toBe(8);
     }
   });

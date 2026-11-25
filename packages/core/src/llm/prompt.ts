@@ -18,6 +18,7 @@ const STOCK_SYSTEM = [
   'Aturan:',
   '- ingredient_id harus salah satu id pada daftar bahan, dan tiap bahan paling banyak satu kali.',
   '- qty bilangan bulat lebih dari 0 dan tidak boleh melebihi ruang di rak (kapasitas dikurangi stok).',
+  '- Kalau jumlah yang kurang lebih besar daripada ruang di rak, pesan sebanyak ruang di rak saja.',
   '- Usulkan hanya bahan yang memang kurang. Tulis rationale dalam bahasa Indonesia.',
 ].join('\n');
 
@@ -38,6 +39,10 @@ const SYSTEMS: Partial<Record<Purpose, string>> = {
   policy_review: REVIEW_SYSTEM,
 };
 
+// A small model copies what it sees, so the list shows the id as it must be written, and says so.
+const LIST_HEADER =
+  'Daftar bahan, dalam bentuk "ingredient_id (nama)". Tulis ingredient_id persis seperti di depan tanda kurung, tanpa awalan dan tanpa nama:';
+
 type Fields = Record<string, unknown>;
 
 const isRecord = (value: unknown): value is Fields =>
@@ -49,10 +54,10 @@ function stockList(facts: Fields | undefined): string[] {
   const lines = records(facts?.lines);
   if (lines.length === 0) return [];
   return [
-    'Daftar bahan (pakai id persis seperti ini):',
+    LIST_HEADER,
     ...lines.map((line) => {
       const room = Number(line.capacity_qty) - Number(line.qty);
-      return `- id=${String(line.ingredient_id)} (${String(line.name)}): stok ${String(line.qty)} ${String(line.unit)}, kapasitas ${String(line.capacity_qty)}, ruang di rak ${Math.max(0, room)}`;
+      return `- ${String(line.ingredient_id)} (${String(line.name)}): stok ${String(line.qty)} ${String(line.unit)}, kapasitas ${String(line.capacity_qty)}, ruang di rak ${Math.max(0, room)}`;
     }),
   ];
 }
@@ -64,12 +69,12 @@ function reviewList(facts: Fields | undefined): string[] {
     Array.isArray(facts?.blocked) ? facts.blocked.map((id) => String(id)) : [],
   );
   return [
-    'Daftar bahan (pakai id persis seperti ini):',
+    LIST_HEADER,
     ...ingredients.map((item) => {
       const bounds = isRecord(item.bounds) ? item.bounds : {};
       const id = String(item.ingredient_id);
       return (
-        `- id=${id} (${String(item.name)}): batas sekarang ${String(item.min_qty)} ${String(item.unit)} (awal ${String(item.base_min_qty)}), ` +
+        `- ${id} (${String(item.name)}): batas sekarang ${String(item.min_qty)} ${String(item.unit)} (awal ${String(item.base_min_qty)}), ` +
         `boleh diubah ke ${String(bounds.min)} sampai ${String(bounds.max)}` +
         (blocked.has(id) ? ', TERBLOKIR: jangan diusulkan' : '')
       );

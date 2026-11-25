@@ -69,16 +69,18 @@ describe('buildPrompt for a stock proposal', () => {
     expect(prompt.system).toContain('"items"');
     expect(prompt.system).toContain('"urgency"');
     expect(prompt.system).toContain('ruang di rak');
+    expect(prompt.system).toContain('pesan sebanyak ruang di rak saja');
+  });
+
+  it('tells the model how to write an id, because a small model copies what it sees', () => {
+    expect(prompt.user).toContain('Tulis ingredient_id persis seperti di depan tanda kurung');
+    expect(prompt.user).not.toContain('id=');
   });
 
   it('carries the situation, and the ids and the room on the shelf of every ingredient', () => {
     expect(prompt.user).toContain(stock.context);
-    expect(prompt.user).toContain(
-      '- id=susu (Susu): stok 900 ml, kapasitas 6000, ruang di rak 5100',
-    );
-    expect(prompt.user).toContain(
-      '- id=gula (Gula): stok 100 g, kapasitas 2000, ruang di rak 1900',
-    );
+    expect(prompt.user).toContain('- susu (Susu): stok 900 ml, kapasitas 6000, ruang di rak 5100');
+    expect(prompt.user).toContain('- gula (Gula): stok 100 g, kapasitas 2000, ruang di rak 1900');
   });
 
   it('does not mention a refusal on the first attempt', () => {
@@ -121,10 +123,10 @@ describe('buildPrompt for the nightly review', () => {
   it('gives every ingredient with its id, its minimum, the range it may be changed to, and what is blocked', () => {
     expect(prompt.user).toContain(review.context);
     expect(prompt.user).toContain(
-      '- id=susu (Susu): batas sekarang 1500 ml (awal 1000), boleh diubah ke 500 sampai 3000',
+      '- susu (Susu): batas sekarang 1500 ml (awal 1000), boleh diubah ke 500 sampai 3000',
     );
     expect(prompt.user).toContain(
-      '- id=teh (Teh): batas sekarang 200 g (awal 200), boleh diubah ke 100 sampai 500, TERBLOKIR: jangan diusulkan',
+      '- teh (Teh): batas sekarang 200 g (awal 200), boleh diubah ke 100 sampai 500, TERBLOKIR: jangan diusulkan',
     );
     expect(prompt.user.split('TERBLOKIR').length - 1).toBe(1);
   });

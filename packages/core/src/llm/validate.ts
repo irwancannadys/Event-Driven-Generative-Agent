@@ -84,6 +84,11 @@ export function validateDecision<P extends Purpose>(
   return problem ?? { ok: true, decision };
 }
 
+/** The refusal names the ids that exist: a model that is asked again can only be helped by knowing what to write. */
+function unknownIngredient(id: string, world: ValidationWorld): string {
+  return `unknown ingredient "${id}": use exactly one of ${[...world.ingredients.keys()].join(', ')}`;
+}
+
 function checkAgainstWorld(
   purpose: Purpose,
   decision: unknown,
@@ -93,7 +98,7 @@ function checkAgainstWorld(
     const { items } = decision as DecisionOf<'stock_proposal'>;
     for (const item of items) {
       const facts = world.ingredients.get(item.ingredient_id);
-      if (!facts) return fail('unknown_id', `unknown ingredient "${item.ingredient_id}"`);
+      if (!facts) return fail('unknown_id', unknownIngredient(item.ingredient_id, world));
       if (world.covered?.has(item.ingredient_id)) {
         return fail(
           'stale',
@@ -113,7 +118,7 @@ function checkAgainstWorld(
     const { change } = decision as DecisionOf<'policy_review'>;
     if (change) {
       const facts = world.ingredients.get(change.ingredient_id);
-      if (!facts) return fail('unknown_id', `unknown ingredient "${change.ingredient_id}"`);
+      if (!facts) return fail('unknown_id', unknownIngredient(change.ingredient_id, world));
       if (world.blocked?.has(change.ingredient_id)) {
         return fail(
           'out_of_range',

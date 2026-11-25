@@ -72,6 +72,18 @@ describe('validateDecision: stock_proposal against the world', () => {
     expect(result).toMatchObject({ ok: false, reason: 'unknown_id' });
   });
 
+  it('names the ids that exist when it refuses an unknown one, so that a retry can be helped', () => {
+    const result = validateDecision(
+      'stock_proposal',
+      proposal([{ ingredient_id: 'Susu', qty: 10 }]),
+      world(),
+    );
+    expect(result).toMatchObject({ ok: false, reason: 'unknown_id' });
+    expect(result.ok ? '' : result.message).toMatch(
+      /^unknown ingredient "Susu": use exactly one of susu/,
+    );
+  });
+
   it('says out_of_range for more than fits on the shelf', () => {
     const fits = validateDecision(
       'stock_proposal',

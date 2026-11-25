@@ -60,4 +60,59 @@ describe('decisionJsonSchema', () => {
     const schema = decisionJsonSchema('policy_review');
     expect(JSON.parse(JSON.stringify(schema))).toEqual(schema);
   });
+
+  describe('with the facts of a request', () => {
+    const idsOf = (schema: Schema, ...path: string[]) => {
+      let node: unknown = schema;
+      for (const key of path) node = (node as Record<string, unknown>)[key];
+      return (node as { enum?: string[] }).enum;
+    };
+
+    it('lets a stock proposal name only the ingredients it was told about', () => {
+      const schema = decisionJsonSchema('stock_proposal', {
+        lines: [{ ingredient_id: 'susu' }, { ingredient_id: 'gula' }],
+      }) as Schema;
+      expect(idsOf(schema, 'properties', 'items', 'items', 'properties', 'ingredient_id')).toEqual([
+        'susu',
+        'gula',
+      ]);
+    });
+
+    it('lets a review name the ingredients it was told about, except the blocked ones', () => {
+      const schema = decisionJsonSchema('policy_review', {
+        ingredients: [
+          { ingredient_id: 'susu' },
+          { ingredient_id: 'teh' },
+          { ingredient_id: 'gula' },
+        ],
+        blocked: ['teh'],
+      }) as Schema;
+      expect(idsOf(schema, 'properties', 'change', 'properties', 'ingredient_id')).toEqual([
+        'susu',
+        'gula',
+      ]);
+    });
+
+    it('does not limit the ids when there is nothing to take them from', () => {
+      const plain = JSON.stringify(decisionJsonSchema('stock_proposal'));
+      expect(JSON.stringify(decisionJsonSchema('stock_proposal', {}))).toBe(plain);
+      expect(JSON.stringify(decisionJsonSchema('stock_proposal', { lines: [] }))).toBe(plain);
+      expect(plain).not.toContain('"enum":["susu"');
+    });
+
+    it('keeps the rest of the schema as it is', () => {
+      const facts = { lines: [{ ingredient_id: 'susu' }] };
+      const withIds = decisionJsonSchema('stock_proposal', facts) as Schema;
+      expect(withIds.required).toEqual(['items', 'urgency', 'rationale']);
+      expect(withIds.properties?.urgency?.enum).toEqual(['low', 'normal', 'high']);
+    });
+
+    it('makes a new schema every time, so one request cannot change the ids of the next', () => {
+      decisionJsonSchema('stock_proposal', { lines: [{ ingredient_id: 'susu' }] });
+      const next = decisionJsonSchema('stock_proposal', { lines: [{ ingredient_id: 'gula' }] });
+      expect(
+        idsOf(next as Schema, 'properties', 'items', 'items', 'properties', 'ingredient_id'),
+      ).toEqual(['gula']);
+    });
+  });
 });

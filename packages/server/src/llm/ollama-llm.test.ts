@@ -75,6 +75,15 @@ describe('OllamaLLM', () => {
     });
   });
 
+  it('lets the model write only the ids of the ingredients it was told about', async () => {
+    const { llm, sent } = client([async () => reply('{}')]);
+    await llm.complete(request);
+    const format = sent[0]?.body.format as {
+      properties: { items: { items: { properties: { ingredient_id: { enum?: string[] } } } } };
+    };
+    expect(format.properties.items.items.properties.ingredient_id.enum).toEqual(['susu']);
+  });
+
   it('hands the text of the answer on as it is, with the model and how long it took', async () => {
     let clock = 1000;
     const { llm } = client([async () => reply('{"items":[]}')], {
